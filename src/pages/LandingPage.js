@@ -5,20 +5,11 @@ import '../styles/LandingPage.css';
 const LandingPage = () => {
     return (
         <div className="landing-page">
-            <ParticleBackground />
+            <ParticleBackground/>
             <div className="container">
-                <a href="#">
-                    <div className="sun"></div>
-                    <div className="button"><span>Login</span></div>
-                </a>
-                <a href="#">
-                    <div className="sun"></div>
-                    <div className="button"><span>Invitation</span></div>
-                </a>
-                <a href="#">
-                    <div className="sun"></div>
-                    <div className="button"><span>Join Room</span></div>
-                </a>
+                <a href="google.com" className="button fire"><span>Login</span></a>
+                <a href="#" className="button ice"><span>Invitation</span></a>
+                <a href="#" className="button fire"><span>Join Room</span></a>
             </div>
         </div>
     );
