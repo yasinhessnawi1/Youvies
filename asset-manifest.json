@@ -1,13 +1,13 @@
 {
   "files": {
-    "main.css": "/Youvies/static/css/main.0b77e192.css",
-    "main.js": "/Youvies/static/js/main.22300746.js",
-    "index.html": "/Youvies/index.html",
-    "main.0b77e192.css.map": "/Youvies/static/css/main.0b77e192.css.map",
-    "main.22300746.js.map": "/Youvies/static/js/main.22300746.js.map"
+    "main.css": "/static/css/main.e0f8805e.css",
+    "main.js": "/static/js/main.8e68e4c3.js",
+    "index.html": "/index.html",
+    "main.e0f8805e.css.map": "/static/css/main.e0f8805e.css.map",
+    "main.8e68e4c3.js.map": "/static/js/main.8e68e4c3.js.map"
   },
   "entrypoints": [
-    "static/css/main.0b77e192.css",
-    "static/js/main.22300746.js"
+    "static/css/main.e0f8805e.css",
+    "static/js/main.8e68e4c3.js"
   ]
 }
