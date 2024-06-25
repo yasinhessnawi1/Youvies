@@ -1,10 +1,10 @@
-import React, { useEffect } from 'react';
-import { createNoise3D } from 'simplex-noise';
+import React, {useEffect} from 'react';
+import {createNoise3D} from 'simplex-noise';
 import '../styles/ParticleBackground.css';
 
 const ParticleAnimation = () => {
     useEffect(() => {
-        let canvas, ctx, field, w, h, fieldSize, columns, rows, noiseZ, particles, hue;
+        let canvas, ctx, field, w, h, fieldSize, columns, rows, noiseZ, particles;
         noiseZ = 0;
         const particleCount = 2000;
         const particleSize = 0.9;
@@ -94,8 +94,7 @@ const ParticleAnimation = () => {
 
         function initParticles() {
             particles = [];
-            let numberOfParticles = particleCount;
-            for (let i = 0; i < numberOfParticles; i++) {
+            for (let i = 0; i < particleCount; i++) {
                 let particle = new Particle(Math.random() * w, Math.random() * h);
                 particles.push(particle);
             }
@@ -106,15 +105,14 @@ const ParticleAnimation = () => {
             for (let x = 0; x < columns; x++) {
                 field[x] = new Array(rows);
                 for (let y = 0; y < rows; y++) {
-                    let v = new Vector(0, 0);
-                    field[x][y] = v;
+                    field[x][y] = new Vector(0, 0);
                 }
             }
         }
 
         function calcField() {
             const noise3D = createNoise3D();
-            if (sORp) {
+
                 for (let x = 0; x < columns; x++) {
                     for (let y = 0; y < rows; y++) {
                         let angle = noise3D(x / 20, y / 20, noiseZ) * Math.PI * 2;
@@ -123,16 +121,8 @@ const ParticleAnimation = () => {
                         field[x][y].setAngle(angle);
                     }
                 }
-            } else {
-                for (let x = 0; x < columns; x++) {
-                    for (let y = 0; y < rows; y++) {
-                        let angle = noise3D(x / 20, y / 20, noiseZ) * Math.PI * 2;
-                        let length = noise3D(x / 40 + 40000, y / 40 + 40000, noiseZ) * fieldForce;
-                        field[x][y].setLength(length);
-                        field[x][y].setAngle(angle);
-                    }
-                }
-            }
+
+
         }
 
         function reset() {
@@ -160,7 +150,7 @@ const ParticleAnimation = () => {
 
         function drawParticles() {
             particles.forEach(p => {
-                var ps = (p.fieldSize = Math.abs(p.vel.x + p.vel.y) * particleSize + 0.3);
+                let ps = (p.fieldSize = Math.abs(p.vel.x + p.vel.y) * particleSize + 0.3);
                 ctx.fillStyle = "hsl(" + (hueBase + p.hue + (p.vel.x + p.vel.y) * hueRange) + ", 100%, 50%)";
                 ctx.fillRect(p.pos.x, p.pos.y, ps, ps);
                 let pos = p.pos.div(fieldSize);

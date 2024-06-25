@@ -1,0 +1,43 @@
+.login-page {
+    position: relative;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: transparent;
+}
+
+.login-card {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.8);
+    border-radius: 15px;
+    padding: 30px;
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+    text-align: center;
+    width: 300px;
+    z-index: 2;
+}
+
+.login-card h2 {
+    margin-bottom: 20px;
+    color: #fff;
+}
+
+.login-card form {
+    display: flex;
+    flex-direction: column;
+}
+
+.login-card input {
+    margin-bottom: 15px;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+}
+
+.button-container {
+    display: flex;
+    justify-content: space-between;
+}
+

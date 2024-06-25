@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     const canvas = document.getElementById('particle-background-canvas');
     const ctx = canvas.getContext('2d');
-    let mouse = { x: null, y: null, radius: 100 };
+    let mouse = {x: null, y: null, radius: 100};
     let particleText = [];
 
     canvas.width = window.innerWidth;
@@ -19,12 +19,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     class Particle {
-        constructor(x, y, size, color, weight) {
+        constructor(x, y, size, color) {
             this.x = x;
             this.y = y;
             this.size = size;
             this.color = color;
-            this.weight = weight;
             this.baseX = this.x;
             this.baseY = this.y;
             this.density = Math.random() * 10000 + 1;
@@ -66,23 +65,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function drawContent() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        const fontSize = Math.min(canvas.width / 20, canvas.height / 20);
+        const fontSize = 20;
         ctx.font = `bold ${fontSize}px Arial`;
         ctx.fillStyle = 'white';
 
         const text = 'Youvies';
         const textMetrics = ctx.measureText(text);
-        const textX = (canvas.width - textMetrics.width) / 10;
+        const textX = (canvas.width - textMetrics.width) / 2.5;
         const textY = (canvas.height + fontSize / 2) / 10;
         ctx.fillText(text, textX, textY);
 
         const logo = new Image();
         logo.src = './logo.png';
-        logo.width = canvas.width / 50;
-        logo.height = canvas.height / 40;
+        logo.width = 20;
+        logo.height = 10;
         logo.onload = () => {
-            const logoX = textX  + textMetrics.width * 5;
-            const logoY = textY + fontSize + 20; // Adjust spacing between text and logo
+            const logoX = textX + textMetrics.width * 5;
+            const logoY = textY + fontSize; // Adjust spacing between text and logo
             ctx.drawImage(logo, logoX, logoY);
             ctx.willReadFrequently = true;
             const logoCoordinates = ctx.getImageData(logoX, logoY, logo.width, logo.height);
@@ -98,7 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         let positionX = textX + x * adjustment;
                         let positionY = textY - fontSize + y * adjustment;
                         let color = 'white';
-                        particleText.push(new Particle(positionX, positionY, 3, color, 0));
+                        particleText.push(new Particle(positionX, positionY, 3, color));
                     }
                 }
             }
@@ -109,7 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         let positionX = logoX + x * adjustment;
                         let positionY = logoY + y * adjustment;
                         let color = 'white';
-                        particleText.push(new Particle(positionX, positionY, 3, color, 0));
+                        particleText.push(new Particle(positionX, positionY, 3, color));
                     }
                 }
             }
