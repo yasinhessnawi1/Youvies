@@ -1,5 +1,6 @@
 import React, { useContext } from 'react';
 import ParticleBackground from '../components/ParticleBackground';
+import NameParticles from '../components/NameParticles';
 import '../styles/LandingPage.css';
 import { UserContext } from '../contexts/UserContext';
 import { useHistory } from 'react-router-dom';
@@ -10,7 +11,16 @@ const LandingPage = () => {
 
     return (
         <div className="landing-page">
-            <ParticleBackground/>
+            <div className="canvas-container">
+                <NameParticles />
+                <ParticleBackground />
+            </div>
+            <div className="container_name">
+                <div className="text-logo">
+                    <span className="text">Youvies</span>
+                    <img src="./../assets/logo.png" alt="Logo" className="logo" />
+                </div>
+            </div>
             <div className="container">
                 {user ? (
                     <>

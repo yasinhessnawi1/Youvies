@@ -49,8 +49,6 @@ T
 $src/components/ParticleBackground.js,c\4\c4a6d91938aa23f8e53bb2fece7e6a24e5c6ad0e
 G
 public/particle-name.js,8\4\84d426e61f85e51461ecf24d4e67a2524e9078b1
-Q
-!src/styles/ParticleBackground.css,3\7\379631007dcfc0a46b82fce27502077610004373
 [
 +node_modules/@types/node/child_process.d.ts,b\9\b99a84bc418321fff0f468b5a3d501f719414520
 Q
@@ -85,3 +83,11 @@ B
 src/api/UserApi.js,6\7\67588dd458152fa096b3ca2a0ecf48001a16c6e7
 ;
 qodana.yaml,8\5\85c3a901608a6b9adf48d245fa84828b66304e51
+M
+public/ParticleBackground.css,8\f\8ffaa34d980494becbc1982c8cfc8dc1a9ff84c2
+O
+src/components/NameParticles.js,9\4\94ec773d82fd0fb1abd9710a238cf6ef93f0052f
+P
+ src/pages/ParticleBackground.css,c\8\c8d9cbd7c4fe96173a2b6d60eff26b6e7e5f393c
+O
+src/components/particle-name.js,4\5\45d7cab1f534d2132030d929c290ec1d6ebcb61c

@@ -1,17 +1,19 @@
-import React, {useEffect} from 'react';
-import {createNoise3D} from 'simplex-noise';
-import '../styles/ParticleBackground.css';
+import React, { useEffect, useRef } from 'react';
+import { createNoise3D } from 'simplex-noise';
 
-const ParticleAnimation = () => {
+const ParticleBackground = () => {
+    const canvasRef = useRef(null);
+
     useEffect(() => {
-        let canvas, ctx, field, w, h, fieldSize, columns, rows, noiseZ, particles;
+        let canvas = canvasRef.current;
+        let ctx = canvas.getContext('2d');
+        let field, w, h, fieldSize, columns, rows, noiseZ, particles;
         noiseZ = 0;
         const particleCount = 2000;
         const particleSize = 0.9;
         fieldSize = 70;
         const fieldForce = 0.15;
         const noiseSpeed = 0.0003;
-        const sORp = true;
         const trailLength = 0.15;
         const hueBase = 10;
         const hueRange = 5;
@@ -87,45 +89,7 @@ const ParticleAnimation = () => {
             }
         }
 
-        canvas = document.querySelector("#canvas");
-        ctx = canvas.getContext("2d");
-        reset();
-        window.addEventListener("resize", reset);
-
-        function initParticles() {
-            particles = [];
-            for (let i = 0; i < particleCount; i++) {
-                let particle = new Particle(Math.random() * w, Math.random() * h);
-                particles.push(particle);
-            }
-        }
-
-        function initField() {
-            field = new Array(columns);
-            for (let x = 0; x < columns; x++) {
-                field[x] = new Array(rows);
-                for (let y = 0; y < rows; y++) {
-                    field[x][y] = new Vector(0, 0);
-                }
-            }
-        }
-
-        function calcField() {
-            const noise3D = createNoise3D();
-
-                for (let x = 0; x < columns; x++) {
-                    for (let y = 0; y < rows; y++) {
-                        let angle = noise3D(x / 20, y / 20, noiseZ) * Math.PI * 2;
-                        let length = noise3D(x / 40 + 40000, y / 40 + 40000, noiseZ) * fieldForce;
-                        field[x][y].setLength(length);
-                        field[x][y].setAngle(angle);
-                    }
-                }
-
-
-        }
-
-        function reset() {
+        const reset = () => {
             w = canvas.width = window.innerWidth;
             h = canvas.height = window.innerHeight;
             noiseZ = Math.random();
@@ -133,25 +97,56 @@ const ParticleAnimation = () => {
             rows = Math.round(h / fieldSize) + 1;
             initParticles();
             initField();
-        }
+        };
 
-        function draw() {
+        const initParticles = () => {
+            particles = [];
+            for (let i = 0; i < particleCount; i++) {
+                let particle = new Particle(Math.random() * w, Math.random() * h);
+                particles.push(particle);
+            }
+        };
+
+        const initField = () => {
+            field = new Array(columns);
+            for (let x = 0; x < columns; x++) {
+                field[x] = new Array(rows);
+                for (let y = 0; y < rows; y++) {
+                    field[x][y] = new Vector(0, 0);
+                }
+            }
+        };
+
+        const calcField = () => {
+            const noise3D = createNoise3D();
+
+            for (let x = 0; x < columns; x++) {
+                for (let y = 0; y < rows; y++) {
+                    let angle = noise3D(x / 20, y / 20, noiseZ) * Math.PI * 2;
+                    let length = noise3D(x / 40 + 40000, y / 40 + 40000, noiseZ) * fieldForce;
+                    field[x][y].setLength(length);
+                    field[x][y].setAngle(angle);
+                }
+            }
+        };
+
+        const draw = () => {
             requestAnimationFrame(draw);
             calcField();
             noiseZ += noiseSpeed;
             drawBackground();
             drawParticles();
-        }
+        };
 
-        function drawBackground() {
-            ctx.fillStyle = "rgba(0,0,0," + trailLength + ")";
+        const drawBackground = () => {
+            ctx.fillStyle = `rgba(0,0,0,${trailLength})`;
             ctx.fillRect(0, 0, w, h);
-        }
+        };
 
-        function drawParticles() {
+        const drawParticles = () => {
             particles.forEach(p => {
                 let ps = (p.fieldSize = Math.abs(p.vel.x + p.vel.y) * particleSize + 0.3);
-                ctx.fillStyle = "hsl(" + (hueBase + p.hue + (p.vel.x + p.vel.y) * hueRange) + ", 100%, 50%)";
+                ctx.fillStyle = `hsl(${hueBase + p.hue + (p.vel.x + p.vel.y) * hueRange}, 100%, 50%)`;
                 ctx.fillRect(p.pos.x, p.pos.y, ps, ps);
                 let pos = p.pos.div(fieldSize);
                 let v;
@@ -161,12 +156,19 @@ const ParticleAnimation = () => {
                 p.move(v);
                 p.wrap();
             });
-        }
+        };
 
+        reset();
         draw();
+
+        window.addEventListener('resize', reset);
+
+        return () => {
+            window.removeEventListener('resize', reset);
+        };
     }, []);
 
-    return <canvas id="canvas"></canvas>;
+    return <canvas ref={canvasRef} id="background-particle-canvas" />;
 };
 
-export default ParticleAnimation;
+export default ParticleBackground;
