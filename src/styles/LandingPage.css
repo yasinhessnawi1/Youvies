@@ -41,7 +41,6 @@ body {
 
 .container {
     position: relative;
-    bottom: 20%;
     display: flex;
     flex-direction: column;
     width: 100%;
@@ -51,29 +50,7 @@ body {
     z-index: 2;
 }
 
-.text-logo {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-}
 
-.text {
-    position: relative;
-    font-size: 30px;
-    font-weight: bold;
-    color: transparent;
-    align-self: center;
-    align-content: center;
-    justify-content: center;
-}
-
-.logo {
-    width: 30px;
-    height: auto;
-    visibility: hidden;
-}
 
 .button {
     border: 1px solid green;

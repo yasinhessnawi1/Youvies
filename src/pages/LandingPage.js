@@ -12,22 +12,16 @@ const LandingPage = () => {
     return (
         <div className="landing-page">
             <div className="canvas-container">
-                <NameParticles />
+                <NameParticles text="Youvies" logoSrc="/logo.png" />
                 <ParticleBackground />
-            </div>
-            <div className="container_name">
-                <div className="text-logo">
-                    <span className="text">Youvies</span>
-                    <img src="./../assets/logo.png" alt="Logo" className="logo" />
-                </div>
             </div>
             <div className="container">
                 {user ? (
                     <>
-                        <a href="#" className="button fire"><span>Movie</span></a>
-                        <a href="#" className="button ice"><span>Show</span></a>
-                        <a href="#" className="button fire"><span>Anime</span></a>
-                        <a href="#" className="button ice"><span>Join Room</span></a>
+                        <a href="#" className="button fire" onClick={()=> history.push('/home/movie')}><span>Movie</span></a>
+                        <a href="#" className="button ice" onClick={()=> history.push('/home/show')}><span>Show</span></a>
+                        <a href="#" className="button fire" onClick={()=> history.push('/home/anime')}><span>Anime</span></a>
+                        <a href="#" className="button ice" onClick={()=> history.push('/home/room')}><span>Join Room</span></a>
                         <a href="#" className="button fire" onClick={logout}><span>Logout</span></a>
                     </>
                 ) : (
