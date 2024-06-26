@@ -95,8 +95,8 @@ const NameParticles = ({ text = "Youvies", logoSrc }) => {
         ctx.fillStyle = 'white';
 
         const textWidth = ctx.measureText(text).width;
-        const textX = innerWidth  / 2.5;
-        const textY = fontSize * 5 ; // Adjust the Y position to be 1.5 times the font size from the top
+        const textX = outerWidth  / 2 - textWidth / 2 - fontSize * 10;
+        const textY = fontSize ; // Adjust the Y position to be 1.5 times the font size from the top
 
         ctx.fillText(text, textX, textY);
 
