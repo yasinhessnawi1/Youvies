@@ -42,7 +42,7 @@ const LoginPage = () => {
                     />
                     <div className="button-container">
                         <button type="submit" className="button fire"><span>Login</span></button>
-                        <button type="button" className="button ice"><span>Cancel</span></button>
+                        <button type="button" className="button ice" onClick={() => history.push("/")}><span>Cancel</span></button>
                     </div>
                 </form>
             </div>

@@ -1,10 +1,7 @@
 .login-page {
-    position: relative;
-    height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
-    background: transparent;
 }
 
 .login-card {
@@ -12,10 +9,10 @@
     background: rgba(0, 0, 0, 0.8);
     border-radius: 15px;
     padding: 30px;
+    align-self: center;
     box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
     text-align: center;
     width: 300px;
-    z-index: 2;
 }
 
 .login-card h2 {
