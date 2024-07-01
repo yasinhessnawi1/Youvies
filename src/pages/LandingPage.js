@@ -1,5 +1,5 @@
 import React, { useContext, useEffect } from 'react';
-import { useHistory } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import ParticleBackground from '../components/ParticleBackground';
 import NameParticles from '../components/NameParticles';
 import '../styles/LandingPage.css';
@@ -7,13 +7,13 @@ import { UserContext } from '../contexts/UserContext';
 
 const LandingPage = () => {
     const { user } = useContext(UserContext);
-    const history = useHistory();
+    const navigate = useNavigate();
 
     useEffect(() => {
         if (user) {
-            history.push('/home');
+            navigate('/home');
         }
-    }, [user, history]);
+    }, [user, navigate]);
 
     return (
         <div className="landing-page">
@@ -22,7 +22,7 @@ const LandingPage = () => {
                 <ParticleBackground />
             </div>
             <div className="button-container">
-                <a href="/login" className="button fire" onClick={() => history.push('/login')}>
+                <a href="/login" className="button fire" onClick={() => navigate('/login')}>
                     <span>Login</span>
                 </a>
                 <a href="/" className="button ice">

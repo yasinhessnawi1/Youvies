@@ -11,7 +11,7 @@ const NameParticles = ({ text = "Youvies", logoSrc }) => {
     useEffect(() => {
         if(canvasRef.current !== null) {
             canvas = canvasRef.current;
-            ctx = canvas.getContext('2d');
+            ctx = canvas.getContext('2d' ,{willReadFrequently: true});
         }else if (canvas.getContext('2d') !== null) {
             ctx = canvas.getContext('2d');
         }

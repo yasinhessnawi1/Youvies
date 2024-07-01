@@ -1,25 +1,23 @@
 import React from 'react';
-import LandingPage from "./pages/LandingPage";
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import LandingPage from './pages/LandingPage';
+import LoginPage from './pages/LoginPage';
+import HomePage from './pages/HomePage';
+import { UserProvider } from './contexts/UserContext';
 import './styles/global.css';
-import LoginPage from "./pages/LoginPage";
-import {Route, BrowserRouter as Router, Switch} from "react-router-dom";
-import {UserProvider} from "./contexts/UserContext";
-import HomePage from "./pages/HomePage";
-
 
 function App() {
     return (
-        <Router >
+        <Router>
             <UserProvider>
-                <Switch>
-                    <Route path="/login" component={LoginPage} />
-                    <Route path="/home" component={HomePage} />
-                    <Route path="/" component={LandingPage} />
-                </Switch>
+                <Routes>
+                    <Route path="/login" element={<LoginPage />} />
+                    <Route path="/home" element={<HomePage />} />
+                    <Route path="/" element={<LandingPage />} />
+                </Routes>
             </UserProvider>
         </Router>
     );
 }
 
 export default App;
-

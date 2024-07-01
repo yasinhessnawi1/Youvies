@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useRef, useState } from 'react';
-import { Link, useHistory } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { FaBars, FaTimes, FaUserCircle, FaGgCircle } from 'react-icons/fa';
 import { UserContext } from '../contexts/UserContext';
 import '../styles/Header.css';
@@ -9,7 +9,7 @@ const Header = ({ setActiveTab }) => {
     const { user, logout } = useContext(UserContext);
     const [menuOpen, setMenuOpen] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(false);
-    const history = useHistory();
+    const navigate = useNavigate();
     const dropdownRef = useRef(null);
 
     useEffect(() => {
@@ -27,7 +27,7 @@ const Header = ({ setActiveTab }) => {
 
     const handleLogout = () => {
         logout();
-        history.push('/login');
+        navigate('/login');
     };
 
     const toggleDropdown = () => setDropdownOpen(!dropdownOpen);
@@ -40,7 +40,7 @@ const Header = ({ setActiveTab }) => {
     };
 
     const handleNavigatingToProfile = () => {
-        history.push('/profile');
+        navigate('/profile');
     };
 
     const handleTabClick = (tab) => {

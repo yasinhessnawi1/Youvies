@@ -2,7 +2,7 @@
 
 import React, { createContext, useState, useEffect } from 'react';
 import { loginUser, logoutUser } from '../api/UserApi';
-import {useHistory} from "react-router-dom";
+import {useNavigate} from "react-router-dom";
 
 // Create Context
 export const UserContext = createContext(undefined, undefined);
@@ -10,7 +10,7 @@ export const UserContext = createContext(undefined, undefined);
 // UserProvider Component
 export const UserProvider = ({ children }) => {
     const [user, setUser] = useState(null);
-    const history = useHistory();
+    const navigate = useNavigate();
     useEffect(() => {
         // Check if user is logged in (e.g., via a token in localStorage)
         const loggedUser = localStorage.getItem('user');
@@ -37,7 +37,7 @@ export const UserProvider = ({ children }) => {
             }
             setUser(null);
             localStorage.removeItem('user');
-            history.push('/');
+            navigate('/');
         } catch (error) {
             console.error('Logout failed:', error);
         }

@@ -1,7 +1,7 @@
 // src/pages/LoginPage.js
 
 import React, { useContext, useState } from 'react';
-import { useHistory } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import ParticleBackground from '../components/ParticleBackground';
 import '../styles/LoginPage.css';
 import { UserContext } from '../contexts/UserContext';
@@ -11,13 +11,13 @@ const LoginPage = () => {
     const { login } = useContext(UserContext);
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
-    const history = useHistory();
+    const navigate = useNavigate();
 
     const handleLogin = async (e) => {
         e.preventDefault();
         try {
             await login(username, password);
-            history.push('/home');
+            navigate('/home');
         } catch (error) {
             alert('Login failed: ' + error.message);
         }
@@ -44,7 +44,7 @@ const LoginPage = () => {
                     />
                     <div className="login-button-container">
                         <button type="submit" className="button fire"><span>Login</span></button>
-                        <button type="button" className="button ice" onClick={() => history.push("/")}><span>Cancel</span></button>
+                        <button type="button" className="button ice" onClick={() => navigate("/")}><span>Cancel</span></button>
                     </div>
                 </form>
             </div>
