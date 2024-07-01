@@ -5,6 +5,7 @@ import { useHistory } from 'react-router-dom';
 import ParticleBackground from '../components/ParticleBackground';
 import '../styles/LoginPage.css';
 import { UserContext } from '../contexts/UserContext';
+import NameParticles from "../components/NameParticles";
 
 const LoginPage = () => {
     const { login } = useContext(UserContext);
@@ -16,7 +17,7 @@ const LoginPage = () => {
         e.preventDefault();
         try {
             await login(username, password);
-            history.push('/');
+            history.push('/home');
         } catch (error) {
             alert('Login failed: ' + error.message);
         }
@@ -25,6 +26,7 @@ const LoginPage = () => {
     return (
         <div className="login-page">
             <ParticleBackground />
+            <NameParticles text="Youvies" logoSrc="/logo.png" />
             <div className="login-card">
                 <h2>Login</h2>
                 <form onSubmit={handleLogin}>
@@ -40,7 +42,7 @@ const LoginPage = () => {
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                     />
-                    <div className="button-container">
+                    <div className="login-button-container">
                         <button type="submit" className="button fire"><span>Login</span></button>
                         <button type="button" className="button ice" onClick={() => history.push("/")}><span>Cancel</span></button>
                     </div>

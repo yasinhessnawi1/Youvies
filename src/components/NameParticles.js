@@ -8,7 +8,7 @@ const NameParticles = ({ text = "Youvies", logoSrc }) => {
 
     useEffect(() => {
         const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext('2d', {willReadFrequently: true});
 
         const setCanvasSize = () => {
             canvas.width = window.innerWidth;
@@ -162,7 +162,7 @@ const NameParticles = ({ text = "Youvies", logoSrc }) => {
 
     const animate = () => {
         const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext('2d', {willReadFrequently: true});
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         if (particleText.current.length === 0) {
@@ -176,7 +176,7 @@ const NameParticles = ({ text = "Youvies", logoSrc }) => {
         animationFrameRef.current = requestAnimationFrame(animate);
     };
 
-    return <canvas ref={canvasRef} id="name-particle-canvas" />;
+    return <canvas  ref={canvasRef} id="name-particle-canvas" />;
 };
 
 export default NameParticles;

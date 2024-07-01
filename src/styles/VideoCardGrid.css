@@ -1,0 +1,49 @@
+.video-card-grid {
+    margin-bottom: 40px;
+}
+
+.content-title {
+    margin-bottom: 20px;
+    font-size: 24px;
+    color: #fff;
+}
+
+.error-message {
+    color: red;
+    font-size: 16px;
+    margin-bottom: 20px;
+}
+
+.cards-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.watch-more {
+    font-size: 18px;
+    color: #fff;
+    position: relative;
+}
+.load-more-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+    background-color: transparent;
+    color: transparent;
+}
+.load-more-container:hover{
+    transform: scale(1.05);
+}
+.load-more-button {
+    background-color: transparent;
+    color: #fff;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+.watch-more-icon {
+    padding-top: 10%;
+    position: relative;
+}

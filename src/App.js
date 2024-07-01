@@ -12,9 +12,9 @@ function App() {
         <Router >
             <UserProvider>
                 <Switch>
+                    <Route path="/home" component={HomePage} />
                     <Route path="/login" component={LoginPage} />
                     <Route path="/" component={LandingPage} />
-                    <Route path="/home/movie" component={HomePage } />
                 </Switch>
             </UserProvider>
         </Router>

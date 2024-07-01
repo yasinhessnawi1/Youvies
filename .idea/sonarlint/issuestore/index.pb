@@ -47,8 +47,6 @@ J
 .babelrc,b\c\bcac7464521b8c19a2372c739f6dc9e9ab7dfc80
 T
 $src/components/ParticleBackground.js,c\4\c4a6d91938aa23f8e53bb2fece7e6a24e5c6ad0e
-G
-public/particle-name.js,8\4\84d426e61f85e51461ecf24d4e67a2524e9078b1
 [
 +node_modules/@types/node/child_process.d.ts,b\9\b99a84bc418321fff0f468b5a3d501f719414520
 Q
@@ -67,8 +65,6 @@ R
 "node_modules/@types/node/test.d.ts,e\c\ecd3bba198fa7ff5473557780f55254e2ae0eaa9
 \
 ,node_modules/@types/node/worker_threads.d.ts,1\1\11d9fb42c140cc6796475fe49f85c640183562b5
-F
-build/particle-name.js,9\c\9c390bf0b8d2c4946483962df7beb8c3a909fdb3
 Z
 *node_modules/@types/node/dns/promises.d.ts,8\f\8f690010bde6ad4da19d1ee37423897f2f9b0270
 @
@@ -83,11 +79,47 @@ B
 src/api/UserApi.js,6\7\67588dd458152fa096b3ca2a0ecf48001a16c6e7
 ;
 qodana.yaml,8\5\85c3a901608a6b9adf48d245fa84828b66304e51
-M
-public/ParticleBackground.css,8\f\8ffaa34d980494becbc1982c8cfc8dc1a9ff84c2
 O
 src/components/NameParticles.js,9\4\94ec773d82fd0fb1abd9710a238cf6ef93f0052f
-P
- src/pages/ParticleBackground.css,c\8\c8d9cbd7c4fe96173a2b6d60eff26b6e7e5f393c
+E
+src/styles/Header.css,3\e\3ec39bbcd0bb439e2e8ef796a201c60dbb1bbc39
+G
+src/styles/HomePage.css,7\d\7d44ab8f2fc671709e576ee642a974540c7f5cf2
+H
+src/components/Banner.js,9\7\977cf33ca56502bdbf70c0a987e39dfd84faff0c
+H
+src/styles/VideoCard.css,9\3\93ad8f363bdd5e986ee9232a0cca9e4d45d3f06e
+E
+src/styles/Banner.css,3\a\3adcf61803ea5dfdbaa11172ec0460f36f2f2c6f
+C
+src/dev/palette.jsx,8\f\8f15683c22445a28ef31e645fd2a71337720a825
+D
+src/dev/previews.jsx,b\b\bb483293176105de09f814d1404394f1f14ce8d6
+@
+src/dev/index.js,6\6\6629e821eb1fc148dc019c1fd774ba7dea6f3712
+E
+src/dev/useInitial.js,c\8\c8c2209c7fc4548e384d1a15fda1695a79248ad9
+A
+src/dev/README.md,a\d\adf7b239b17c79ba453bd0758ea370d771ee5f35
+D
+src/api/MovierApi.js,4\e\4e42981a317c19dfd2784bc31e783ac822f99136
+D
+src/api/AnimesApi.js,3\4\34d11c30a7fb40615e368c80ae3a0d030b1f1873
+C
+src/api/ShowsApi.js,f\e\fe199e7950b956960f09b3256ef36cd9cee76db9
+D
+src/api/MoviesApi.js,5\0\5092a6d911423808cfe765f1a9a776e275cfdda9
+J
+src/components/ItemCard.js,2\1\218d166de7402ac08aa711f32b3eeccc97d2b054
 O
-src/components/particle-name.js,4\5\45d7cab1f534d2132030d929c290ec1d6ebcb61c
+src/components/VideoCardGrid.js,c\2\c2a222ae74aa8bd96a0cd5ee0dd277a38166f95b
+G
+src/styles/ItemCard.css,d\9\d91a50089c4604876a578e01e2114bb973925af4
+L
+src/styles/VideoCardGrid.css,d\e\de45ee8aa9e02d17b9ccdc674599a1023cd996a2
+C
+src/api/ItemsApi.js,8\a\8a3e784bc0fa21935ff62d24c095854130722e3b
+H
+src/api/AnimeShowsApi.js,2\1\21fa1c75b0f7103fad9bcfed43b6171293cb9539
+<
+src/types.ts,c\d\cdcae0801e2caed2292f00e63d0ca49eeb3c029d

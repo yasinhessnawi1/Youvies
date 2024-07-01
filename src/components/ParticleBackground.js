@@ -6,6 +6,7 @@ const ParticleBackground = () => {
 
     useEffect(() => {
         let canvas = canvasRef.current;
+
         let ctx = canvas.getContext('2d');
         let field, w, h, fieldSize, columns, rows, noiseZ, particles;
         noiseZ = 0;

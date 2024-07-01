@@ -5,7 +5,7 @@ import { loginUser, logoutUser } from '../api/UserApi';
 import {useHistory} from "react-router-dom";
 
 // Create Context
-export const UserContext = createContext();
+export const UserContext = createContext(undefined, undefined);
 
 // UserProvider Component
 export const UserProvider = ({ children }) => {
@@ -24,6 +24,7 @@ export const UserProvider = ({ children }) => {
             const userData = await loginUser(username, password);
             setUser(userData);
             localStorage.setItem('user', JSON.stringify(userData));
+
         } catch (error) {
             throw new Error('Invalid username or password');
         }
