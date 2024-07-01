@@ -5,10 +5,17 @@ const NameParticles = ({ text = "Youvies", logoSrc }) => {
     const particleText = useRef([]);
     const mouse = useRef({ x: null, y: null, radius: 50 });
     const animationFrameRef = useRef(null);
+    let ctx = useRef(null);
+    let canvas = useRef(null);
 
     useEffect(() => {
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d', {willReadFrequently: true});
+        if(canvasRef.current !== null) {
+            canvas = canvasRef.current;
+            ctx = canvas.getContext('2d');
+        }else if (canvas.getContext('2d') !== null) {
+            ctx = canvas.getContext('2d');
+        }
+
 
         const setCanvasSize = () => {
             canvas.width = window.innerWidth;
@@ -86,8 +93,7 @@ const NameParticles = ({ text = "Youvies", logoSrc }) => {
     }
 
     const drawContent = () => {
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d');
+
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         const fontSize = Math.min(20, canvas.width / 20);
@@ -125,10 +131,7 @@ const NameParticles = ({ text = "Youvies", logoSrc }) => {
     };
 
     const captureParticleCoordinates = (textX, textY, textWidth, textHeight, logoX = null, logoY = null, logoWidth = 0, logoHeight = 0) => {
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d');
         const textCoordinates = ctx.getImageData(textX, textY, textWidth, textHeight);
-
         particleText.current = [];
         const adjustment = 5;
 
@@ -161,8 +164,7 @@ const NameParticles = ({ text = "Youvies", logoSrc }) => {
     };
 
     const animate = () => {
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d', {willReadFrequently: true});
+
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         if (particleText.current.length === 0) {
