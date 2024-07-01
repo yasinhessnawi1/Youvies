@@ -8,7 +8,7 @@ import './styles/global.css';
 
 function App() {
     return (
-        <Router>
+        <Router basename="/Youvies">
             <UserProvider>
                 <Routes>
                     <Route path="/login" element={<LoginPage />} />

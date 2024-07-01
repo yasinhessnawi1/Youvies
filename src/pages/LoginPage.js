@@ -25,7 +25,7 @@ const LoginPage = () => {
     return (
         <div className="login-page">
             <ParticleBackground />
-
+            <NameParticles text="Youvies" logoSrc="/logo.png" />
             <div className="login-card">
                 <h2>Login</h2>
                 <form onSubmit={handleLogin}>
@@ -43,7 +43,7 @@ const LoginPage = () => {
                     />
                     <div className="login-button-container">
                         <button type="submit" className="button fire"><span>Login</span></button>
-                        <button type="button" className="button ice" onClick={() => navigate("/")}><span>Cancel</span></button>
+                        <button type="button" className="button ice" onClick={() => navigate('/')}><span>Cancel</span></button>
                     </div>
                 </form>
             </div>
