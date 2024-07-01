@@ -12,8 +12,8 @@ function App() {
         <Router >
             <UserProvider>
                 <Switch>
-                    <Route path="/home" component={HomePage} />
                     <Route path="/login" component={LoginPage} />
+                    <Route path="/home" component={HomePage} />
                     <Route path="/" component={LandingPage} />
                 </Switch>
             </UserProvider>
