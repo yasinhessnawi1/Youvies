@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { FaBars, FaTimes, FaUserCircle, FaGgCircle } from 'react-icons/fa';
 import { UserContext } from '../contexts/UserContext';
 import '../styles/Header.css';
-import logoImage from '../assets/logo.png';
+import logoImage from '../assets/logo-nobg_resized.png';
 
 const Header = ({ setActiveTab }) => {
     const { user, logout } = useContext(UserContext);
@@ -71,8 +71,7 @@ const Header = ({ setActiveTab }) => {
                 </nav>
             </div>
             <Link to="/home" className="logo-link">
-                <div className="logo-text">Youvies</div>
-                <img src={logoImage} alt="Logo" className="logo-image"/>
+                <img src={logoImage} alt="Logo" className="logo-image" />
             </Link>
             <div className="right-container">
                 <div className="nav-icons">

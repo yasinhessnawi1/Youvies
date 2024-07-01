@@ -409,3 +409,5 @@ R
 "build/static/css/main.47d5c24a.css,6\2\6250de4282a3db481c361f113f81b8c1cfd4c991
 P
  build/static/js/main.9c148e4d.js,2\e\2ed8ee2b84b2bddfcb4bef925002b5aabf5cd936
+E
+src/styles/Global.css,9\e\9ed7c3b663275dfa5b53442986faea6392bc582b
