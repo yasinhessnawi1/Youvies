@@ -1,4 +1,4 @@
-import React, { useContext, useEffect } from 'react';
+import React, { useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ParticleBackground from '../components/ParticleBackground';
 import NameParticles from '../components/NameParticles';
@@ -22,15 +22,9 @@ const LandingPage = () => {
                 <ParticleBackground />
             </div>
             <div className="button-container">
-                <a href="/login" className="button fire" onClick={() => navigate('/login')}>
-                    <span>Login</span>
-                </a>
-                <a href="/" className="button ice">
-                    <span>Invitation</span>
-                </a>
-                <a href="/" className="button fire">
-                    <span>Join Room</span>
-                </a>
+                <button className="button fire" onClick={() => navigate('/login')}><span>Login</span></button>
+                <button className="button ice"><span>Invitation</span></button>
+                <button className="button fire"><span>Join Room</span></button>
             </div>
         </div>
     );
