@@ -401,3 +401,5 @@ P
 ,build/static/js/main.553d7334.js.LICENSE.txt,e\a\ead10adcb566f2fd284eef4b1616280ac1002b41
 ?
 public/404.html,9\1\9165de4c08ed7f75a6e91e356e892f20aa817eb8
+V
+&node_modules/react-router/package.json,5\9\59cfd8dba9515a8a099df821f5d75ac918900544
