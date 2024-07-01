@@ -4,16 +4,17 @@ import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import HomePage from './pages/HomePage';
 import { UserProvider } from './contexts/UserContext';
-import './styles/global.css';
+import './styles/Global.css';
 
 function App() {
     return (
-        <Router basename="/Youvies">
+        <Router>
             <UserProvider>
                 <Routes>
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/home" element={<HomePage />} />
                     <Route path="/" element={<LandingPage />} />
+                    <Route path="*" element={<LandingPage />} />
                 </Routes>
             </UserProvider>
         </Router>
