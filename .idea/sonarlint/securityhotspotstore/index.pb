@@ -25,8 +25,6 @@ H
 src/components/Picker.js,f\6\f659e182722ffc811f3cdef3b1e375b1437747c2
 H
 src/components/Button.js,b\5\b5840b28802b42e734ba24005ac8c27c430bcce3
-K
-src/components/VideoCard.js,c\3\c337533ce0144967168ac89eef016d8236765c54
 A
 package-lock.json,f\a\fa288d1472d29beccb489a676f68739ad365fc47
 A
@@ -87,24 +85,8 @@ G
 src/styles/HomePage.css,7\d\7d44ab8f2fc671709e576ee642a974540c7f5cf2
 H
 src/components/Banner.js,9\7\977cf33ca56502bdbf70c0a987e39dfd84faff0c
-H
-src/styles/VideoCard.css,9\3\93ad8f363bdd5e986ee9232a0cca9e4d45d3f06e
 E
 src/styles/Banner.css,3\a\3adcf61803ea5dfdbaa11172ec0460f36f2f2c6f
-C
-src/dev/palette.jsx,8\f\8f15683c22445a28ef31e645fd2a71337720a825
-D
-src/dev/previews.jsx,b\b\bb483293176105de09f814d1404394f1f14ce8d6
-@
-src/dev/index.js,6\6\6629e821eb1fc148dc019c1fd774ba7dea6f3712
-E
-src/dev/useInitial.js,c\8\c8c2209c7fc4548e384d1a15fda1695a79248ad9
-A
-src/dev/README.md,a\d\adf7b239b17c79ba453bd0758ea370d771ee5f35
-D
-src/api/MovierApi.js,4\e\4e42981a317c19dfd2784bc31e783ac822f99136
-D
-src/api/AnimesApi.js,3\4\34d11c30a7fb40615e368c80ae3a0d030b1f1873
 C
 src/api/ShowsApi.js,f\e\fe199e7950b956960f09b3256ef36cd9cee76db9
 D
@@ -395,19 +377,7 @@ c
 3node_modules/react-dom/umd/react-dom.development.js,6\0\60391c545fc67407bc142a43e28976d2104a299b
 f
 6node_modules/react-dom/umd/react-dom.production.min.js,f\d\fd4637b049a5c92cae191ba69390a72fe286d269
-P
- build/static/js/main.553d7334.js,3\3\339c050aca7bf2604b1f3da8a2febf714a8224bb
-\
-,build/static/js/main.553d7334.js.LICENSE.txt,e\a\ead10adcb566f2fd284eef4b1616280ac1002b41
-?
-public/404.html,9\1\9165de4c08ed7f75a6e91e356e892f20aa817eb8
 V
 &node_modules/react-router/package.json,5\9\59cfd8dba9515a8a099df821f5d75ac918900544
-T
-$build/static/js/main.9c148e4d.js.map,a\3\a300ee0c1fc8d1ee25eaf4a6e0176229c35d7b32
-R
-"build/static/css/main.47d5c24a.css,6\2\6250de4282a3db481c361f113f81b8c1cfd4c991
-P
- build/static/js/main.9c148e4d.js,2\e\2ed8ee2b84b2bddfcb4bef925002b5aabf5cd936
 E
 src/styles/Global.css,9\e\9ed7c3b663275dfa5b53442986faea6392bc582b

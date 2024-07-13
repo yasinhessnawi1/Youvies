@@ -2,7 +2,7 @@ export const fetchMovies = async (token, page, pageSize) => {
     try {
         console.log('fetchMovies');
         console.log('token:', token);
-        const response = await fetch(`http://localhost:5000/youvies/v1/movies?page=${page}&pageSize=${pageSize}`, {
+        const response = await fetch(`http://20.163.20.153:5000/youvies/v1/movies?page=${page}&pageSize=${pageSize}`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`
@@ -20,7 +20,7 @@ export const fetchMovies = async (token, page, pageSize) => {
 
 export const searchMovies = async (token, title) => {
     try {
-        const response = await fetch(`http://localhost:5000/youvies/v1/movies/search?title=${title}`, {
+        const response = await fetch(`http://20.163.20.153:5000/youvies/v1/movies/search?title=${title}`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`

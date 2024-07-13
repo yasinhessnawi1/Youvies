@@ -33,7 +33,7 @@ const Banner = ({ contentType }) => {
                 (prevIndices[0] + 2) % items.length,
                 (prevIndices[1] + 2) % items.length,
             ]);
-        }, 5000); // Shuffle every 5 seconds
+        }, 15000); // Shuffle every 5 seconds
 
         return () => clearInterval(interval);
     }, [items]);

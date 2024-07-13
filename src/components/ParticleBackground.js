@@ -16,9 +16,9 @@ const ParticleBackground = () => {
         const fieldForce = 0.15;
         const noiseSpeed = 0.0003;
         const trailLength = 0.15;
-        const hueBase = 10;
+        const hueBase = 0;
         const hueRange = 5;
-        const maxSpeed = 2.3;
+        const maxSpeed = 2.6;
 
         class Vector {
             constructor(x, y) {
@@ -59,7 +59,7 @@ const ParticleBackground = () => {
         class Particle {
             constructor(x, y) {
                 this.pos = new Vector(x, y);
-                this.vel = new Vector(Math.random() - 0.5, Math.random() - 0.5);
+                this.vel = new Vector(Math.random() * 10 , Math.random() );
                 this.acc = new Vector(0, 0);
                 this.hue = Math.random() * 30 - 15;
             }
@@ -124,7 +124,7 @@ const ParticleBackground = () => {
             for (let x = 0; x < columns; x++) {
                 for (let y = 0; y < rows; y++) {
                     let angle = noise3D(x / 20, y / 20, noiseZ) * Math.PI * 2;
-                    let length = noise3D(x / 40 + 40000, y / 40 + 40000, noiseZ) * fieldForce;
+                    let length = noise3D(x / 40 , y / 40 , noiseZ) * fieldForce;
                     field[x][y].setLength(length);
                     field[x][y].setAngle(angle);
                 }
@@ -140,14 +140,14 @@ const ParticleBackground = () => {
         };
 
         const drawBackground = () => {
-            ctx.fillStyle = `rgba(0,0,0,${trailLength})`;
+            ctx.fillStyle = `rgb(35, 4, 0)`;
             ctx.fillRect(0, 0, w, h);
         };
 
         const drawParticles = () => {
             particles.forEach(p => {
                 let ps = (p.fieldSize = Math.abs(p.vel.x + p.vel.y) * particleSize + 0.3);
-                ctx.fillStyle = `hsl(${hueBase + p.hue + (p.vel.x + p.vel.y) * hueRange}, 100%, 50%)`;
+                ctx.fillStyle = `hsl(${hueBase + p.hue + (p.vel.x + p.vel.y) * hueRange}, 100%, 35%)`;
                 ctx.fillRect(p.pos.x, p.pos.y, ps, ps);
                 let pos = p.pos.div(fieldSize);
                 let v;
