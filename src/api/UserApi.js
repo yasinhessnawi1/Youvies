@@ -1,6 +1,6 @@
 // src/api/UserApi.js
 
-const API_URL = 'http://20.163.20.153:5000/youvies/v1';
+const API_URL = 'https://api.youvies.online/youvies/v1';
 
 export const loginUser = async (username, password) => {
     try {

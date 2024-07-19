@@ -1,6 +1,6 @@
 export const fetchAnimeShows = async (token, page, pageSize) => {
     try {
-        const response = await fetch(`http://20.163.20.153:5000/youvies/v1/animeshows?page=${page}&pageSize=${pageSize}`, {
+        const response = await fetch(`https://api.youvies.online/youvies/v1/animeshows?page=${page}&pageSize=${pageSize}`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`
@@ -18,7 +18,7 @@ export const fetchAnimeShows = async (token, page, pageSize) => {
 
 export const searchAnimeShows = async (token, title) => {
     try {
-        const response = await fetch(`http://20.163.20.153:5000/youvies/v1/animeshows/search?title=${title}`, {
+        const response = await fetch(`https://api.youvies.online/youvies/v1/animeshows/search?title=${title}`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`
