@@ -1,0 +1,59 @@
+.carousel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+    width: 100%;
+}
+
+.carousel-button {
+    background: rgba(0, 0, 0, 0.5);
+    border: none;
+    color: white;
+    font-size: 2rem;
+    cursor: pointer;
+    z-index: 1;
+    padding: 0 10px;
+    height: 100%;
+}
+
+.carousel-items {
+    display: flex;
+    transition: transform 0.5s ease-in-out;
+    width: calc(100% - 80px); /* Adjusted width to consider the buttons */
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    scrollbar-color: rgba(168, 55, 55, 0.5) transparent;
+}
+
+.carousel-item {
+    min-width: calc(100% / 5); /* Adjust this value based on itemsPerPage */
+    transition: transform 0.5s ease-in-out;
+    padding: 5px; /* Add padding between items if needed */
+}
+
+@media (max-width: 1200px) {
+    .carousel-item {
+        min-width: calc(100% / 4);
+    }
+}
+
+@media (max-width: 992px) {
+    .carousel-item {
+        min-width: calc(100% / 3);
+    }
+}
+
+@media (max-width: 768px) {
+    .carousel-item {
+        min-width: calc(100% / 2);
+    }
+}
+
+@media (max-width: 576px) {
+    .carousel-item {
+        min-width: 100%;
+    }
+}

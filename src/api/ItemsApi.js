@@ -1,36 +1,30 @@
-import { fetchMovies, searchMovies } from './MoviesApi';
-import { fetchShows, searchShows } from './ShowsApi';
-import { fetchAnimeShows, searchAnimeShows } from './AnimeShowsApi';
+import {fetchMovies, fetchMoviesByGenre, searchMovies} from './MoviesApi';
+import {fetchShows, fetchShowsByGenre, searchShows} from './ShowsApi';
+import {fetchAnimeByGenre, fetchAnimeMovies, fetchAnimeShows, searchAnimeShows} from './AnimeShowsApi';
 
-export const fetchItems = async (token, category, page, pageSize) => {
-    console.log('fetchItems');
-    console.log('token:', token);
+
+export const fetchItems = async (token, category, genre, page , pageSize) => {
     switch (category) {
         case 'movies':
-            return await fetchMovies(token, page, pageSize);
+            return await fetchMoviesByGenre(token, genre, page, pageSize);
         case 'shows':
-            return await fetchShows(token, page, pageSize);
+            return await fetchShowsByGenre(token, genre, page, pageSize);
+        case 'anime':
+            return await fetchAnimeByGenre(token, 'animeshows' ,genre, page, pageSize);
+        default:
+            return null;
+    }
+};
+export const fetchBannerItems = async (token, category, page, pageSize) => {
+    switch (category) {
+        case 'movies':
+            return await fetchMovies(token,page, pageSize);
+        case 'shows':
+            return await fetchShows(token , page, pageSize);
         case 'anime':
             return await fetchAnimeShows(token, page, pageSize);
         default:
-            return handleDefaultFetch(token);
+            return await fetchMovies(token, page, pageSize);
     }
 };
 
-const handleDefaultFetch = async (token) => {
-    const user = JSON.parse(localStorage.getItem('user'));
-    const favoriteTitles = user.favorites || [];
-    const lastWatchedTitles = user.lastWatched || [];
-
-    let recommendedItems = [];
-
-    for (let title of [...favoriteTitles, ...lastWatchedTitles]) {
-        const movieResults = await searchMovies(token, title);
-        const showResults = await searchShows(token, title);
-        const animeResults = await searchAnimeShows(token, title);
-
-        recommendedItems.push(...movieResults, ...showResults, ...animeResults);
-    }
-
-    return recommendedItems;
-};

@@ -23,8 +23,6 @@ H
 src/components/Footer.js,b\d\bd22e369de6b4e7c909c8598869bb4c2e3bc1508
 H
 src/components/Picker.js,f\6\f659e182722ffc811f3cdef3b1e375b1437747c2
-H
-src/components/Button.js,b\5\b5840b28802b42e734ba24005ac8c27c430bcce3
 A
 package-lock.json,f\a\fa288d1472d29beccb489a676f68739ad365fc47
 A
@@ -43,8 +41,6 @@ J
 src/styles/LandingPage.css,d\4\d4c19282c0248e3f312f630482d8d204ebc2f8c7
 8
 .babelrc,b\c\bcac7464521b8c19a2372c739f6dc9e9ab7dfc80
-T
-$src/components/ParticleBackground.js,c\4\c4a6d91938aa23f8e53bb2fece7e6a24e5c6ad0e
 [
 +node_modules/@types/node/child_process.d.ts,b\9\b99a84bc418321fff0f468b5a3d501f719414520
 Q
@@ -65,10 +61,6 @@ R
 ,node_modules/@types/node/worker_threads.d.ts,1\1\11d9fb42c140cc6796475fe49f85c640183562b5
 Z
 *node_modules/@types/node/dns/promises.d.ts,8\f\8f690010bde6ad4da19d1ee37423897f2f9b0270
-@
-build/index.html,9\9\990a85f5e72fc21bd93d9e8ddb10d110045a91c8
-I
-build/asset-manifest.json,c\1\c1ebef89e8330101684eecc1f866f45ce2df6ef8
 5
 CNAME,b\9\b9c1aaaf65573c7e15b93b6d826729e7711cf242
 H
@@ -77,8 +69,6 @@ B
 src/api/UserApi.js,6\7\67588dd458152fa096b3ca2a0ecf48001a16c6e7
 ;
 qodana.yaml,8\5\85c3a901608a6b9adf48d245fa84828b66304e51
-O
-src/components/NameParticles.js,9\4\94ec773d82fd0fb1abd9710a238cf6ef93f0052f
 E
 src/styles/Header.css,3\e\3ec39bbcd0bb439e2e8ef796a201c60dbb1bbc39
 G
@@ -381,3 +371,37 @@ V
 &node_modules/react-router/package.json,5\9\59cfd8dba9515a8a099df821f5d75ac918900544
 E
 src/styles/Global.css,9\e\9ed7c3b663275dfa5b53442986faea6392bc582b
+R
+"src/components/StarryBackground.js,9\0\908d9eabe7937172e87fa7bcf49d72b82253b616
+M
+src/components/VideoPlayer.js,5\b\5b4d82ebb691bc95d04c4d189f2f91a206333f7d
+J
+src/styles/VideoPlayer.css,b\9\b9d1ce2cd32b162b08e300d443ef859da7fdc363
+A
+src/api/Stream.js,5\7\572a41def968040fda36c103217fb6c9ca047d86
+R
+"src/contexts/VideoPlayerContext.js,4\6\4669e9429fe294d8956c62fe0a4d685561056867
+J
+src/components/Carousel.js,8\e\8e0630f45d08ebd4fc14bc25c87ab9c39cafdfd1
+G
+src/styles/Carousel.css,1\6\16b22c33a62f675eff8cdc551a3c98625b07680c
+D
+src/api/GenersApi.js,1\3\13011477c96d99736b6d3a5446d9114064f575b0
+4
+.env,3\c\3c84dcdc6bbe3d7817c49dcdc327b926fea1808a
+C
+config-overrides.js,0\5\0531b356b1f4be3b5576f5a7a7ec72e5e4bf1762
+L
+src/contexts/ItemConetext.js,f\4\f49e775d162f7f520c8e7ffed1de6c482d231fd8
+K
+src/contexts/ItemContext.js,a\a\aab020d81b2e2a2e439debcd4886bb3f964f6e74
+J
+src/contexts/TabContext.js,6\2\623b1f574c02706dc80f9905c89434fd21edf105
+N
+src/contexts/LoadingConetxt.js,6\1\61eb20ad7b9b872020e0c630ecfc14e59465c9e9
+N
+src/contexts/LoadingContext.js,8\8\88eef3bdc659108fe4e60f38225048d77aa2cd0d
+R
+"src/components/LoadingIndicator.js,d\c\dcb09d361d64c2d140cff579d0399fa26e69a94e
+O
+src/styles/LadoingIndicator.css,7\c\7c7fcac8cfee507fa6f4ec96b11cf41c616b33d3

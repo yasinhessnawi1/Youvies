@@ -5,16 +5,26 @@
   "homepage": "https://youvies.online",
   "dependencies": {
     "@react-buddy/ide-toolbox": "^2.4.0",
+    "assert": "^2.1.0",
+    "buffer": "^6.0.3",
+    "dotenv": "^16.4.5",
+    "process": "^0.11.10",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-icons": "^5.2.1",
+    "react-player": "^2.16.0",
     "react-router-dom": "^6.24.0",
     "react-scripts": "^5.0.1",
-    "simplex-noise": "^4.0.1"
+    "simplex-noise": "^4.0.1",
+    "stream-browserify": "^3.0.0",
+    "url": "^0.11.3",
+    "util": "^0.12.5",
+    "vm-browserify": "^1.1.2",
+    "webtorrent": "^2.4.12"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
+    "start": "react-app-rewired start",
+    "build": "react-app-rewired build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "predeploy": "npm run build",
@@ -34,6 +44,12 @@
   },
   "devDependencies": {
     "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
-    "gh-pages": "^6.1.1"
+    "crypto-browserify": "^3.12.0",
+    "gh-pages": "^6.1.1",
+    "os-browserify": "^0.3.0",
+    "path-browserify": "^1.0.1",
+    "react-app-rewired": "^2.2.1",
+    "webpack": "^5.93.0",
+    "webpack-cli": "^5.1.4"
   }
 }
