@@ -87,3 +87,22 @@ export const fetchAnimeByGenre = async (token, type, genre, page , pageSize) => 
         throw error;
     }
 };
+export const fetchOneAnime= async (token,id, endpoint)  => {
+    endpoint = endpoint === 'animeshows' ? 'animeshows' : 'animemovies';
+    try {
+        let response = await fetch(`https://api.youvies.online/youvies/v1/${endpoint}/${id}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch anime');
+            }
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching anime by genre:', error);
+        throw error;
+    }
+};

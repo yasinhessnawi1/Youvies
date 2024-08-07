@@ -50,3 +50,20 @@ export const fetchShowsByGenre = async (token, genre, page , pageSize) => {
         throw error;
     }
 };
+export const fetchOneShow= async (token,id)  => {
+    try {
+        const response = await fetch(`https://api.youvies.online/youvies/v1/shows/${id}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        if (!response.ok) {
+            throw new Error('Failed to fetch movies by genre');
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching movies by genre:', error);
+        throw error;
+    }
+};

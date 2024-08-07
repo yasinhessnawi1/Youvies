@@ -1,6 +1,5 @@
 export const fetchMovies = async (token, page, pageSize) => {
     try {
-        console.log('fetching movies' + token);
         const response = await fetch(`https://api.youvies.online/youvies/v1/movies?page=${page}&pageSize=${pageSize}`, {
             method: 'GET',
             headers: {
@@ -37,6 +36,23 @@ export const searchMovies = async (token, title) => {
 export const fetchMoviesByGenre = async (token, genre, page , pageSize) => {
     try {
         const response = await fetch(`https://api.youvies.online/youvies/v1/movies/genre/${genre}?page=${page}&&pageSize=${pageSize}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        if (!response.ok) {
+            throw new Error('Failed to fetch movies by genre');
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching movies by genre:', error);
+        throw error;
+    }
+};
+export const fetchOneMovie= async (token,id)  => {
+    try {
+        const response = await fetch(`https://api.youvies.online/youvies/v1/movies/${id}`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`

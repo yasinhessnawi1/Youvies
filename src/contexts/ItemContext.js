@@ -20,10 +20,10 @@ export const ItemProvider = ({ children }) => {
 
         try {
             const [movies, shows, animeMovies, animeShows] = await Promise.all([
-                fetchMovies(user.token, 1, 10),
-                fetchShows(user.token, 1, 10),
-                fetchAnimeMovies(user.token, 1, 10),
-                fetchAnimeShows(user.token, 1, 10),
+                fetchMovies(user.token, 1, 5),
+                fetchShows(user.token, 1, 5),
+                fetchAnimeMovies(user.token, 1, 5),
+                fetchAnimeShows(user.token, 1, 5),
             ]);
 
             setItems({
@@ -35,10 +35,10 @@ export const ItemProvider = ({ children }) => {
 
             setTimeout(async () => {
                 const [movies100, shows100, animeMovies100, animeShows100] = await Promise.all([
-                    fetchMovies(user.token, 1, 100),
-                    fetchShows(user.token, 1, 100),
-                    fetchAnimeMovies(user.token, 1, 100),
-                    fetchAnimeShows(user.token, 1, 100),
+                    fetchMovies(user.token, 1, 50),
+                    fetchShows(user.token, 1, 50),
+                    fetchAnimeMovies(user.token, 1, 50),
+                    fetchAnimeShows(user.token, 1, 50),
                 ]);
 
                 setItems({
@@ -83,11 +83,9 @@ export const ItemProvider = ({ children }) => {
                 case 'shows':
                     fetchedItems = await fetchShowsByGenre(user.token, genre, page, pageSize);
                     break;
-                case 'anime_shows':
+                case 'anime':
                     fetchedItems = await fetchAnimeByGenre(user.token, 'anime_shows', genre, page, pageSize);
-                    break;
-                case 'anime_movies':
-                    fetchedItems = await fetchAnimeByGenre(user.token, 'anime_movies', genre, page, pageSize);
+                    fetchedItems = fetchedItems.concat(await fetchAnimeByGenre(user.token, 'anime_movies', genre, page, pageSize));
                     break;
                 default:
                     break;

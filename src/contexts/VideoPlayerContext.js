@@ -3,24 +3,20 @@ import React, { createContext, useState } from 'react';
 export const VideoPlayerContext = createContext();
 
 export const VideoPlayerProvider = ({ children }) => {
+    const [item, setItem] = useState(null);
     const [videoPlayerState, setVideoPlayerState] = useState({
         isVisible: false,
         magnet: null,
         torrents: [],
-        episodes: [],
-        currentEpisode: null,
-        currentQuality: 'HD'
     });
 
-    const showVideoPlayer = (magnet, torrents = [], episodes = [], currentEpisode = null) => {
+    const showVideoPlayer = (magnet, torrents, item) => {
         setVideoPlayerState({
             isVisible: true,
             magnet,
             torrents,
-            episodes,
-            currentEpisode,
-            currentQuality: 'HD'
         });
+        setItem(item);
     };
 
     const hideVideoPlayer = () => {
@@ -28,32 +24,12 @@ export const VideoPlayerProvider = ({ children }) => {
             isVisible: false,
             magnet: null,
             torrents: [],
-            episodes: [],
-            currentEpisode: null,
-            currentQuality: 'HD'
         });
-    };
-
-    const changeQuality = (quality) => {
-        const selectedTorrent = videoPlayerState.torrents[quality][0].magnet;
-        setVideoPlayerState((prevState) => ({
-            ...prevState,
-            magnet: selectedTorrent,
-            currentQuality: quality
-        }));
-    };
-
-    const changeEpisode = (episode) => {
-        const selectedTorrent = episode.torrents['HD'][0].magnet;
-        setVideoPlayerState((prevState) => ({
-            ...prevState,
-            magnet: selectedTorrent,
-            currentEpisode: episode
-        }));
+        setItem(null);
     };
 
     return (
-        <VideoPlayerContext.Provider value={{ videoPlayerState, showVideoPlayer, hideVideoPlayer, changeQuality, changeEpisode }}>
+        <VideoPlayerContext.Provider value={{ videoPlayerState, showVideoPlayer, hideVideoPlayer ,item}}>
             {children}
         </VideoPlayerContext.Provider>
     );

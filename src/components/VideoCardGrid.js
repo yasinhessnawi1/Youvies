@@ -1,23 +1,23 @@
-import React, { useState, useEffect, useContext } from 'react';
-import { ItemContext } from '../contexts/ItemContext';
+import React, { useState, useEffect } from 'react';
 import Carousel from './Carousel';
 import '../styles/VideoCardGrid.css';
 
 const VideoCardGrid = ({ contentType, genre, items }) => {
-    const { fetchMoreItems } = useContext(ItemContext);
     const [currentItems, setCurrentItems] = useState(items);
 
     useEffect(() => {
         setCurrentItems(items);
     }, [items]);
-
+    if ( items === null) {
+        return null;
+    }
     return (
         <div className="video-card-grid">
             <div className={'gridHeader'}>
                 <h4 className="content-title">{genre || contentType}</h4>
-                <div className="item-counter">{items.length} items</div>
+                <div className="item-counter">{items.length}</div>
             </div>
-            <Carousel items={currentItems}/>
+            <Carousel items={currentItems } contentType={contentType}/>
         </div>
     );
 };

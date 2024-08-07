@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext } from 'react';
+import React, {useContext, useEffect, useState} from 'react';
 import '../styles/HomePage.css';
 import Header from "../components/Header";
 import Banner from "../components/Banner";
@@ -6,9 +6,9 @@ import VideoCardGrid from "../components/VideoCardGrid";
 import Footer from "../components/Footer";
 import StarryBackground from "../components/StarryBackground";
 import LoadingIndicator from "../components/LoadingIndicator";
-import { ItemContext } from "../contexts/ItemContext";
-import { TabContext } from "../contexts/TabContext";
-import { useLoading } from "../contexts/LoadingContext";
+import {ItemContext} from "../contexts/ItemContext";
+import {TabContext} from "../contexts/TabContext";
+import {useLoading} from "../contexts/LoadingContext";
 
 const HomePage = () => {
     const { items, fetchItemsByGenre } = useContext(ItemContext);
@@ -16,7 +16,6 @@ const HomePage = () => {
     const { isLoading } = useLoading();
     const [genres, setGenres] = useState([]);
     const [genreItems, setGenreItems] = useState({});
-    const [fetching, setFetching] = useState(false);
 
     useEffect(() => {
         const loadGenres = () => {
@@ -29,6 +28,7 @@ const HomePage = () => {
                         { "id": 16, "name": "Animation" },
                         { "id": 35, "name": "Comedy" },
                         { "id": 80, "name": "Crime" },
+                        {"id": "0", "name": "Others"},
                         { "id": 99, "name": "Documentary" },
                         { "id": 18, "name": "Drama" },
                         { "id": 10751, "name": "Family" },
@@ -51,6 +51,7 @@ const HomePage = () => {
                         { "id": 16, "name": "Animation" },
                         { "id": 35, "name": "Comedy" },
                         { "id": 80, "name": "Crime" },
+                        {"id": "0", "name": "Others"},
                         { "id": 99, "name": "Documentary" },
                         { "id": 18, "name": "Drama" },
                         { "id": 10751, "name": "Family" },
@@ -70,6 +71,7 @@ const HomePage = () => {
                         { "id": "1", "name": "Action" },
                         { "id": "2", "name": "Adventure" },
                         { "id": "3", "name": "Comedy" },
+                        {"id": "0", "name": "Others"},
                         { "id": "4", "name": "Drama" },
                         { "id": "5", "name": "Fantasy" },
                         { "id": "6", "name": "Horror" },
@@ -94,28 +96,16 @@ const HomePage = () => {
     useEffect(() => {
         const loadGenreItems = async () => {
             let itemsByGenre = {};
-            setFetching(true);
 
             // Fetch 10 items for each genre first
             await Promise.all(genres.map(async (genre) => {
-                const fetchedItems = await fetchItemsByGenre(activeTab, genre.name, 1, 10);
-                itemsByGenre[genre.name] = fetchedItems;
+                itemsByGenre[genre.name] = await fetchItemsByGenre(activeTab, genre.name, 1, 5);
             }));
             setGenreItems(itemsByGenre);
-            setFetching(false);
 
             // Then fetch 100 items for each genre in the background
             await Promise.all(genres.map(async (genre) => {
-                const fetchedItems = await fetchItemsByGenre(activeTab, genre.name, 1, 100);
-                setGenreItems(prevItems => ({
-                    ...prevItems,
-                    [genre.name]: fetchedItems,
-                }));
-            }));
-
-            // Finally fetch 1000 items for each genre in the background
-            await Promise.all(genres.map(async (genre) => {
-                const fetchedItems = await fetchItemsByGenre(activeTab, genre.name, 1, 1000);
+                const fetchedItems = await fetchItemsByGenre(activeTab, genre.name, 1, 50);
                 setGenreItems(prevItems => ({
                     ...prevItems,
                     [genre.name]: fetchedItems,
@@ -147,7 +137,7 @@ const HomePage = () => {
         return genres.map((genre) => (
             <div key={genre.id}>
                 <h2>{genre.name}</h2>
-                <VideoCardGrid contentType={activeTab} items={genreItems[genre.name] || []} genre={genre.name} />
+                  <VideoCardGrid contentType={activeTab} items={genreItems[genre.name] || []} genre={genre.name} />
             </div>
         ));
     };

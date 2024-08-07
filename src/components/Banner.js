@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useContext } from 'react';
-import { fetchBannerItems } from '../api/ItemsApi';
+import {fetchBannerItems, fetchOneItem} from '../api/ItemsApi';
 import '../styles/Banner.css';
 import '../styles/VideoPlayer.css';
 import { UserContext } from '../contexts/UserContext';
@@ -20,14 +20,7 @@ const Banner = ({ contentType }) => {
             try {
                 if (!user) return;
                 const itemsData = await fetchBannerItems(user.token, contentType, page, pageSize);
-                const itemsWithBestTorrents = itemsData.map(item => {
-                    if (item.torrents) {
-                        const bestTorrent = getBestTorrent(item.torrents);
-                        return { ...item, bestTorrent };
-                    }
-                    return item;
-                });
-                setItems(itemsWithBestTorrents);
+                setItems(itemsData);
             } catch (error) {
                 console.error('Error loading items:', error);
             }
@@ -50,6 +43,16 @@ const Banner = ({ contentType }) => {
 
     const currentItem = items[currentIndex] || {};
 
+    const getBestTorrent = (torrents) => {
+        const qualityPriority = ['1080p', '720p', '480p', 'unknown'];
+        for (const quality of qualityPriority) {
+            if (torrents[quality] && torrents[quality].length > 0) {
+                return torrents[quality][0];
+            }
+        }
+        return torrents['unknown'] ? torrents['unknown'][0] : null;
+    };
+
     const handleReadMore = () => {
         setShowFullDescription(!showFullDescription);
     };
@@ -58,20 +61,19 @@ const Banner = ({ contentType }) => {
         setIsPaused(!isPaused);
     };
 
-    const handlePlayClick = (magnet) => {
-        showVideoPlayer(magnet);
-    };
-
-    const getBestTorrent = (torrents) => {
-        const qualities = ['HD', '720p', 'SD'];
-        for (let quality of qualities) {
-            if (torrents[quality]) {
-                return torrents[quality].sort((a, b) => b.seeders - a.seeders)[0].magnet;
-            }
+    const handlePlayClick = async (item) => {
+        const fullItem = await fetchOneItem(user.token, contentType, item._id || item.id);
+        let bestTorrent = null;
+        if (fullItem.torrents && fullItem.torrents.length !== 0) { // Movie or Anime Movie
+            bestTorrent = getBestTorrent(fullItem.torrents);
+        } else if (fullItem.Seasons) { // Show or Anime Show
+            const season = Object.values(fullItem.Seasons)[0]; // Get the first season
+            const episode = Object.values(season.episodes)[0]; // Get the first episode
+            bestTorrent = getBestTorrent(episode.torrents);
         }
-        // Return the first available torrent if none of the preferred qualities are found
-        const allTorrents = Object.values(torrents).flat();
-        return allTorrents.length > 0 ? allTorrents.sort((a, b) => b.seeders - a.seeders)[0].magnet : null;
+        if (bestTorrent) {
+            showVideoPlayer(bestTorrent.magnet, fullItem.torrents || episode.torrents, bestTorrent);
+        }
     };
 
     return (
@@ -93,12 +95,10 @@ const Banner = ({ contentType }) => {
                     )}
                 </p>
                 <div className="actions">
-                    {currentItem.bestTorrent && (
-                        <button className="button fire play-button" onClick={() => handlePlayClick(currentItem.bestTorrent)}>
-                            <img aria-hidden="true" alt="play-icon" src="https://openui.fly.dev/openui/24x24.svg?text=▶" />
-                            <span>Play</span>
-                        </button>
-                    )}
+                    <button className="button fire play-button" onClick={() => handlePlayClick(currentItem)}>
+                        <img aria-hidden="true" alt="play-icon" src="https://openui.fly.dev/openui/24x24.svg?text=▶" />
+                        <span>Play</span>
+                    </button>
                     <button className="button ice info-button">
                         <img aria-hidden="true" alt="info-icon" src="https://openui.fly.dev/openui/24x24.svg?text=ℹ" />
                         <span>More Info</span>

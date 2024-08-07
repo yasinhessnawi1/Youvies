@@ -1,6 +1,6 @@
-import {fetchMovies, fetchMoviesByGenre, searchMovies} from './MoviesApi';
-import {fetchShows, fetchShowsByGenre, searchShows} from './ShowsApi';
-import {fetchAnimeByGenre, fetchAnimeMovies, fetchAnimeShows, searchAnimeShows} from './AnimeShowsApi';
+import {fetchMovies, fetchMoviesByGenre, fetchOneMovie, searchMovies} from './MoviesApi';
+import {fetchOneShow, fetchShows, fetchShowsByGenre, searchShows} from './ShowsApi';
+import {fetchAnimeByGenre, fetchAnimeMovies, fetchAnimeShows, fetchOneAnime, searchAnimeShows} from './AnimeShowsApi';
 
 
 export const fetchItems = async (token, category, genre, page , pageSize) => {
@@ -25,6 +25,20 @@ export const fetchBannerItems = async (token, category, page, pageSize) => {
             return await fetchAnimeShows(token, page, pageSize);
         default:
             return await fetchMovies(token, page, pageSize);
+    }
+};
+export const fetchOneItem = async (token, category, id) => {
+    switch (category) {
+        case 'movies':
+            return await fetchOneMovie(token,id);
+        case 'shows':
+            return await fetchOneShow(token,id);
+            case 'anime_shows' :
+            return await fetchOneAnime(token,id,"animeshows");
+            case 'anime_movies' :
+            return await fetchOneAnime(token,id,"animemovies");
+        default:
+            return await fetchOneMovie(token,id);
     }
 };
 

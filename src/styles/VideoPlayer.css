@@ -5,12 +5,22 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.9); /* Semi-transparent black background */
-    z-index: 1000; /* Make sure it's on top of other content */
-    display: flex;
+    background: rgba(0, 0, 0, 0.8);
+    display: inline;
     justify-content: center;
     align-items: center;
+    z-index: 1000;
+    animation: fadeIn 0.5s ease-in-out;
 }
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+
+
+
 
 .video-player-overlay #player {
     width: 100%;
@@ -27,4 +37,101 @@
     border: none;
     cursor: pointer;
     z-index: 1000; /* Ensure it's above the player */
+}
+
+.toggle-torrent-button {
+    position: absolute;
+    top: 50px;
+    right: 20px;
+    font-size: 16px;
+    color: white;
+    background: none;
+    border-radius: 5px;
+    cursor: pointer;
+    z-index: 1000; /* Ensure it's above the player */
+}
+
+.torrent-list {
+    position: absolute;
+    top: 80px;
+    right: 20px;
+    background: #4d4d4d;
+    color: black;
+    padding: 10px;
+    border-radius: 5px;
+    max-height: 300px;
+    max-width: 400px;
+    overflow-x: hidden;
+    scrollbar-color: #d77777 #4d4d4d; /* Scrollbar color */
+    scrollbar-width: thin; /* Scrollbar width */
+    z-index: 1000; /* Ensure it's above the player */
+}
+
+.torrent-item {
+    cursor: pointer;
+    padding: 5px 0;
+    border-bottom: 1px solid #985c5c;
+}
+
+.torrent-item:hover {
+    background-color: #5b3434;
+}
+.torrent-item.active {
+    background-color: #ccc;
+    font-weight: bold;
+}
+.player:hover .toggle-torrent-button {
+    display: block;
+
+}
+
+
+
+@keyframes slideIn {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(0); }
+}
+
+@keyframes slideOut {
+    from { transform: translateX(0); }
+    to { transform: translateX(-100%); }
+}
+
+
+
+.video-controls {
+    position: relative;
+    bottom: 20px;
+    display: flex;
+    justify-content: space-evenly;
+    align-self: center;
+    align-items: center;
+}
+
+.control-button {
+    background: rgba(0, 0, 0, 0.7);
+    border: none;
+    color: white;
+    font-size: 18px;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 0.3s;
+
+}
+
+.control-button:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+#player {
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 8px;
+    animation: zoomIn 0.3s ease-in-out;
+}
+
+@keyframes zoomIn {
+    from { transform: scale(0.5); }
+    to { transform: scale(1); }
 }

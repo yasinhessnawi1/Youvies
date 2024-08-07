@@ -46,6 +46,33 @@ const Header = () => {
     };
 
     const handleTabClick = (tab) => {
+        document.getElementById(tab+'Tab').style.color = 'rgba(240, 96, 29, 1)';
+        switch (tab) {
+            case 'home':
+                document.getElementById('moviesTab').style.color = 'white';
+                document.getElementById('showsTab').style.color = 'white';
+                document.getElementById('animeTab').style.color = 'white';
+                document.getElementById('roomsTab').style.color = 'white';
+                break;
+            case 'movies':
+                document.getElementById('homeTab').style.color = 'white';
+                document.getElementById('showsTab').style.color = 'white';
+                document.getElementById('animeTab').style.color = 'white';
+                document.getElementById('roomsTab').style.color = 'white';
+                break;
+            case 'shows':
+                document.getElementById('homeTab').style.color = 'white';
+                document.getElementById('moviesTab').style.color = 'white';
+                document.getElementById('animeTab').style.color = 'white';
+                document.getElementById('roomsTab').style.color = 'white';
+                break;
+            case 'anime':
+                document.getElementById('homeTab').style.color = 'white';
+                document.getElementById('moviesTab').style.color = 'white';
+                document.getElementById('showsTab').style.color = 'white';
+                document.getElementById('roomsTab').style.color = 'white';
+                break;
+        }
         setActiveTab(tab);
         navigate('/' + tab);
         closeMenu();
@@ -65,7 +92,7 @@ const Header = () => {
                     <Link to="/category/horror" className="menu-item" onClick={closeMenu}>Horror</Link>
                 </div>
                 <nav className="nav-links">
-                    <div className="nav-link" id="homeTab" style={{ color: 'rgba(255, 138, 48, 1)' }} onClick={() => handleTabClick('home')}>Home</div>
+                    <div className="nav-link" id="homeTab"   onClick={() => handleTabClick('home')}>Home</div>
                     <div className="nav-link" id="moviesTab" onClick={() => handleTabClick('movies')}>Movies</div>
                     <div className="nav-link" id="showsTab" onClick={() => handleTabClick('shows')}>Shows</div>
                     <div className="nav-link" id="animeTab" onClick={() => handleTabClick('anime')}>Anime</div>
