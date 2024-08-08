@@ -10,36 +10,9 @@ const ItemCard = ({ item , contentType}) => {
     const { showVideoPlayer } = useContext(VideoPlayerContext);
     const [isWatched, setIsWatched] = useState(user?.watched?.includes(item.title || item.attributes?.canonicalTitle) || false);
 
-    const getBestTorrent = (torrents) => {
-        if (!torrents) return null;
-        const qualityPriority = [ '1080p', '720p', '480p', 'unknown'];
-        for (const quality of qualityPriority) {
-          try{
-            if (torrents[quality] && torrents[quality].length > 0) {
-                return  torrents[quality][0];
-            }
-          }catch (e){
-            return torrents['1080p'] ? torrents['1080p'][0] : null;
-          }
-        }
-        return torrents['1080p'] ? torrents['1080p'][0] : null;
-    };
 
     const handlePlayClick = async () => {
-        const fullItem = await fetchOneItem(user.token, contentType, item._id || item.id);
-        let bestTorrent = null;
-        let episode = null;
-        if ((fullItem.torrents && fullItem.torrents.length !== 0)){ // Movie or Anime Movie
-            bestTorrent = getBestTorrent(fullItem.torrents);
-        } else if (fullItem.seasons && fullItem.seasons.length !== 0) { // Show
-             episode = fullItem.seasons[1].episodes[1];
-            bestTorrent = getBestTorrent(episode.torrents);
-        }
-        if (bestTorrent) {
-            showVideoPlayer(bestTorrent.magnet, fullItem.torrents || episode.torrents, bestTorrent);
-        }else {
-            alert('No video available for this item, please try again later.');
-        }
+            showVideoPlayer(item.id , item);
     };
 
     // Determine item type and set rating and imageUrl accordingly
@@ -59,7 +32,7 @@ const ItemCard = ({ item , contentType}) => {
 
     return (
         <div className="item-card">
-            <div className="item-image" style={{ backgroundImage: `url(${imageUrl})` }}>
+            <div className="item-image" style={{ backgroundImage: `url(${imageUrl})`|| 'https://via.placeholder.com/300x450?text=Loading...' }}>
                 <div className="watched-icon">
                     {isWatched ? <FaCheckCircle color="green" /> : <FaRegCircle />}
                 </div>

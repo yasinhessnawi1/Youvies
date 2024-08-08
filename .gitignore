@@ -1,7 +1,5 @@
 node_modules/
-firebase/
 .idea/
-package.json
 package-lock.json
 .gitignore
 /.idea/

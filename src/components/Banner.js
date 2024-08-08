@@ -43,15 +43,7 @@ const Banner = ({ contentType }) => {
 
     const currentItem = items[currentIndex] || {};
 
-    const getBestTorrent = (torrents) => {
-        const qualityPriority = ['1080p', '720p', '480p', 'unknown'];
-        for (const quality of qualityPriority) {
-            if (torrents[quality] && torrents[quality].length > 0) {
-                return torrents[quality][0];
-            }
-        }
-        return torrents['unknown'] ? torrents['unknown'][0] : null;
-    };
+
 
     const handleReadMore = () => {
         setShowFullDescription(!showFullDescription);
@@ -62,32 +54,21 @@ const Banner = ({ contentType }) => {
     };
 
     const handlePlayClick = async (item) => {
-        const fullItem = await fetchOneItem(user.token, contentType, item._id || item.id);
-        let bestTorrent = null;
-        if (fullItem.torrents && fullItem.torrents.length !== 0) { // Movie or Anime Movie
-            bestTorrent = getBestTorrent(fullItem.torrents);
-        } else if (fullItem.Seasons) { // Show or Anime Show
-            const season = Object.values(fullItem.Seasons)[0]; // Get the first season
-            const episode = Object.values(season.episodes)[0]; // Get the first episode
-            bestTorrent = getBestTorrent(episode.torrents);
-        }
-        if (bestTorrent) {
-            showVideoPlayer(bestTorrent.magnet, fullItem.torrents || episode.torrents, bestTorrent);
-        }
+            showVideoPlayer(item.id , item);
     };
 
     return (
         <div className="banner">
             <div className="banner-background" style={{
-                backgroundImage: `url(${currentItem.poster_path ? `https://image.tmdb.org/t/p/original/${currentItem.poster_path}` : currentItem.image_url ? `https://image.tmdb.org/t/p/original/${currentItem.image_url}` : currentItem.attributes?.posterImage?.original || 'picture goes here'})`
+                backgroundImage: `url(${currentItem.poster_path ? `https://image.tmdb.org/t/p/original/${currentItem.poster_path}`  : currentItem.attributes?.posterImage?.original || 'http://via.placeholder.com/300x450?text=Loading...'})`
             }}></div>
             <div className="overlay"></div>
             <div className="content">
-                <h1 className="title">{currentItem.title || currentItem.attributes?.canonicalTitle || 'Title'}</h1>
+                <h1 className="title">{currentItem.title || currentItem.attributes?.canonicalTitle || 'Title loading...'}</h1>
                 <p className="description">
                     {showFullDescription
-                        ? currentItem.overview || currentItem.attributes?.synopsis || 'Description of the item goes here.'
-                        : (currentItem.overview || currentItem.attributes?.synopsis || 'Description of the item goes here.').slice(0, 120)}
+                        ? currentItem.overview || currentItem.attributes?.synopsis || 'Description loading...'
+                        : (currentItem.overview || currentItem.attributes?.synopsis || 'Description loading ...').slice(0, 120)}
                     {currentItem.overview && currentItem.overview.length > 120 && (
                         <span onClick={handleReadMore} className="read-more">
                             {showFullDescription ? ' Show Less' : '... Read More'}

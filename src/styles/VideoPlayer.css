@@ -1,4 +1,3 @@
-/* VideoPlayer.css */
 .video-player-overlay {
     position: fixed;
     top: 0;
@@ -6,7 +5,7 @@
     width: 100%;
     height: 100%;
     background: rgba(0, 0, 0, 0.8);
-    display: inline;
+    display: flex;
     justify-content: center;
     align-items: center;
     z-index: 1000;
@@ -18,11 +17,7 @@
     to { opacity: 1; }
 }
 
-
-
-
-
-.video-player-overlay #player {
+#player {
     width: 100%;
     height: 100%;
 }
@@ -36,76 +31,18 @@
     background: none;
     border: none;
     cursor: pointer;
-    z-index: 1000; /* Ensure it's above the player */
+    z-index: 1000;
 }
 
-.toggle-torrent-button {
+.overlay-menu {
     position: absolute;
-    top: 50px;
-    right: 20px;
-    font-size: 16px;
-    color: white;
-    background: none;
-    border-radius: 5px;
-    cursor: pointer;
-    z-index: 1000; /* Ensure it's above the player */
-}
-
-.torrent-list {
-    position: absolute;
-    top: 80px;
-    right: 20px;
-    background: #4d4d4d;
-    color: black;
-    padding: 10px;
-    border-radius: 5px;
-    max-height: 300px;
-    max-width: 400px;
-    overflow-x: hidden;
-    scrollbar-color: #d77777 #4d4d4d; /* Scrollbar color */
-    scrollbar-width: thin; /* Scrollbar width */
-    z-index: 1000; /* Ensure it's above the player */
-}
-
-.torrent-item {
-    cursor: pointer;
-    padding: 5px 0;
-    border-bottom: 1px solid #985c5c;
-}
-
-.torrent-item:hover {
-    background-color: #5b3434;
-}
-.torrent-item.active {
-    background-color: #ccc;
-    font-weight: bold;
-}
-.player:hover .toggle-torrent-button {
-    display: block;
-
-}
-
-
-
-@keyframes slideIn {
-    from { transform: translateX(-100%); }
-    to { transform: translateX(0); }
-}
-
-@keyframes slideOut {
-    from { transform: translateX(0); }
-    to { transform: translateX(-100%); }
-}
-
-
-
-.video-controls {
-    position: relative;
-    bottom: 20px;
+    top: 0;
+    width: 100%;
+    background: rgba(0, 0, 0, 0.9);
     display: flex;
-    justify-content: space-evenly;
-    align-self: center;
-    align-items: center;
+    justify-content: space-around;
+    padding: 10px;
+    z-index: 1000;
 }
 
 .control-button {
@@ -117,21 +54,25 @@
     border-radius: 5px;
     cursor: pointer;
     transition: background 0.3s;
-
 }
 
 .control-button:hover {
     background: rgba(255, 255, 255, 0.3);
 }
 
-#player {
-    max-width: 100%;
-    max-height: 100%;
-    border-radius: 8px;
-    animation: zoomIn 0.3s ease-in-out;
+.video-controls {
+    position: absolute;
+    bottom: 20px;
+    display: flex;
+    justify-content: space-evenly;
+    width: 100%;
+    z-index: 1000;
 }
 
-@keyframes zoomIn {
-    from { transform: scale(0.5); }
-    to { transform: scale(1); }
+.error-message {
+    color: red;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1000;
 }

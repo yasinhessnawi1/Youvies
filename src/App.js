@@ -10,10 +10,12 @@ import { LoadingProvider } from './contexts/LoadingContext';
 import { TabProvider } from './contexts/TabContext';
 import VideoPlayer from './components/VideoPlayer';
 import './styles/Global.css';
+import ErrorBoundary from "./components/ErrorBoundary";
 
 function App() {
     return (
         <Router>
+            <ErrorBoundary>
             <UserProvider>
                 <VideoPlayerProvider>
                     <ItemProvider>
@@ -34,6 +36,7 @@ function App() {
                     </ItemProvider>
                 </VideoPlayerProvider>
             </UserProvider>
+            </ErrorBoundary>
         </Router>
     );
 }

@@ -1,4 +1,6 @@
-import React, {useContext, useEffect, useState} from 'react';
+// src/pages/HomePage.js
+
+import React, { useContext, useEffect, useState } from 'react';
 import '../styles/HomePage.css';
 import Header from "../components/Header";
 import Banner from "../components/Banner";
@@ -6,9 +8,10 @@ import VideoCardGrid from "../components/VideoCardGrid";
 import Footer from "../components/Footer";
 import StarryBackground from "../components/StarryBackground";
 import LoadingIndicator from "../components/LoadingIndicator";
-import {ItemContext} from "../contexts/ItemContext";
-import {TabContext} from "../contexts/TabContext";
-import {useLoading} from "../contexts/LoadingContext";
+import { ItemContext } from "../contexts/ItemContext";
+import { TabContext } from "../contexts/TabContext";
+import { useLoading } from "../contexts/LoadingContext";
+import SearchBar from '../components/SearchBar';
 
 const HomePage = () => {
     const { items, fetchItemsByGenre } = useContext(ItemContext);
@@ -28,7 +31,6 @@ const HomePage = () => {
                         { "id": 16, "name": "Animation" },
                         { "id": 35, "name": "Comedy" },
                         { "id": 80, "name": "Crime" },
-                        {"id": "0", "name": "Others"},
                         { "id": 99, "name": "Documentary" },
                         { "id": 18, "name": "Drama" },
                         { "id": 10751, "name": "Family" },
@@ -51,7 +53,6 @@ const HomePage = () => {
                         { "id": 16, "name": "Animation" },
                         { "id": 35, "name": "Comedy" },
                         { "id": 80, "name": "Crime" },
-                        {"id": "0", "name": "Others"},
                         { "id": 99, "name": "Documentary" },
                         { "id": 18, "name": "Drama" },
                         { "id": 10751, "name": "Family" },
@@ -71,7 +72,6 @@ const HomePage = () => {
                         { "id": "1", "name": "Action" },
                         { "id": "2", "name": "Adventure" },
                         { "id": "3", "name": "Comedy" },
-                        {"id": "0", "name": "Others"},
                         { "id": "4", "name": "Drama" },
                         { "id": "5", "name": "Fantasy" },
                         { "id": "6", "name": "Horror" },
@@ -137,7 +137,7 @@ const HomePage = () => {
         return genres.map((genre) => (
             <div key={genre.id}>
                 <h2>{genre.name}</h2>
-                  <VideoCardGrid contentType={activeTab} items={genreItems[genre.name] || []} genre={genre.name} />
+                <VideoCardGrid contentType={activeTab} items={genreItems[genre.name] || []} genre={genre.name} />
             </div>
         ));
     };
@@ -147,6 +147,7 @@ const HomePage = () => {
             <Header />
             <StarryBackground />
             <div className="home-page">
+                <SearchBar activeTab={activeTab} />
                 {isLoading && <LoadingIndicator />}
                 <Banner contentType={activeTab} />
                 <div className="home_content">
