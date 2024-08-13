@@ -1,13 +1,15 @@
-import React, { useContext, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import StarryBackground from "../components/StarryBackground";
-import '../styles/LoginPage.css';
-import { UserContext } from '../contexts/UserContext';
+import React, {useContext, useState} from 'react';
+import {useNavigate} from 'react-router-dom';
+import StarryBackground from "../components/static/StarryBackground";
+import '../styles/page/LoginPage.css';
+import {UserContext} from '../contexts/UserContext';
+import {registerUser} from "../api/UserApi";
 
 const LoginPage = () => {
-    const { login } = useContext(UserContext);
+    const {login} = useContext(UserContext);
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [email, setEmail] = useState('');
     const navigate = useNavigate();
 
     const handleLogin = async (e) => {
@@ -19,34 +21,69 @@ const LoginPage = () => {
             alert('Login failed: ' + error.message);
         }
     };
-
+    const handleSignUp = async (e) => {
+        e.preventDefault();
+        try {
+            let newUser = {
+                username: username,
+                password: password,
+                email: email
+            }
+            await registerUser(newUser);
+            await handleLogin(e);
+        } catch (error) {
+            alert('Login failed: ' + error.message);
+        }
+    };
     return (
         <div className="login-page">
-            <StarryBackground />
+            <StarryBackground/>
             <div className="login-container">
                 <div className="logo">
-                    <img src="/logo-nobg.png" alt="logo" />
+                    <img src="/logo-nobg.png" alt="logo"/>
                 </div>
-                <div className="login-card">
-                    <h2>Login</h2>
-                    <form onSubmit={handleLogin}>
-                        <input
-                            type="text"
-                            placeholder="Username"
-                            value={username}
-                            onChange={(e) => setUsername(e.target.value)}
-                        />
-                        <input
-                            type="password"
-                            placeholder="Password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                        />
-                        <div className="login-button-container">
-                            <button type="submit" className="button fire"><span>Login</span></button>
-                            <button type="button" className="button ice" onClick={() => navigate('/')}><span>Cancel</span></button>
-                        </div>
-                    </form>
+                <div className="wrapper">
+                    <div className="card-switch">
+                        <label className="switch">
+                            <input className="toggle" type="checkbox"/>
+                            <span className="slider"></span>
+                            <span className="card-side"></span>
+                            <div className="flip-card__inner">
+                                <div className="flip-card__front">
+                                    <div className="title">Log in</div>
+                                    <form onSubmit={handleLogin} className="flip-card__form"
+                                    >
+                                        <input type="text" value={username}
+                                               onChange={(e) => setUsername(e.target.value)} placeholder="Username"
+                                               name="username" className="flip-card__input" required/>
+                                        <input type="password" value={password}
+                                               onChange={(e) => setPassword(e.target.value)} placeholder="Password"
+                                               name="password" className="flip-card__input" required/>
+                                        <button type="submit" className="flip-card__btn" value={username}>Let’s go!
+                                        </button>
+                                    </form>
+                                </div>
+                                <div className="flip-card__back">
+                                    <div className="title">Sign up</div>
+                                    <form onSubmit={handleSignUp} className="flip-card__form">
+                                        <input type="text" placeholder="Username" name="name" className="flip-card__input"
+                                               value={username}
+                                               onChange={(e) => setUsername(e.target.value)}
+                                               required/>
+                                        <input type="email" placeholder="Email" name="email"
+                                               value={email}
+                                               onChange={(e) => setEmail(e.target.value)}
+                                               className="flip-card__input" required/>
+                                        <input type="password" placeholder="Password" name="password"
+                                               value={password}
+                                               onChange={(e) => setPassword(e.target.value)}
+                                               className="flip-card__input" required/>
+                                        <button type="submit" className="flip-card__btn">Confirm!</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
                 </div>
             </div>
         </div>

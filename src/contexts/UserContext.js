@@ -1,18 +1,14 @@
-// src/contexts/UserContext.js
-
 import React, { createContext, useState, useEffect } from 'react';
-import { loginUser, logoutUser } from '../api/UserApi';
-import {useNavigate} from "react-router-dom";
+import { loginUser, logoutUser, editUser } from '../api/UserApi';
+import { useNavigate } from "react-router-dom";
 
-// Create Context
 export const UserContext = createContext(undefined, undefined);
 
-// UserProvider Component
 export const UserProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const navigate = useNavigate();
+
     useEffect(() => {
-        // Check if user is logged in (e.g., via a token in localStorage)
         const loggedUser = localStorage.getItem('user');
         if (loggedUser) {
             setUser(JSON.parse(loggedUser));
@@ -24,7 +20,6 @@ export const UserProvider = ({ children }) => {
             const userData = await loginUser(username, password);
             setUser(userData);
             localStorage.setItem('user', JSON.stringify(userData));
-
         } catch (error) {
             throw new Error('Invalid username or password');
         }
@@ -32,7 +27,8 @@ export const UserProvider = ({ children }) => {
 
     const logout = async () => {
         try {
-            if (user.user && user.token) {
+            if (user && user.token) {
+               // await editUser(user, user.token);
                 await logoutUser(user.token);
             }
             setUser(null);
@@ -43,8 +39,25 @@ export const UserProvider = ({ children }) => {
         }
     };
 
+    const addToWatchedList = async (watchedItem) => {
+        if (!user) return;
+
+        const updatedUser = { ...user, watched: user.watched || [] };
+
+        if (!updatedUser.watched.includes(watchedItem)) {
+           // updatedUser.watched.a(watchedItem);
+            setUser(updatedUser);
+            localStorage.setItem('user', JSON.stringify(updatedUser));
+        }
+        try {
+            //await editUser(updatedUser, user.token);
+        } catch (error) {
+            console.error('Error updating watched list:', error);
+        }
+    };
+
     return (
-        <UserContext.Provider value={{ user, login, logout }}>
+        <UserContext.Provider value={{ user, login, logout, addToWatchedList }}>
             {children}
         </UserContext.Provider>
     );

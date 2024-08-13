@@ -4,6 +4,7 @@
   "private": true,
   "homepage": "https://youvies.online",
   "dependencies": {
+    "@consumet/extensions": "^1.7.0",
     "@react-buddy/ide-toolbox": "^2.4.0",
     "@videojs/http-streaming": "^3.13.2",
     "@webtor/platform-sdk-js": "^0.2.18",

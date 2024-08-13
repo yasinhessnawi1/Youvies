@@ -1,4 +1,3 @@
-// TabContext.js
 import React, { createContext, useState } from 'react';
 
 export const TabContext = createContext();

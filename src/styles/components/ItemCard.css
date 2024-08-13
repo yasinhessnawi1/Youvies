@@ -69,12 +69,12 @@
 }
 
 .item-card .fire.button {
-    background-color: #ff4500;
+    background-color: var(--color-primary-fire);
     color: white;
 }
 
 .item-card .ice.button {
-    background-color: #1e90ff;
+    background-color: rgba(53, 158, 210, 0.66);
     color: white;
 }
 

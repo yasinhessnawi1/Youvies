@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ItemCard from './ItemCard';
-import '../styles/Carousel.css';
+import '../styles/components/Carousel.css';
 
 const Carousel = ({ items = [] ,contentType} ) => {
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -30,6 +30,8 @@ const Carousel = ({ items = [] ,contentType} ) => {
     const nextItem = () => {
         if (currentIndex + itemsPerPage < items.length) {
             setCurrentIndex(currentIndex + itemsPerPage);
+        }else{
+            setCurrentIndex(0);
         }
     };
 
@@ -50,7 +52,7 @@ const Carousel = ({ items = [] ,contentType} ) => {
             )}
             <div className="carousel-items">
                 {getVisibleItems().map((item, index) => (
-                    <div key={`${item.id || item._id}-${index}`} className="carousel-item">
+                    <div key={`${item.id}-${index}`} className="carousel-item">
                         <ItemCard item={item} contentType={contentType}/>
                     </div>
                 ))}
