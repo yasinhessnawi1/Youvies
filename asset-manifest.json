@@ -1,14 +1,16 @@
 {
   "files": {
-    "main.css": "/static/css/main.1e6120c4.css",
-    "main.js": "/static/js/main.00542c21.js",
+    "main.css": "/static/css/main.8d01e727.css",
+    "main.js": "/static/js/main.63b7563f.js",
+    "static/js/312.9493baee.chunk.js": "/static/js/312.9493baee.chunk.js",
     "static/media/logo-nobg_resized.png": "/static/media/logo-nobg_resized.18e914499f9ef1b3e8c5.png",
     "index.html": "/index.html",
-    "main.1e6120c4.css.map": "/static/css/main.1e6120c4.css.map",
-    "main.00542c21.js.map": "/static/js/main.00542c21.js.map"
+    "main.8d01e727.css.map": "/static/css/main.8d01e727.css.map",
+    "main.63b7563f.js.map": "/static/js/main.63b7563f.js.map",
+    "312.9493baee.chunk.js.map": "/static/js/312.9493baee.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.1e6120c4.css",
-    "static/js/main.00542c21.js"
+    "static/css/main.8d01e727.css",
+    "static/js/main.63b7563f.js"
   ]
 }
