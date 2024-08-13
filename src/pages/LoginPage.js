@@ -35,6 +35,9 @@ const LoginPage = () => {
             alert('Login failed: ' + error.message);
         }
     };
+    if (localStorage.getItem('user')) {
+        navigate('/home');
+    }
     return (
         <div className="login-page">
             <StarryBackground/>
