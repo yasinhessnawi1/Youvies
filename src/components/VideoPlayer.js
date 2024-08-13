@@ -61,7 +61,7 @@ const VideoPlayer = () => {
 
     const handleSeasonChange = (season) => {
         setSelectedSeason(season);
-        setSelectedEpisode(1); // Reset episode to 1 when changing seasons
+        handleEpisodeChange(1); // Reset episode to 1 when changing season
         setIsLoading(true); // Set loading to true when changing season
     };
 
@@ -135,8 +135,8 @@ const VideoPlayer = () => {
                                         <button className="dropdown-button">Season</button>
                                         <div className="dropdown-content">
                                             {item.seasons_info.map((season, index) => (
-                                                <span key={index} onClick={() => handleSeasonChange(season.number)}>
-                                                    Season {season.number} - {season.episode_count} Episodes
+                                                <span key={index} onClick={() => handleSeasonChange(season.season_number)}>
+                                                    Season {season.season_number}
                                                 </span>
                                             ))}
                                         </div>
