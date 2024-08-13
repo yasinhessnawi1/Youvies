@@ -1,11 +1,13 @@
 // src/api/UserApi.js
 
-const API_URL = 'https://api.youvies.online/youvies/v1';
+
+
+import {BASE_URL} from "../saved/AnimeShowsApi";
 
 export const loginUser = async (username, password) => {
     try {
 
-        const response = await fetch(`${API_URL}/api/login`, {
+        const response = await fetch(`${BASE_URL}/api/login`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -27,7 +29,7 @@ export const loginUser = async (username, password) => {
 
 export const registerUser = async (user) => {
     try {
-        const response = await fetch(`${API_URL}/api/register`, {
+        const response = await fetch(`${BASE_URL}/api/register`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -48,7 +50,7 @@ export const registerUser = async (user) => {
 
 export const editUser = async (user, token) => {
     try {
-        const response = await fetch(`${API_URL}/api/user`, {
+        const response = await fetch(`${BASE_URL}/api/user`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -70,7 +72,7 @@ export const editUser = async (user, token) => {
 
 export const logoutUser = async (token) => {
     try {
-        const response = await fetch(`${API_URL}/api/logout`, {
+        const response = await fetch(`${BASE_URL}/api/logout`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,

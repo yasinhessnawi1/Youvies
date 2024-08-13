@@ -1,8 +1,8 @@
 import React, { useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import '../styles/LandingPage.css';
+import './LandingPage.css';
 import { UserContext } from '../contexts/UserContext';
-import StarryBackground from "../components/StarryBackground";
+import StarryBackground from "../components/static/StarryBackground";
 
 const LandingPage = () => {
     const { user } = useContext(UserContext);
@@ -23,8 +23,7 @@ const LandingPage = () => {
                 </div>
                 <div className="button-container">
                     <button className="button fire" onClick={() => navigate('/login')}><span>Login</span></button>
-                    <button className="button ice"><span>Invitation</span></button>
-                    <button className="button fire"><span>Join Room</span></button>
+                    <button className="button ice"><span>Sign up</span></button>
                 </div>
             </div>
         </div>

@@ -1,50 +1,44 @@
-import React, { useEffect, useState, useContext } from 'react';
-import {fetchBannerItems, fetchOneItem} from '../api/ItemsApi';
-import '../styles/Banner.css';
-import '../styles/VideoPlayer.css';
+import React, { useEffect, useState, useContext, useRef } from 'react';
+import '../styles/components/Banner.css';
+import '../styles/components/VideoPlayer.css';
 import { UserContext } from '../contexts/UserContext';
 import { VideoPlayerContext } from '../contexts/VideoPlayerContext';
+import { useItemContext } from '../contexts/ItemContext';
+import Button from "./Button";
 
 const Banner = ({ contentType }) => {
-    const { user } = useContext(UserContext);
+    const { user, addToWatchedList } = useContext(UserContext);
     const { showVideoPlayer } = useContext(VideoPlayerContext);
-    const [items, setItems] = useState([]);
+    const { items, isLoading, fetchAllItems } = useItemContext();
     const [currentIndex, setCurrentIndex] = useState(0);
-    const [page, setPage] = useState(1);
     const [showFullDescription, setShowFullDescription] = useState(false);
     const [isPaused, setIsPaused] = useState(false);
-    const pageSize = 10;
+    const hasFetched = useRef(false);
 
     useEffect(() => {
-        const loadItems = async () => {
-            try {
-                if (!user) return;
-                const itemsData = await fetchBannerItems(user.token, contentType, page, pageSize);
-                setItems(itemsData);
-            } catch (error) {
-                console.error('Error loading items:', error);
-            }
-        };
 
-        loadItems();
-    }, [page, pageSize, user, contentType]);
+        if (!user || !contentType || hasFetched.current || isLoading) return;
+        const itemKey = `home-${contentType}`;
+        if ((!items[itemKey] || items[itemKey].length === 0) && !hasFetched) {
+            fetchAllItems(user.token);
+        }
+        hasFetched.current = true;
+    }, [user, contentType, items, fetchAllItems]);
 
     useEffect(() => {
-        if (isPaused) return;
-        if (!items) return;
+        if (isPaused || isLoading ) return;
         const interval = setInterval(() => {
-            setCurrentIndex((prevIndex) => (prevIndex + 1) % items.length);
+            const itemKey = `home-${contentType}`;
+            setCurrentIndex((prevIndex) => (prevIndex + 1) % (items[itemKey]?.length || 1));
         }, 15000);
 
         return () => clearInterval(interval);
-    }, [items, isPaused]);
+    }, [items, contentType, isPaused, isLoading]);
 
-    if (!items) return null;
+    const itemKey = `home-${contentType}`;
+    if (isLoading || !items[itemKey] || items[itemKey].length === 0) return null;
 
-    const currentItem = items[currentIndex] || {};
-
-
-
+    const currentItem = items[itemKey][currentIndex] || {};
     const handleReadMore = () => {
         setShowFullDescription(!showFullDescription);
     };
@@ -54,45 +48,73 @@ const Banner = ({ contentType }) => {
     };
 
     const handlePlayClick = async (item) => {
-            showVideoPlayer(item.id , item);
+        if (!user ) return;
+        const itemType = determineItemType(contentType);
+        if (itemType.includes("Show") && user.watched.includes(`${itemType}:${item.title}:1:1`)) {
+            showVideoPlayer(item.id, item, true);
+        } else {
+            const watchedItem = `${itemType}:${item.title}:${1}:${1}`;
+            addToWatchedList(user, watchedItem);
+            showVideoPlayer(item.id, item);
+        }
     };
+
+    const determineItemType = (contentType) => {
+        switch (contentType) {
+            case 'movies':
+                return 'Movie';
+            case 'shows':
+                return 'Show';
+            case 'anime':
+                return 'Anime';
+            default:
+                return 'Unknown';
+        }
+    };
+    let imageUrl = '';
+    let title = '';
+    switch (contentType) {
+        case 'movies':
+        case 'shows':
+            imageUrl = currentItem.backdrop_path ? `https://image.tmdb.org/t/p/original${currentItem.backdrop_path}` :
+                currentItem.poster_path ?  `https://image.tmdb.org/t/p/original${currentItem.poster_path}`: `https://via.placeholder.com/300x450?text=Loading...`;
+            title = currentItem.title || 'Title loading...';
+            break;
+        case 'anime':
+            imageUrl = currentItem.cover ? currentItem.cover:
+                currentItem.image|| 'https://via.placeholder.com/300x450?text=Loading...';
+            title = currentItem.title.userPreferred || 'Title loading...';
+            break;
+        default:
+            break;
+    }
 
     return (
         <div className="banner">
             <div className="banner-background" style={{
-                backgroundImage: `url(${currentItem.poster_path ? `https://image.tmdb.org/t/p/original/${currentItem.poster_path}`  : currentItem.attributes?.posterImage?.original || 'http://via.placeholder.com/300x450?text=Loading...'})`
+                backgroundImage: `url(${imageUrl})`,
             }}></div>
             <div className="overlay"></div>
             <div className="content">
-                <h1 className="title">{currentItem.title || currentItem.attributes?.canonicalTitle || 'Title loading...'}</h1>
+                <h1 className="title">{title || 'Title loading...'}</h1>
                 <p className="description">
                     {showFullDescription
-                        ? currentItem.overview || currentItem.attributes?.synopsis || 'Description loading...'
-                        : (currentItem.overview || currentItem.attributes?.synopsis || 'Description loading ...').slice(0, 120)}
+                        ? currentItem.overview || currentItem.description || 'Description loading...'
+                        : (currentItem.overview || currentItem.description || 'Description loading ...').slice(0, 120)}
                     {currentItem.overview && currentItem.overview.length > 120 && (
                         <span onClick={handleReadMore} className="read-more">
-                            {showFullDescription ? ' Show Less' : '... Read More'}
-                        </span>
+                        {showFullDescription ? ' Show Less' : '... Read More'}
+                    </span>
                     )}
                 </p>
                 <div className="actions">
-                    <button className="button fire play-button" onClick={() => handlePlayClick(currentItem)}>
-                        <img aria-hidden="true" alt="play-icon" src="https://openui.fly.dev/openui/24x24.svg?text=▶" />
-                        <span>Play</span>
-                    </button>
-                    <button className="button ice info-button">
-                        <img aria-hidden="true" alt="info-icon" src="https://openui.fly.dev/openui/24x24.svg?text=ℹ" />
-                        <span>More Info</span>
-                    </button>
-                    <button className="button pause-button" onClick={handlePause}>
-                        <img aria-hidden="true" alt="pause-icon"
-                             src={isPaused ? "https://openui.fly.dev/openui/24x24.svg?text=▶" : "https://openui.fly.dev/openui/24x24.svg?text=❚❚"} />
-                        <span>{isPaused ? 'Resume' : 'Pause'}</span>
-                    </button>
+                    <Button text="More Info" onClick={()=> alert('This Function is not made yet please be patient!')} />
+                    <Button text="Watch" onClick={() => handlePlayClick(currentItem)} />
+                    <Button text={isPaused ? 'Resume' : 'Pause'} onClick={handlePause} />
                 </div>
             </div>
         </div>
     );
-};
+}
 
 export default Banner;

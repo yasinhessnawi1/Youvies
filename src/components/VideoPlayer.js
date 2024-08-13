@@ -1,80 +1,86 @@
-import React, { useContext, useEffect, useRef, useState } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { VideoPlayerContext } from '../contexts/VideoPlayerContext';
-import '../styles/VideoPlayer.css';
-import { FaStar, FaForward, FaBackward } from "react-icons/fa";
+import { useLoading } from '../contexts/LoadingContext';
+import LoadingIndicator from './static/LoadingIndicator'; // Import the LoadingIndicator
+import '../styles/components/VideoPlayer.css';
+import { FaEllipsisV, FaTimes } from 'react-icons/fa';
 
 const VideoPlayer = () => {
     const { videoPlayerState, hideVideoPlayer, switchProvider, item } = useContext(VideoPlayerContext);
-    const playerRef = useRef(null);
+    const { isLoading, setIsLoading } = useLoading(); // Use LoadingContext
     const [showOverlay, setShowOverlay] = useState(false);
     const [error, setError] = useState('');
+    const [selectedSeason, setSelectedSeason] = useState(videoPlayerState.season);
+    const [selectedEpisode, setSelectedEpisode] = useState(videoPlayerState.episode);
 
-    const constructVideoUrl = (item, provider) => {
-        switch (provider) {
-            case 'vidsrc':
-                return item.seasons_info === undefined
-                    ? `https://vidsrc.xyz/embed/movie?tmdb=${item.tmdbId}`
-                    : `https://vidsrc.xyz/embed/tv?tmdb=${item.tmdbId}&season=${item.season}&episode=${item.episode}`;
-            case 'NontonGo':
-                return item.seasons_info === undefined
-                    ? `https://www.NontonGo.win/embed/movie/${item.tmdbId}`
-                    : `https://www.NontonGo.win/embed/tv/${item.tmdbId}/${item.season}/${item.episode}`;
-            case 'SuperEmbed':
-                return item.seasons_info === undefined
-                    ? `https://multiembed.mov/directstream.php?video_id=${item.tmdbId}&tmdb=1`
-                    : `https://multiembed.mov/directstream.php?video_id=${item.tmdbId}&tmdb=1&s=${item.season}&e=${item.episode}`;
-            case '2embed':
-                if (item.subtype === 'movie') {
-                    return `https://www.2embed.cc/embed/${item.tmdbId}`;
-                } else if (item.subtype === 'tv') {
-                    return `https://www.2embed.cc/embedtv/${item.tmdbId}&s=${item.season}&e=${item.episode}`;
-                } else if (item.subtype === 'anime') {
-                    return `https://2anime.xyz/embed/${item.title}-${item.episode}`;
-                }
-                break;
-            default:
-                return '';
+    // Determine content type
+    const determineContentType = () => {
+        if (item?.seasons_info) {
+            return 'Show';
+        } else if (item?.title?.userPreferred) {
+            return 'Anime';
+        } else {
+            return 'Movie';
         }
     };
 
+    // Construct the URL based on the content type and provider
+    const constructVideoUrl = (item, provider, season = 1, episode = 1) => {
+        const contentType = determineContentType();
+
+        if (contentType === 'Anime') {
+            const title = item.title.userPreferred.replace(/ /g, '-').toLowerCase();
+            return `https://2anime.xyz/embed/${title}-episode-${episode}`;
+        } else {
+            const id = item.id;
+            switch (provider) {
+                case 'NontonGo':
+                    if (contentType === 'Show') {
+                        return `https://www.NontonGo.win/embed/tv/${id}/${season}/${episode}`;
+                    } else {
+                        return `https://www.NontonGo.win/embed/movie/${id}`;
+                    }
+                case '2embed':
+                    if (contentType === 'Show') {
+                        return `https://www.2embed.cc/embedtv/${id}&s=${season}&e=${episode}`;
+                    } else {
+                        return `https://www.2embed.cc/embed/${id}`;
+                    }
+                default:
+                    return '';
+            }
+        }
+    };
+
+    const videoSrc = item ? constructVideoUrl(item, videoPlayerState.provider, selectedSeason, selectedEpisode) : '';
+
     useEffect(() => {
-        const loadVideo = () => {
-            if (videoPlayerState.tmdbId) {
-                const videoSrc = constructVideoUrl(item, videoPlayerState.provider);
-                if (playerRef.current) {
-                    playerRef.current.src = videoSrc;
-                    playerRef.current.load();
-                    playerRef.current.play().catch((error) => {
-                        setError('Failed to play video. Please try another source.');
-                    });
-                }
-            }
-        };
+        console.log(`Constructed video URL: ${videoSrc}`);
+        setIsLoading(true); // Set loading to true when the videoSrc changes
+    }, [videoSrc, setIsLoading]);
 
-        loadVideo();
+    const handleSeasonChange = (season) => {
+        setSelectedSeason(season);
+        setSelectedEpisode(1); // Reset episode to 1 when changing seasons
+        setIsLoading(true); // Set loading to true when changing season
+    };
 
-        return () => {
-            if (playerRef.current) {
-                playerRef.current.removeAttribute('src');
-                playerRef.current.load();
-            }
-        };
-    }, [videoPlayerState.tmdbId, videoPlayerState.provider, item]);
+    const handleEpisodeChange = (episode) => {
+        setSelectedEpisode(episode);
+        switchProvider(videoPlayerState.provider, selectedSeason, episode);
+        setIsLoading(true); // Set loading to true when changing episode
+    };
+
+    const handleContentLoad = () => {
+        setIsLoading(false); // Set loading to false when content is loaded
+    };
+
+    const toggleOverlay = () => {
+        setShowOverlay(prev => !prev);
+    };
 
     const hidePlayer = () => {
         hideVideoPlayer();
-    };
-
-    const seekForward = () => {
-        if (playerRef.current) {
-            playerRef.current.currentTime += 10;
-        }
-    };
-
-    const seekBackward = () => {
-        if (playerRef.current) {
-            playerRef.current.currentTime -= 10;
-        }
     };
 
     if (!videoPlayerState.isVisible) {
@@ -82,23 +88,78 @@ const VideoPlayer = () => {
     }
 
     return (
-        <div className="video-player-overlay" onMouseEnter={() => setShowOverlay(true)} onMouseLeave={() => setShowOverlay(false)}>
-            <video id="player" ref={playerRef} controls>
-                <track kind="captions" />
-            </video>
+        <div className="video-player-overlay">
+            {isLoading && <LoadingIndicator />} {/* Show Loading Indicator when loading */}
+            <iframe
+                src={videoSrc}
+                title="Video Player"
+                width="100%"
+                height="100%"
+                frameBorder="0"
+                allowFullScreen
+                onLoad={handleContentLoad} // Trigger content load handler
+                onError={() => {
+                    setError('Failed to load video. Please try another source.');
+                    setIsLoading(false); // Stop loading if there's an error
+                }}
+            ></iframe>
+            <div className="overlay-menu-button" onClick={toggleOverlay}>
+                {showOverlay ? <FaTimes size={24} /> : <FaEllipsisV size={24} />}
+            </div>
             {showOverlay && (
                 <div className="overlay-menu">
-                    <button className="close-button" onClick={hidePlayer}>×</button>
-                    <button className="control-button" onClick={() => switchProvider('NontonGo')}>NontonGo</button>
-                    <button className="control-button" onClick={() => switchProvider('vidsrc')}>VidSrc</button>
-                    <button className="control-button" onClick={() => switchProvider('SuperEmbed')}>SuperEmbed</button>
-                    <button className="control-button" onClick={() => switchProvider('2embed')}>2Embed</button>
+                    {determineContentType() === 'Anime' ? (
+                        <>
+                            <div className="dropdown">
+                                <button className="dropdown-button">Season</button>
+                                <div className="dropdown-content">
+                                    <span onClick={() => handleSeasonChange(1)}>Season 1</span>
+                                </div>
+                            </div>
+                            <div className="dropdown">
+                                <button className="dropdown-button">Episode</button>
+                                <div className="dropdown-content">
+                                    {[...Array(item.totalEpisodes)].map((_, i) => (
+                                        <span key={i} onClick={() => handleEpisodeChange(i + 1)}>
+                                            Episode {i + 1}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            {item.seasons_info && (
+                                <>
+                                    <div className="dropdown">
+                                        <button className="dropdown-button">Season</button>
+                                        <div className="dropdown-content">
+                                            {item.seasons_info.map((season, index) => (
+                                                <span key={index} onClick={() => handleSeasonChange(season.number)}>
+                                                    Season {season.number} - {season.episode_count} Episodes
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="dropdown">
+                                        <button className="dropdown-button">Episode</button>
+                                        <div className="dropdown-content">
+                                            {Array.from({ length: item.seasons_info[selectedSeason - 1]?.episode_count || 1 }, (_, i) => i + 1).map((episode) => (
+                                                <span key={episode} onClick={() => handleEpisodeChange(episode)}>
+                                                    Episode {episode}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                            <button className="control-button" onClick={() => switchProvider('NontonGo')}>NontonGo</button>
+                            <button className="control-button" onClick={() => switchProvider('2embed')}>2Embed</button>
+                        </>
+                    )}
+                    <button className="control-button" onClick={hidePlayer}>Close Player</button>
                 </div>
             )}
-            <div className="video-controls">
-                <button className="control-button" onClick={seekBackward}><FaBackward /> 10s</button>
-                <button className="control-button" onClick={seekForward}>10s <FaForward /></button>
-            </div>
             {error && <div className="error-message">{error}</div>}
         </div>
     );

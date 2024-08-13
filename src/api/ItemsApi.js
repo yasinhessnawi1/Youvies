@@ -1,38 +1,36 @@
-
-import { fetchMovies, fetchMoviesByGenre, fetchOneMovie, searchMovies } from './MoviesApi';
-import { fetchOneShow, fetchShows, fetchShowsByGenre, searchShows } from './ShowsApi';
+import {fetchMovies, fetchMoviesByGenre, fetchOneMovie, searchMovies} from './MoviesApi';
+import {fetchOneShow, fetchShows, fetchShowsByGenre, searchShows} from './ShowsApi';
 import {
     fetchAnimeByGenre,
-    fetchAnimeMovies,
-    fetchAnimeShows,
+    fetchAnime,
     fetchOneAnime,
-    searchAnimeMovies,
-    searchAnimeShows
-} from './AnimeShowsApi';
+    searchAnime
+} from './AnimeShowApi';
 
-export const fetchItems = async (token, category, genre, page, pageSize) => {
+export const fetchItemsByGenre = async (token, category, genre, page, pageSize) => {
     switch (category) {
         case 'movies':
             return await fetchMoviesByGenre(token, genre, page, pageSize);
         case 'shows':
             return await fetchShowsByGenre(token, genre, page, pageSize);
         case 'anime':
-            return await fetchAnimeByGenre(token, 'animeshows', genre, page, pageSize);
+            return await fetchAnimeByGenre(genre, page, pageSize);
         default:
             return null;
     }
 };
 
-export const fetchBannerItems = async (token, category, page, pageSize) => {
+export const fetchItems = async (token, category, page, pageSize) => {
     switch (category) {
         case 'movies':
             return await fetchMovies(token, page, pageSize);
         case 'shows':
             return await fetchShows(token, page, pageSize);
         case 'anime':
-            return await fetchAnimeShows(token, page, pageSize);
+            return await fetchAnime(page, pageSize);
         default:
-            return await fetchMovies(token, page, pageSize);
+            console.log('Invalid category:', category);
+            break;
     }
 };
 
@@ -42,26 +40,32 @@ export const fetchOneItem = async (token, category, id) => {
             return await fetchOneMovie(token, id);
         case 'shows':
             return await fetchOneShow(token, id);
-        case 'anime_shows':
-            return await fetchOneAnime(token, id, "animeshows");
-        case 'anime_movies':
-            return await fetchOneAnime(token, id, "animemovies");
+        case 'anime':
+            return await fetchOneAnime(id);
         default:
             return await fetchOneMovie(token, id);
     }
 };
 
 export const searchItems = async (token, category, title) => {
+
     switch (category) {
         case 'movies':
             return await searchMovies(token, title);
         case 'shows':
             return await searchShows(token, title);
-        case 'anime_shows':
-            return await searchAnimeShows(token, title);
-        case 'anime_movies':
-            return await searchAnimeMovies(token, title);
+        case 'anime':
+            return await searchAnime(title);
+            case 'home':
+               const results = await Promise.all( [
+                    searchShows(token, title),
+                    searchAnime(title),
+                    searchMovies(token, title),
+                    ]
+                );
+               console.log('results:', results);
+               return results.flat();
         default:
-            return null;
+            return [];
     }
 };

@@ -1,13 +1,3 @@
-:root {
-    --color-highlight-fire: rgba(255, 236, 168, 1);
-    --color-primary-fire: rgba(255, 138, 48, 1);
-    --color-secondary-fire: rgba(240, 96, 29, 1);
-    --color-highlight-ice: rgba(168, 236, 255, 1);
-    --color-primary-ice: rgba(48, 138, 255, 1);
-    --color-secondary-ice: rgba(29, 96, 240, 1);
-    --background-gradient-start: #010101;
-    --background-gradient-end: #0a0000;
-}
 
 .header {
     background: transparent;
@@ -110,9 +100,8 @@
 .logo-image {
     width: auto;
     height: auto;
-    max-height: 70%;
-    max-width: 70%;
-    margin-right: 10px;
+    max-height: 60%;
+    max-width: 60%;
 }
 
 .logo-text {
@@ -127,9 +116,9 @@
 
 .nav-icons {
     display: flex;
-    flex-direction: column;
     align-items: center;
     gap: 0.1rem;
+    position: relative;
 }
 
 .nav-icons:hover {
@@ -160,11 +149,12 @@
 
 .user-controls {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
     gap: 5px;
     cursor: pointer;
 }
+
 
 .dropdown-menu {
     position: absolute;
@@ -234,4 +224,9 @@
     .mobile-nav{
         display: none;
     }
+}
+.search-icon {
+    width: 2rem;
+    height: 2rem;
+    cursor: pointer;
 }

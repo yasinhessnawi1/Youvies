@@ -1,69 +1,42 @@
+import { handleApiErrors, BASE_URL } from './apiHelpers';
+
+
 export const fetchShows = async (token, page, pageSize) => {
-    try {
-        const response = await fetch(`https://api.youvies.online/youvies/v1/shows?page=${page}&pageSize=${pageSize}`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        if (!response.ok) {
-            throw new Error('Failed to fetch shows');
+    const response = await fetch(`${BASE_URL}/shows?page=${page}&pageSize=${pageSize}&type=sorted`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${token}`
         }
-        return await response.json();
-    } catch (error) {
-        console.error('Error fetching shows:', error);
-        throw error;
-    }
+    });
+    return await handleApiErrors(response);
 };
 
 export const searchShows = async (token, title) => {
-    try {
-        const response = await fetch(`https://api.youvies.online/youvies/v1/shows/search?title=${title}`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        if (!response.ok) {
-            throw new Error('Failed to search shows');
+    const response = await fetch(`${BASE_URL}/shows/search?title=${title}&type=sorted`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${token}`
         }
-        return await response.json();
-    } catch (error) {
-        console.error('Error searching shows:', error);
-        throw error;
-    }
+    });
+    return await handleApiErrors(response);
 };
-export const fetchShowsByGenre = async (token, genre, page , pageSize) => {
-    try {
-        const response = await fetch(`https://api.youvies.online/youvies/v1/shows/genre/${genre}?page=${page}&&pageSize=${pageSize}`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        if (!response.ok) {
-            throw new Error('Failed to fetch shows by genre');
+
+export const fetchShowsByGenre = async (token, genre, page, pageSize) => {
+    const response = await fetch(`${BASE_URL}/shows/genre/${genre}?page=${page}&&pageSize=${pageSize}&type=sorted`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${token}`
         }
-        return await response.json();
-    } catch (error) {
-        console.error('Error fetching shows by genre:', error);
-        throw error;
-    }
+    });
+    return await handleApiErrors(response);
 };
-export const fetchOneShow= async (token,id)  => {
-    try {
-        const response = await fetch(`https://api.youvies.online/youvies/v1/shows/${id}`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        if (!response.ok) {
-            throw new Error('Failed to fetch movies by genre');
+
+export const fetchOneShow = async (token, id) => {
+    const response = await fetch(`${BASE_URL}/shows/${id}`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${token}`
         }
-        return await response.json();
-    } catch (error) {
-        console.error('Error fetching movies by genre:', error);
-        throw error;
-    }
+    });
+    return await handleApiErrors(response);
 };
