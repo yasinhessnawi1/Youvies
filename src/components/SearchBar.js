@@ -4,6 +4,7 @@ import { UserContext } from '../contexts/UserContext';
 import '../styles/components/SearchBar.css';
 import { VideoPlayerContext } from "../contexts/VideoPlayerContext";
 import Button from "./Button";
+import LoadingIndicator from "./static/LoadingIndicator";
 
 const SearchBar = ({ activeTab }) => {
     const { user } = useContext(UserContext);
@@ -149,7 +150,7 @@ const SearchBar = ({ activeTab }) => {
                 </div>
             </div>
 
-            {isSearching && <p>Loading...</p>}
+            {isSearching &&  <LoadingIndicator />} {/* Show Loading Indicator when loading */}
             {searchResults && searchResults.length > 0 && (
                 <div className="search-results-dropdown" ref={dropdownRef}>
                     {searchResults.map((item) => (

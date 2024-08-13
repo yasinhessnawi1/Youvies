@@ -4,6 +4,8 @@ import StarryBackground from "../components/static/StarryBackground";
 import '../styles/page/LoginPage.css';
 import {UserContext} from '../contexts/UserContext';
 import {registerUser} from "../api/UserApi";
+import {useLoading} from "../contexts/LoadingContext";
+import LoadingIndicator from "../components/static/LoadingIndicator";
 
 const LoginPage = () => {
     const {login} = useContext(UserContext);
@@ -11,18 +13,22 @@ const LoginPage = () => {
     const [password, setPassword] = useState('');
     const [email, setEmail] = useState('');
     const navigate = useNavigate();
+    const { isLoading, setIsLoading } = useLoading(); // Use LoadingContext
 
     const handleLogin = async (e) => {
         e.preventDefault();
+        setIsLoading(true);
         try {
             await login(username, password);
             navigate('/home');
         } catch (error) {
             alert('Login failed: ' + error.message);
         }
+        setIsLoading(false);
     };
     const handleSignUp = async (e) => {
         e.preventDefault();
+        setIsLoading(true);
         try {
             let newUser = {
                 username: username,
@@ -34,12 +40,14 @@ const LoginPage = () => {
         } catch (error) {
             alert('Login failed: ' + error.message);
         }
+        setIsLoading(false);
     };
     if (localStorage.getItem('user')) {
         navigate('/home');
     }
     return (
         <div className="login-page">
+            {isLoading && <LoadingIndicator />} {/* Show Loading Indicator when loading */}
             <StarryBackground/>
             <div className="login-container">
                 <div className="logo">
