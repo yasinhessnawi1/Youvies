@@ -1,5 +1,5 @@
-//export const BASE_URL = 'https://api.youvies.online/youvies/v1';
-export const BASE_URL = 'http://localhost:5000/youvies/v1';
+export const BASE_URL = 'https://api.youvies.online/youvies/v1';
+//export const BASE_URL = 'http://localhost:5000/youvies/v1';
 export const handleApiErrors = async (response) => {
     if (!response.ok) {
         console.warn('API returned an error:', response);
