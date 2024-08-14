@@ -27,7 +27,15 @@
 .dropdown-button:hover .arrow-down {
     transform: rotate(180deg);
 }
-
+.load-more-button {
+    padding: 5px 10px;
+    background-color: #444;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
 .dropdown-content {
     display: none;
     position: absolute;
@@ -37,7 +45,6 @@
     box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.2);
     z-index: 1;
     border-radius: 4px;
-    overflow: auto;
     opacity: 0;
     transform: translateY(-10px);
     transition: opacity 0.3s ease, transform 0.3s ease;
@@ -103,3 +110,4 @@
     align-items: center;
     margin: 20px;
 }
+

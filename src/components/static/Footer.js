@@ -17,6 +17,15 @@ const Footer = () => {
             title: 'Beta Version Alert',
             description: 'You are currently using a beta version of our website. This means some features may not function as intended, and not all planned features are currently available. We appreciate your patience and invite you to report any bugs you encounter to help us improve.',
         },
+        {
+            title: 'User Account Alert',
+            description: 'As this is a Beta version your user account could be lost due changes in the database.',
+        },
+        {
+            title: 'Content Info',
+            description: 'We have a good collection of many items but we dont have everything. Stay tuned to watch more.',
+        },
+
     ];
 
     useEffect(() => {

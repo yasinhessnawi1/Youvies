@@ -1,19 +1,20 @@
 import React, { useContext, useState, useEffect } from 'react';
 import { VideoPlayerContext } from '../contexts/VideoPlayerContext';
 import { useLoading } from '../contexts/LoadingContext';
-import LoadingIndicator from './static/LoadingIndicator'; // Import the LoadingIndicator
+import LoadingIndicator from './static/LoadingIndicator';
 import '../styles/components/VideoPlayer.css';
-import { FaEllipsisV, FaTimes } from 'react-icons/fa';
+import {FaEllipsisV, FaTimes, FaChevronDown, FaArrowDown} from 'react-icons/fa';
 
 const VideoPlayer = () => {
-    const { videoPlayerState, hideVideoPlayer, switchProvider, item } = useContext(VideoPlayerContext);
-    const { isLoading, setIsLoading } = useLoading(); // Use LoadingContext
+    const { videoPlayerState, hideVideoPlayer, switchProvider, changeSeason, changeEpisode, item } = useContext(VideoPlayerContext);
+    const { isLoading, setIsLoading } = useLoading();
     const [showOverlay, setShowOverlay] = useState(false);
     const [error, setError] = useState('');
     const [selectedSeason, setSelectedSeason] = useState(videoPlayerState.season);
     const [selectedEpisode, setSelectedEpisode] = useState(videoPlayerState.episode);
+    const [isSeasonDropdownOpen, setIsSeasonDropdownOpen] = useState(false);
+    const [isEpisodeDropdownOpen, setIsEpisodeDropdownOpen] = useState(false);
 
-    // Determine content type
     const determineContentType = () => {
         if (item?.seasons_info) {
             return 'Show';
@@ -24,7 +25,6 @@ const VideoPlayer = () => {
         }
     };
 
-    // Construct the URL based on the content type and provider
     const constructVideoUrl = (item, provider, season = 1, episode = 1) => {
         const contentType = determineContentType();
 
@@ -56,23 +56,29 @@ const VideoPlayer = () => {
 
     useEffect(() => {
         console.log(`Constructed video URL: ${videoSrc}`);
-        setIsLoading(true); // Set loading to true when the videoSrc changes
+        setIsLoading(true);
     }, [videoSrc, setIsLoading]);
 
     const handleSeasonChange = (season) => {
+        if (season === selectedSeason) return;
         setSelectedSeason(season);
-        handleEpisodeChange(1); // Reset episode to 1 when changing season
-        setIsLoading(true); // Set loading to true when changing season
+        setSelectedEpisode(1);
+        changeSeason(season);
+        setIsLoading(true);
+        setIsSeasonDropdownOpen(false); // Close dropdown after selection
     };
 
     const handleEpisodeChange = (episode) => {
+        if (episode === selectedEpisode) return;
         setSelectedEpisode(episode);
+        changeEpisode(episode);
         switchProvider(videoPlayerState.provider, selectedSeason, episode);
-        setIsLoading(true); // Set loading to true when changing episode
+        setIsLoading(true);
+        setIsEpisodeDropdownOpen(false); // Close dropdown after selection
     };
 
     const handleContentLoad = () => {
-        setIsLoading(false); // Set loading to false when content is loaded
+        setIsLoading(false);
     };
 
     const toggleOverlay = () => {
@@ -83,13 +89,21 @@ const VideoPlayer = () => {
         hideVideoPlayer();
     };
 
+    const toggleSeasonDropdown = () => {
+        setIsSeasonDropdownOpen((prev) => !prev);
+    };
+
+    const toggleEpisodeDropdown = () => {
+        setIsEpisodeDropdownOpen((prev) => !prev);
+    };
+
     if (!videoPlayerState.isVisible) {
         return null;
     }
 
     return (
-        <div className="video-player-overlay">
-            {isLoading && <LoadingIndicator />} {/* Show Loading Indicator when loading */}
+        <div className="player-video-player-overlay">
+            {isLoading && <LoadingIndicator />}
             <iframe
                 src={videoSrc}
                 title="Video Player"
@@ -97,70 +111,68 @@ const VideoPlayer = () => {
                 height="100%"
                 frameBorder="0"
                 allowFullScreen
-                onLoad={handleContentLoad} // Trigger content load handler
+                onLoad={handleContentLoad}
                 onError={() => {
                     setError('Failed to load video. Please try another source.');
-                    setIsLoading(false); // Stop loading if there's an error
+                    setIsLoading(false);
                 }}
             ></iframe>
-            <div className="overlay-menu-button" onClick={toggleOverlay}>
+            <div className={`player-overlay-menu-button ${showOverlay ? 'active' : ''}`} onClick={toggleOverlay}>
                 {showOverlay ? <FaTimes size={24} /> : <FaEllipsisV size={24} />}
             </div>
             {showOverlay && (
-                <div className="overlay-menu">
-                    {determineContentType() === 'Anime' ? (
-                        <>
-                            <div className="dropdown">
-                                <button className="dropdown-button">Season</button>
-                                <div className="dropdown-content">
-                                    <span onClick={() => handleSeasonChange(1)}>Season 1</span>
-                                </div>
-                            </div>
-                            <div className="dropdown">
-                                <button className="dropdown-button">Episode</button>
-                                <div className="dropdown-content">
-                                    {[...Array(item.totalEpisodes)].map((_, i) => (
-                                        <span key={i} onClick={() => handleEpisodeChange(i + 1)}>
-                                            Episode {i + 1}
+                <div className="player-overlay-menu">
+                    <div className="player-dropdown-container">
+                        <div className="player-dropdown">
+                            <button className="player-dropdown-button" onClick={toggleSeasonDropdown}>
+                                Season {selectedSeason} <FaArrowDown className={"arrow-down"} />
+                            </button>
+                            {isSeasonDropdownOpen && (
+                                <div className="player-dropdown-content">
+                                    {item.seasons_info.map((season, index) => (
+                                        <span
+                                            key={index}
+                                            className={`player-dropdown-item ${selectedSeason === season.season_number ? 'highlight' : ''}`}
+                                            onClick={() => handleSeasonChange(season.season_number)}
+                                        >
+                                            Season {season.season_number}
                                         </span>
                                     ))}
                                 </div>
-                            </div>
-                        </>
-                    ) : (
-                        <>
-                            {item.seasons_info && (
-                                <>
-                                    <div className="dropdown">
-                                        <button className="dropdown-button">Season</button>
-                                        <div className="dropdown-content">
-                                            {item.seasons_info.map((season, index) => (
-                                                <span key={index} onClick={() => handleSeasonChange(season.season_number)}>
-                                                    Season {season.season_number}
-                                                </span>
-                                            ))}
-                                        </div>
-                                    </div>
-                                    <div className="dropdown">
-                                        <button className="dropdown-button">Episode</button>
-                                        <div className="dropdown-content">
-                                            {Array.from({ length: item.seasons_info[selectedSeason - 1]?.episode_count || 1 }, (_, i) => i + 1).map((episode) => (
-                                                <span key={episode} onClick={() => handleEpisodeChange(episode)}>
-                                                    Episode {episode}
-                                                </span>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </>
                             )}
-                            <button className="control-button" onClick={() => switchProvider('NontonGo')}>NontonGo</button>
-                            <button className="control-button" onClick={() => switchProvider('2embed')}>2Embed</button>
-                        </>
-                    )}
-                    <button className="control-button" onClick={hidePlayer}>Close Player</button>
+                        </div>
+                    </div>
+                    <div className="player-dropdown-container">
+                        <div className="player-dropdown">
+                            <button className="player-dropdown-button" onClick={toggleEpisodeDropdown}>
+                                Episode {selectedEpisode} <FaArrowDown className={"arrow-down"} />
+                            </button>
+                            {isEpisodeDropdownOpen && (
+                                <div className="player-dropdown-content">
+                                    {Array.from({ length: item.seasons_info[selectedSeason - 1]?.episode_count || 1 }, (_, i) => i + 1).map((episode) => (
+                                        <span
+                                            key={episode}
+                                            className={`player-dropdown-item ${selectedEpisode === episode ? 'highlight' : ''}`}
+                                            onClick={() => handleEpisodeChange(episode)}
+                                        >
+                                            Episode {episode}
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                    <div className="player-server-switch-container">
+                        <span className="player-server-switch-label">Video troubles? Try switching server:</span>
+                        <div className="player-server-buttons">
+                            <button className={`player-control-button ${videoPlayerState.provider === 'NontonGo' ? 'active' : ''}`} onClick={() => switchProvider('NontonGo')}>NontonGo</button>
+                            <button className={`player-control-button ${videoPlayerState.provider === '2embed' ? 'active' : ''}`} onClick={() => switchProvider('2embed')}>2Embed</button>
+                        </div>
+                    </div>
+                    <button className="player-control-button player-close-button" onClick={hidePlayer}>Close Player</button>
                 </div>
             )}
-            {error && <div className="error-message">{error}</div>}
+            {error && <div className="player-error-message">{error}</div>}
         </div>
     );
 };

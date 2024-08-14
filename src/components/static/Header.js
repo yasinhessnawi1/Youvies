@@ -109,8 +109,8 @@ const Header = ({onSearchClick}) => {
 
             <div className="right-container">
                 <div className="nav-icons">
-                    <div className={"user-controls"}>
-                        <img className="search-icon" onClick={onSearchClick} src={"./search.png"}
+                    <div className={"user-controls"}  onClick={onSearchClick}>
+                        <img className="search-icon"  src={"./search.png"}
                              alt={"search icon"}/>
                         <div className="username">Search</div>
 

@@ -14,6 +14,25 @@ const SearchBar = ({ activeTab }) => {
     const dropdownRef = useRef(null);
     const { showVideoPlayer } = useContext(VideoPlayerContext);
 
+    const handleSearch = async () => {
+        if (!user || !searchQuery) return;
+
+        setIsSearching(true);
+        try {
+            const results = await searchItems(user.token, activeTab, searchQuery);
+            setSearchResults(results);
+        } catch (error) {
+            console.error('Error searching items:', error);
+        }
+        setIsSearching(false);
+    };
+
+    const handleKeyDown = (e) => {
+        if (e.key === 'Enter') {
+            handleSearch();
+        }
+    };
+
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -26,26 +45,6 @@ const SearchBar = ({ activeTab }) => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
     }, [dropdownRef]);
-
-    useEffect(() => {
-        if (!user || !searchQuery) return;
-        if (searchQuery.length >= 3) {
-            const delayDebounceFn = setTimeout(async () => {
-                setIsSearching(true);
-                try {
-                    const results = await searchItems(user.token, activeTab, searchQuery);
-                    setSearchResults(results);
-                } catch (error) {
-                    console.error('Error searching items:', error);
-                }
-                setIsSearching(false);
-            }, 300);
-
-            return () => clearTimeout(delayDebounceFn);
-        } else {
-            setSearchResults([]);
-        }
-    }, [searchQuery, activeTab, user]);
 
     const getTitle = (activeTab, currentItem) => {
         if (['movies', 'shows', 'home'].includes(activeTab)) {
@@ -84,7 +83,6 @@ const SearchBar = ({ activeTab }) => {
     };
 
     return (
-
         <div className="search-bar-container" id="poda">
             <div className="border"></div>
             <div id="main">
@@ -93,12 +91,13 @@ const SearchBar = ({ activeTab }) => {
                     placeholder="Search..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={handleKeyDown}
                     className="input search-input"
                 />
                 <div id="input-mask"></div>
                 <div id="pink-mask"></div>
                 <div className="filterBorder"></div>
-                <div id="filter-icon">
+                <div id="filter-icon" onClick={handleSearch}>
                     <svg
                         preserveAspectRatio="none"
                         height="27"
@@ -150,17 +149,17 @@ const SearchBar = ({ activeTab }) => {
                 </div>
             </div>
 
-            {isSearching &&  <LoadingIndicator />} {/* Show Loading Indicator when loading */}
+            {isSearching && <LoadingIndicator />} {/* Show Loading Indicator when loading */}
             {searchResults && searchResults.length > 0 && (
                 <div className="search-results-dropdown" ref={dropdownRef}>
                     {searchResults.map((item) => (
                         <div key={item.id} className="search-result-item">
                             <img src={imageUrl(activeTab, item)} alt={getTitle(activeTab, item)}
-                                 className="search-result-image"/>
+                                 className="search-result-image" />
                             <div className="search-result-info">
                                 <h4>{getTitle(activeTab, item)}</h4>
                                 <div className="search-result-actions">
-                                    <Button text="More Info" onClick={()=> alert('This Function is not made yet please be patient!')} />
+                                    <Button text="More Info" onClick={() => alert('This Function is not made yet please be patient!')} />
                                     <Button text="Watch" onClick={() => handlePlayClick(item, false)} />
                                 </div>
                             </div>

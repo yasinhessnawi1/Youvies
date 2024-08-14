@@ -35,7 +35,7 @@ const Banner = ({ contentType }) => {
         return () => clearInterval(interval);
     }, [items, contentType, isPaused, isLoading]);
 
-    const itemKey = `home-${contentType}`;
+    const itemKey = `${contentType}-home`;
     if (isLoading || !items[itemKey] || items[itemKey].length === 0) return null;
 
     const currentItem = items[itemKey][currentIndex] || {};

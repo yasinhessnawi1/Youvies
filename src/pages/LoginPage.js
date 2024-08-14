@@ -23,6 +23,7 @@ const LoginPage = () => {
             navigate('/home');
         } catch (error) {
             alert('Login failed: ' + error.message);
+            setIsLoading(false);
         }
         setIsLoading(false);
     };
@@ -39,6 +40,7 @@ const LoginPage = () => {
             await handleLogin(e);
         } catch (error) {
             alert('Login failed: ' + error.message);
+            setIsLoading(false);
         }
         setIsLoading(false);
     };
@@ -47,7 +49,6 @@ const LoginPage = () => {
     }
     return (
         <div className="login-page">
-            {isLoading && <LoadingIndicator />} {/* Show Loading Indicator when loading */}
             <StarryBackground/>
             <div className="login-container">
                 <div className="logo">
@@ -60,6 +61,7 @@ const LoginPage = () => {
                             <span className="slider"></span>
                             <span className="card-side"></span>
                             <div className="flip-card__inner">
+                                {isLoading && <LoadingIndicator />} {/* Show Loading Indicator when loading */}
                                 <div className="flip-card__front">
                                     <div className="title">Log in</div>
                                     <form onSubmit={handleLogin} className="flip-card__form"

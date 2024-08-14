@@ -6,22 +6,19 @@ import LoadingIndicator from './static/LoadingIndicator';
 import { FaArrowDown, FaSymfony } from "react-icons/fa";
 
 const VideoCardGrid = ({ contentType, genres, isHomePage }) => {
-    const { items, selectedGenre, setSelectedGenre, isLoading, fetchGenreItems } = useItemContext();
+    const { items, selectedGenre, setSelectedGenre, isLoading, fetchGenreItems, fetchMoreItems } = useItemContext();
     const [currentItems, setCurrentItems] = useState([]);
     const hasFetched = useRef(false);
 
     useEffect(() => {
-        // Clear current items immediately on contentType or selectedGenre change
         setCurrentItems([]);
 
-        // Prevent fetch requests if genre is not selected or if it's the home page
         if (!selectedGenre && !isHomePage) return;
 
-        const itemKey = isHomePage ? `home-${contentType}` : `${contentType}-${selectedGenre}`;
+        const itemKey = isHomePage ? `${contentType}-home` : `${contentType}-${selectedGenre}`;
         if (items[itemKey]) {
             setCurrentItems(items[itemKey]);
         } else if (!hasFetched.current && !isHomePage) {
-            // Fetch genre items if not already fetched (only for non-home pages)
             const token = JSON.parse(localStorage.getItem('user'))?.token;
             if (token && selectedGenre && !isLoading) {
                 fetchGenreItems(token, contentType, selectedGenre);
@@ -50,7 +47,14 @@ const VideoCardGrid = ({ contentType, genres, isHomePage }) => {
         }
     };
 
-    if (isLoading) return <LoadingIndicator />;
+    const handleFetchMore = async () => {
+        const token = JSON.parse(localStorage.getItem('user'))?.token;
+        console.log('Fetching more items...', contentType);
+        const genre = selectedGenre || null;
+        await fetchMoreItems(token, contentType, genre);
+    };
+
+    if (isLoading && currentItems.length === 0) return <LoadingIndicator />;
 
     return (
         <div className="video-card-grid">
@@ -78,7 +82,12 @@ const VideoCardGrid = ({ contentType, genres, isHomePage }) => {
                         </div>
                     )}
                 </div>
-                <div className="item-counter">{currentItems.length}</div>
+                <div className="item-counter-container">
+                    <span className="item-counter">{currentItems.length}</span>
+                    <button className="load-more-button" onClick={handleFetchMore}>
+                        Load More
+                    </button>
+                </div>
             </div>
             <Carousel items={currentItems} contentType={contentType} />
         </div>
