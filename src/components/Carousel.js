@@ -44,6 +44,7 @@ const Carousel = ({ items = [], contentType, genre = null, onReachEnd }) => {
     };
 
     const getVisibleItems = () => {
+        if (!items.length) return [];
         return items.slice(currentIndex, currentIndex + itemsPerPage);
     };
 

@@ -143,4 +143,38 @@
     }
 }
 
+@media (max-width: 1000px) {
+    .footer-container {
+        padding: 10px;
+        align-items: flex-start;
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .footer-info {
+        max-width: 100%;
+    }
+
+    .footer-carousel {
+        width: 100%;
+    }
+
+    .card.active {
+        width: 100%;
+    }
+
+    .card-title {
+        font-size: 16px;
+        color: var(--color-primary-fire);
+    }
+
+    .card-des {
+        font-size: 13px;
+    }
+
+    .card-text {
+        font-size: 12px;
+    }
+}
 

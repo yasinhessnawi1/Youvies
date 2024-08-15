@@ -16,7 +16,7 @@
     z-index: 1; /* Background is behind everything */
 }
 
-.overlay {
+.banner-overlay {
     position: absolute;
     top: 0;
     left: 0;
@@ -26,7 +26,7 @@
     z-index: 2; /* Overlay is on top of the background */
 }
 
-.content {
+.banner-content {
     position: absolute;
     bottom: 5rem; /* Position the content at the bottom */
     left: 2rem; /* Position the content to the left */
@@ -40,13 +40,13 @@
 }
 
 
-.title {
+.banner-title {
     font-size: 4rem;
     font-weight: bold;
     color: white;
 }
 
-.description {
+.banner-description {
     margin-top: 1rem;
     max-width: 40rem;
     font-size: 1.2rem;
@@ -58,59 +58,64 @@
     cursor: pointer;
 }
 
-.actions {
+.banner-actions {
     margin-top: 2rem;
     display: flex;
     gap: 1rem;
 }
 
-.play-button, .info-button, .pause-button {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    border-radius: 0.25rem;
-}
 
-.play-button {
-    background-color: var(--color-primary-fire);
-    color: white;
-}
 
-.info-button {
-    background-color: var(--color-primary-ice);
-    color: white;
-}
 
-.pause-button {
-    background-color: var(--color-highlight-fire);
-    color: black;
-}
-
-@media (max-width: 720px) {
-    .content {
-        align-items: center;
+@media (min-width: 600px) and (max-width: 1024px) {
+    .banner-content {
+        bottom: 3rem;
+        left: 1rem;
         padding: 1rem;
-        margin-left: 0;
-        text-align: center;
+        max-width: 50rem;
     }
 
-    .title {
-        font-size: 2rem;
+    .banner-title {
+        font-size: 3rem;
     }
 
-    .description {
-        margin-top: 0.5rem;
+    .banner-description {
         font-size: 1rem;
     }
 
-    .actions {
-        flex-direction: column;
-        width: 100%;
-        align-items: center;
+    .banner-actions {
+        flex-direction: row;
+        justify-content: center;
     }
 
     .play-button, .info-button, .pause-button {
-        width: 80%;
+        padding: 0.4rem 0.8rem;
     }
+}
+@media (max-width: 599px) {
+    .banner-content {
+        bottom: 2rem;
+        left: 0;
+        right: 0;
+        align-items: center;
+        text-align: center;
+        padding: 1rem;
+        margin: 0 auto;
+        max-width: 100%;
+    }
+
+    .banner-title {
+        font-size: 2.5rem;
+    }
+
+    .banner-description {
+        font-size: 1rem;
+    }
+
+    .banner-actions {
+        gap: 0.5rem;
+        width: 100%;
+    }
+
+
 }

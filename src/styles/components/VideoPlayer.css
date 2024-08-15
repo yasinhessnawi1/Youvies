@@ -1,6 +1,4 @@
-/* VideoPlayer.css */
-
-/* Video Player Overlay Styles */
+/* Base Video Player Overlay Styles */
 .player-video-player-overlay {
     position: fixed;
     top: 0;
@@ -33,6 +31,7 @@
     display: flex;
     justify-content: space-around;
     align-items: center;
+    flex-wrap: wrap; /* Allow wrapping on smaller screens */
 }
 
 /* Dropdown Container */
@@ -63,9 +62,10 @@
     display: none;
     position: absolute;
     background-color: rgba(50, 50, 50, 0.9);
-    backdrop-filter: blur(10px); /* Blurry background */
+    backdrop-filter: blur(10px);
     min-width: 160px;
     box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    scrollbar-color: #1f0b0b transparent;
     z-index: 1;
     flex-direction: column;
     border-radius: 4px;
@@ -115,6 +115,7 @@
     display: flex;
     gap: 10px;
     justify-content: center;
+    flex-wrap: wrap; /* Allow wrapping on smaller screens */
 }
 
 /* Control Button */
@@ -146,4 +147,59 @@
     font-weight: bold;
     margin-top: 15px;
     text-align: center;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .player-overlay-menu {
+        flex-direction: column; /* Stack items vertically */
+        padding: 15px;
+    }
+
+    .player-dropdown-content {
+        min-width: 100%; /* Full width on smaller screens */
+        max-height: 200px; /* Adjust height for smaller screens */
+    }
+
+    .player-server-buttons {
+        gap: 5px; /* Reduce gap between buttons */
+    }
+
+    .player-control-button {
+        padding: 6px 12px; /* Smaller padding for buttons */
+        font-size: 14px; /* Smaller font size */
+    }
+
+    .player-close-button {
+        margin-left: 0;
+        margin-top: 10px; /* Add spacing above when stacked */
+    }
+}
+
+@media (max-width: 576px) {
+    .player-overlay-menu-button {
+        top: 10px;
+        right: 10px;
+        font-size: 16px; /* Smaller button for very small screens */
+    }
+
+    .player-control-button {
+        padding: 5px 10px; /* Further reduce padding */
+        font-size: 12px; /* Smaller font size */
+    }
+
+    .player-dropdown-content {
+        min-width: 100%; /* Ensure it spans full width */
+        max-height: 150px; /* Further reduce height */
+        padding: 10px; /* Adjust padding inside dropdown */
+    }
+
+    .player-server-switch-label {
+        font-size: 12px; /* Smaller label font */
+        margin-bottom: 5px;
+    }
+
+    .player-server-buttons {
+        gap: 3px; /* Tighter gap */
+    }
 }

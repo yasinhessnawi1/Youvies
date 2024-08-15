@@ -82,7 +82,7 @@
 }
 
 .content-title {
-    margin-bottom: 20px;
+    margin-bottom: 10px;
     font-size: 24px;
     color: #fff;
 }
@@ -101,13 +101,54 @@
     background: rgba(0, 0, 0, 0.5);
     padding: 10px;
     color: #706e6e;
-    font-size: 1.5rem;
+    font-size: 1.25rem;
 }
 
 .gridHeader {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin: 20px;
+    margin: 5px 5px 10px 0;
 }
 
+
+/* Adjust dropdown and button styles for smaller devices */
+@media (max-width: 576px) {
+    .dropdown-button {
+        font-size: 16px; /* Slightly smaller button text */
+        padding: 8px; /* Increase padding for better touch interaction */
+    }
+
+    .dropdown-button .arrow-down {
+        font-size: 1rem; /* Smaller arrow size */
+    }
+
+    .dropdown-content {
+        min-width: 140px; /* Slightly reduce width */
+        max-height: 150px; /* Reduce max height */
+        padding: 10px; /* Add padding inside dropdown for spacing */
+    }
+
+    .dropdown-content span {
+        padding: 10px; /* Adjust padding for smaller items */
+        font-size: 14px; /* Smaller font size */
+    }
+}
+
+/* Extra small devices */
+@media (max-width: 400px) {
+    .dropdown-button {
+        font-size: 14px; /* Further reduce button text size */
+        padding: 6px; /* Adjust padding */
+    }
+
+    .dropdown-content {
+        min-width: 120px; /* Further reduce width */
+        max-height: 120px; /* Reduce max height */
+    }
+
+    .dropdown-content span {
+        padding: 8px; /* Tighter padding */
+        font-size: 12px; /* Smaller font size */
+    }
+}

@@ -18,6 +18,7 @@ module.exports = function override(config, env) {
         "dns": false,
         "fs": false,
         "global": require.resolve("global"),  // Add global polyfill
+        "zlib": require.resolve("browserify-zlib"),
 
     };
     config.plugins = (config.plugins || []).concat([

@@ -12,20 +12,18 @@ export const ItemProvider = ({ children }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [pageTracker, setPageTracker] = useState({}); // To track the page number for each content type and genre
 
-    const fetchMoreItems = async (token, contentType, genre = null) => {
+    const fetchMoreItems = async ( contentType, genre = null) => {
         const key = `${contentType}-${genre || 'home'}`;
         const currentPage = pageTracker[key] || 1;
         const nextPage = currentPage + 1;
-
-
 
         setIsLoading(true);
         try {
             let moreItems;
             if (genre) {
-                moreItems = await fetchItemsByGenre(token, contentType, genre, nextPage, 50);
+                moreItems = await fetchItemsByGenre( contentType, genre, nextPage, 20);
             } else {
-                moreItems = await fetchItems(token, contentType, nextPage, 50);
+                moreItems = await fetchItems( contentType, nextPage, 20);
             }
 
             setItems((prevItems) => ({
@@ -56,7 +54,7 @@ export const ItemProvider = ({ children }) => {
         }
     }, []);
 
-    const fetchAllItems = async (token) => {
+    const fetchAllItems = async () => {
         if (items['movies-home'] && items['shows-home'] && items['anime-home']) {
             return; // Items are already in the cache, no need to fetch
         }
@@ -64,9 +62,9 @@ export const ItemProvider = ({ children }) => {
         setIsLoading(true);
         try {
             const [movies, shows, anime] = await Promise.all([
-                fetchItems(token, 'movies', 1, 100),
-                fetchItems(token, 'shows', 1, 100),
-                fetchItems(token, 'anime', 1, 100),
+                fetchItems( 'movies', 1, 20),
+                fetchItems( 'shows', 1, 20),
+                fetchItems( 'anime', 1, 50),
             ]);
 
             const fetchedItems = {
@@ -85,7 +83,7 @@ export const ItemProvider = ({ children }) => {
         }
     };
 
-    const fetchGenreItems = async (token, contentType, genre) => {
+    const fetchGenreItems = async ( contentType, genre) => {
         const key = `${contentType}-${genre}`;
         if (items[key]) {
             return; // Items are already in the cache, no need to fetch
@@ -93,7 +91,7 @@ export const ItemProvider = ({ children }) => {
 
         setIsLoading(true);
         try {
-            const genreItems = await fetchItemsByGenre(token, contentType, genre, 1, 100);
+            const genreItems = await fetchItemsByGenre( contentType, genre, 1, 100);
             setItems((prevItems) => ({
                 ...prevItems,
                 [key]: genreItems,

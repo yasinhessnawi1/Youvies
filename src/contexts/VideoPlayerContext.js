@@ -1,5 +1,6 @@
-import React, { createContext, useState, useContext } from 'react';
+import React, {createContext, useState, useContext, useEffect} from 'react';
 import { UserContext } from './UserContext';
+import {fetchOneItem} from "../api/ItemsApi";
 
 export const VideoPlayerContext = createContext();
 
@@ -9,12 +10,12 @@ export const VideoPlayerProvider = ({ children }) => {
     const [videoPlayerState, setVideoPlayerState] = useState({
         isVisible: false,
         tmdbId: null,
-        provider: 'NontonGo', // default provider
+        provider: '2embed', // default provider
         season: 1, // default season
         episode: 1, // default episode
     });
 
-    const showVideoPlayer = (tmdbId, item, continueWatching = false) => {
+    const showVideoPlayer = async (tmdbId, item, continueWatching = false, category) => {
         let season = 1;
         let episode = 1;
         if (continueWatching && user?.watched && user.watched.length > 0) {
@@ -26,21 +27,27 @@ export const VideoPlayerProvider = ({ children }) => {
             }
         }
 
+        try {
+            const fetchedItem = await fetchOneItem(category, tmdbId);
+            setItem(fetchedItem);
+        } catch (err) {
+            console.error('Failed to load item details.');
+        }
+        console.log('item', item);
         setVideoPlayerState({
             isVisible: true,
             tmdbId,
-            provider: 'NontonGo', // default provider when showing player
+            provider: '2embed', // default provider when showing player
             season,
             episode,
         });
-        setItem(item);
     };
 
     const hideVideoPlayer = () => {
         setVideoPlayerState({
             isVisible: false,
             tmdbId: null,
-            provider: 'NontonGo',
+            provider: '2embed',
             season: 1,
             episode: 1,
         });

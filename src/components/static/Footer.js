@@ -38,15 +38,6 @@ const Footer = () => {
 
     return (
         <footer className="footer-container">
-            <div className="footer-info">
-                <h4>About Us</h4>
-                <p>Learn more about our platform, our mission, and our values.</p>
-                <div className="footer-links">
-                    <a href="#" className="footer-link">About Us</a>
-                    <a href="#" className="footer-link">Contact</a>
-                    <a href="#" className="footer-link">Privacy Policy</a>
-                </div>
-            </div>
 
             <div className="footer-carousel">
                 {items.map((item, index) => (
@@ -57,11 +48,21 @@ const Footer = () => {
                         <p className="card-title">{item.title}</p>
                         <p
                             className="card-des"
-                            dangerouslySetInnerHTML={{ __html: item.description }}
+                            dangerouslySetInnerHTML={{__html: item.description}}
                         />
                     </div>
                 ))}
             </div>
+            <div className="footer-info">
+                <h4>About Us</h4>
+                <p>Learn more about our platform, our mission, and our values.</p>
+                <div className="footer-links">
+                    <a href="#" className="footer-link">About Us</a>
+                    <a href="#" className="footer-link">Contact</a>
+                    <a href="#" className="footer-link">Privacy Policy</a>
+                </div>
+            </div>
+
         </footer>
     );
 };

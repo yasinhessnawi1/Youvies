@@ -1,18 +1,23 @@
-import {fetchMovies, fetchMoviesByGenre, fetchOneMovie, searchMovies} from './MoviesApi';
-import {fetchOneShow, fetchShows, fetchShowsByGenre, searchShows} from './ShowsApi';
-import {
-    fetchAnimeByGenre,
-    fetchAnime,
-    fetchOneAnime,
-    searchAnime
-} from './AnimeShowApi';
+// ItemsApi.js
 
-export const fetchItemsByGenre = async (token, category, genre, page, pageSize) => {
+import {
+    fetchMovieDetails,
+    fetchMoviesByGenre,
+    fetchPopularMovies,
+    fetchPopularShows,
+    fetchShowDetails,
+    fetchShowsByGenre,
+    searchMovies,
+    searchShows,
+} from './MediaService';
+import {fetchAnime, fetchAnimeByGenre, fetchOneAnime, searchAnime} from './AnimeShowApi';
+
+export const fetchItemsByGenre = async (category, genre, page, pageSize) => {
     switch (category) {
         case 'movies':
-            return await fetchMoviesByGenre(token, genre, page, pageSize);
+            return await fetchMoviesByGenre(genre, page);
         case 'shows':
-            return await fetchShowsByGenre(token, genre, page, pageSize);
+            return await fetchShowsByGenre(genre, page);
         case 'anime':
             return await fetchAnimeByGenre(genre, page, pageSize);
         default:
@@ -20,12 +25,12 @@ export const fetchItemsByGenre = async (token, category, genre, page, pageSize) 
     }
 };
 
-export const fetchItems = async (token, category, page, pageSize) => {
+export const fetchItems = async (category, page, pageSize) => {
     switch (category) {
         case 'movies':
-            return await fetchMovies(token, page, pageSize);
+            return await fetchPopularMovies(page);
         case 'shows':
-            return await fetchShows(token, page, pageSize);
+            return await fetchPopularShows(page);
         case 'anime':
             return await fetchAnime(page, pageSize);
         default:
@@ -34,37 +39,34 @@ export const fetchItems = async (token, category, page, pageSize) => {
     }
 };
 
-export const fetchOneItem = async (token, category, id) => {
+export const fetchOneItem = async (category, id) => {
     switch (category) {
         case 'movies':
-            return await fetchOneMovie(token, id);
+            return await fetchMovieDetails(id);
         case 'shows':
-            return await fetchOneShow(token, id);
+            return await fetchShowDetails(id);
         case 'anime':
             return await fetchOneAnime(id);
         default:
-            return await fetchOneMovie(token, id);
+            return await fetchMovieDetails(id);
     }
 };
 
-export const searchItems = async (token, category, title) => {
-
+export const searchItems = async (category, title) => {
     switch (category) {
         case 'movies':
-            return await searchMovies(token, title);
+            return await searchMovies(title);
         case 'shows':
-            return await searchShows(token, title);
+            return await searchShows(title);
         case 'anime':
             return await searchAnime(title);
-            case 'home':
-               const results = await Promise.all( [
-                    searchShows(token, title),
-                    searchAnime(title),
-                    searchMovies(token, title),
-                    ]
-                );
-               console.log('results:', results);
-               return results.flat();
+        case 'home':
+            const results = await Promise.all([
+                searchShows(title),
+                searchMovies(title),
+                searchAnime(title),
+            ]);
+            return results.flat();
         default:
             return [];
     }

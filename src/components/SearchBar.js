@@ -1,10 +1,11 @@
-import React, { useState, useContext, useEffect, useRef } from 'react';
+import React, { useState, useContext, useEffect, useRef, useCallback } from 'react';
 import { searchItems } from '../api/ItemsApi';
 import { UserContext } from '../contexts/UserContext';
 import '../styles/components/SearchBar.css';
 import { VideoPlayerContext } from "../contexts/VideoPlayerContext";
 import Button from "./Button";
 import LoadingIndicator from "./static/LoadingIndicator";
+import { debounce } from '../utils/debounce'; // Import debounce utility
 
 const SearchBar = ({ activeTab }) => {
     const { user } = useContext(UserContext);
@@ -12,14 +13,65 @@ const SearchBar = ({ activeTab }) => {
     const [searchResults, setSearchResults] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
     const dropdownRef = useRef(null);
-    const { showVideoPlayer } = useContext(VideoPlayerContext);
+    const [wordCompletions, setWordCompletions] = useState([]);
 
-    const handleSearch = async () => {
-        if (!user || !searchQuery) return;
+    const { showVideoPlayer } = useContext(VideoPlayerContext);
+    /*
+    useEffect(() => {
+        const fetchWordCompletions = async () => {
+            const day = new Date().getDay().toFixed().padStart(2, '0');
+            const month = new Date().getMonth().toFixed().padStart(2, '0');
+            const year = new Date().getFullYear();
+            const today = `${month}_${day}_${year}`;
+            //const completions = await fetchTMDBExport('movie', today); // Adjust for movies or TV
+            setWordCompletions(completions);
+        };
+
+        fetchWordCompletions();
+    }, []);
+
+    html :  {wordCompletions.length > 0 && (
+                    <div className="word-completion-dropdown" ref={dropdownRef}>
+                        {wordCompletions.map((completion, index) => (
+                            <div key={index} className="completion-item" onClick={() => handleCompletionClick(completion)}>
+                                {completion}
+                            </div>
+                        ))}
+                    </div>
+                )}
+     */
+    const handleInputChange = (e) => {
+        const query = e.target.value;
+        //handleWordCompletion(query);
+        setSearchQuery(query);
+        debouncedFetchSuggestions(query);
+
+    };
+
+    const handleWordCompletion = (query) => {
+        if (query.length === 0) {
+            setWordCompletions([]);
+            return;
+        }
+
+        const lastWord = query.split(' ').pop().toLowerCase();
+        const completions = wordCompletions.filter(word => word.toLowerCase().startsWith(lastWord));
+        setWordCompletions(completions.slice(0, 5)); // Limit to 5 suggestions
+    };
+
+    const handleCompletionClick = (completion) => {
+        const words = searchQuery.split(' ');
+        words.pop(); // Remove the last word that is being completed
+        setSearchQuery([...words, completion].join(' '));
+        console.log(searchQuery);
+        setWordCompletions([]);
+    };
+    const fetchSuggestions = async (query) => {
+        if (!user || !query) return;
 
         setIsSearching(true);
         try {
-            const results = await searchItems(user.token, activeTab, searchQuery);
+            const results = await searchItems(activeTab, query);
             setSearchResults(results);
         } catch (error) {
             console.error('Error searching items:', error);
@@ -27,9 +79,12 @@ const SearchBar = ({ activeTab }) => {
         setIsSearching(false);
     };
 
+    const debouncedFetchSuggestions = useCallback(debounce(fetchSuggestions, 400), [activeTab]);
+
+
     const handleKeyDown = (e) => {
         if (e.key === 'Enter') {
-            handleSearch();
+            fetchSuggestions(searchQuery);
         }
     };
 
@@ -46,15 +101,13 @@ const SearchBar = ({ activeTab }) => {
         };
     }, [dropdownRef]);
 
-    const getTitle = (activeTab, currentItem) => {
-        if (['movies', 'shows', 'home'].includes(activeTab)) {
-            return typeof currentItem.title === 'string' ? currentItem.title : 'Unknown Title';
-        } else if (activeTab === 'anime') {
-            if (typeof currentItem.title === 'object' && currentItem.title !== null) {
-                return currentItem.title.userPreferred || currentItem.title.romaji || currentItem.title.english || currentItem.title.native || 'Unknown Title';
-            } else {
-                return 'Unknown Title';
-            }
+    const getTitle = (currentItem) => {
+        if (typeof currentItem.title === 'object' && currentItem.title !== null) {
+            return "Anime: " + (currentItem.title.userPreferred || currentItem.title.romaji || currentItem.title.english || currentItem.title.native || 'Unknown Title');
+        } else if (currentItem.title) {
+            return "Movie: " + currentItem.title;
+        } else if (currentItem.name) {
+            return "Show: " + currentItem.name;
         } else {
             return 'Unknown Title';
         }
@@ -90,14 +143,14 @@ const SearchBar = ({ activeTab }) => {
                     type="text"
                     placeholder="Search..."
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={handleInputChange}
                     onKeyDown={handleKeyDown}
                     className="input search-input"
                 />
                 <div id="input-mask"></div>
                 <div id="pink-mask"></div>
                 <div className="filterBorder"></div>
-                <div id="filter-icon" onClick={handleSearch}>
+                <div id="filter-icon" onClick={() => fetchSuggestions(searchQuery)}>
                     <svg
                         preserveAspectRatio="none"
                         height="27"
@@ -154,10 +207,10 @@ const SearchBar = ({ activeTab }) => {
                 <div className="search-results-dropdown" ref={dropdownRef}>
                     {searchResults.map((item) => (
                         <div key={item.id} className="search-result-item">
-                            <img src={imageUrl(activeTab, item)} alt={getTitle(activeTab, item)}
+                            <img src={imageUrl(activeTab, item)} alt={getTitle(item)}
                                  className="search-result-image" />
                             <div className="search-result-info">
-                                <h4>{getTitle(activeTab, item)}</h4>
+                                <h4>{getTitle(item)}</h4>
                                 <div className="search-result-actions">
                                     <Button text="More Info" onClick={() => alert('This Function is not made yet please be patient!')} />
                                     <Button text="Watch" onClick={() => handlePlayClick(item, false)} />

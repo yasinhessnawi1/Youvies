@@ -196,3 +196,42 @@ strong {
         box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
     }
 }
+@media (min-width: 600px) and (max-width: 1024px) {
+    .btn {
+        width: 11rem;
+        height: 2.5rem;
+    }
+
+    strong {
+        font-size: 10px;
+    }
+
+    .circle {
+        width: 25px;
+        height: 25px;
+    }
+
+    #glow {
+        width: 10rem;
+    }
+}
+@media (max-width: 599px) {
+    .btn {
+        width: 9rem;
+        height: 2.2rem;
+    }
+
+    strong {
+        font-size: 8px;
+        letter-spacing: 3px;
+    }
+
+    .circle {
+        width: 20px;
+        height: 20px;
+    }
+
+    #glow {
+        width: 8rem;
+    }
+}

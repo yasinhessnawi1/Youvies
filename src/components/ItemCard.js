@@ -1,3 +1,5 @@
+// ItemCard.js
+
 import React, { useContext, useMemo } from 'react';
 import { FaPlay, FaInfoCircle, FaCheckCircle, FaRegCircle, FaStar } from 'react-icons/fa';
 import { UserContext } from '../contexts/UserContext';
@@ -15,10 +17,10 @@ const ItemCard = ({ item, contentType }) => {
         const watchedItem = `${contentType}:${item.title}:1:1`;
 
         if (isContinue) {
-            showVideoPlayer(item.id, item, true);
+            showVideoPlayer(item.id, item, true, contentType);
         } else {
             if (!isWatched) addToWatchedList(user, watchedItem);
-            showVideoPlayer(item.id, item);
+            showVideoPlayer(item.id, item, false, contentType);
         }
     };
 
@@ -28,7 +30,7 @@ const ItemCard = ({ item, contentType }) => {
         let itemTitle = '';
 
         if (['movies', 'shows'].includes(contentType)) {
-            itemTitle = typeof item.title === 'string' ? item.title : 'Unknown Title'; // Ensure it's a string
+            itemTitle =  item.title || item.name ||'Title not found'; // Ensure it's a string
             ratingValue = item.vote_average || 0;
             imagePath = item.poster_path
                 ? `https://image.tmdb.org/t/p/original${item.poster_path}`
@@ -58,14 +60,14 @@ const ItemCard = ({ item, contentType }) => {
                 </div>
             </div>
             <div className="item-content">
-                <div className="title">{title}</div> {/* Ensure this is a string */}
+                <div className="title">{title}</div>
                 <div className="rating">
                     {[...Array(5)].map((_, index) => (
                         <FaStar key={index} color={index < rating / 2 ? 'gold' : 'grey'} />
                     ))}
                 </div>
                 <div className="actions">
-                    <Button text="More Info" onClick={()=> alert('This Function is not made yet please be patient!')} />
+                    <Button text="Info" onClick={() => alert('This Function is not made yet please be patient!')} />
                     <Button text="Watch" onClick={() => handlePlayClick(false)} />
                 </div>
             </div>

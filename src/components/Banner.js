@@ -1,3 +1,5 @@
+// Banner.js
+
 import React, { useEffect, useState, useContext, useRef } from 'react';
 import '../styles/components/Banner.css';
 import '../styles/components/VideoPlayer.css';
@@ -16,7 +18,6 @@ const Banner = ({ contentType }) => {
     const hasFetched = useRef(false);
 
     useEffect(() => {
-
         if (!user || !contentType || hasFetched.current || isLoading) return;
         const itemKey = `home-${contentType}`;
         if ((!items[itemKey] || items[itemKey].length === 0) && !hasFetched) {
@@ -26,7 +27,7 @@ const Banner = ({ contentType }) => {
     }, [user, contentType, items, fetchAllItems]);
 
     useEffect(() => {
-        if (isPaused || isLoading ) return;
+        if (isPaused || isLoading) return;
         const interval = setInterval(() => {
             const itemKey = `home-${contentType}`;
             setCurrentIndex((prevIndex) => (prevIndex + 1) % (items[itemKey]?.length || 1));
@@ -48,7 +49,7 @@ const Banner = ({ contentType }) => {
     };
 
     const handlePlayClick = async (item) => {
-        if (!user ) return;
+        if (!user) return;
         const itemType = determineItemType(contentType);
         if (itemType.includes("Show") && user.watched.includes(`${itemType}:${item.title}:1:1`)) {
             showVideoPlayer(item.id, item, true);
@@ -71,6 +72,7 @@ const Banner = ({ contentType }) => {
                 return 'Unknown';
         }
     };
+
     let imageUrl = '';
     let title = '';
     switch (contentType) {
@@ -81,9 +83,8 @@ const Banner = ({ contentType }) => {
             title = currentItem.title || 'Title loading...';
             break;
         case 'anime':
-            imageUrl = currentItem.cover ? currentItem.cover:
-                currentItem.image|| 'https://via.placeholder.com/300x450?text=Loading...';
-            title = currentItem.title.userPreferred || 'Title loading...';
+            imageUrl = currentItem.cover || currentItem.image || 'https://via.placeholder.com/300x450?text=Image+Not+Found.';
+            title = currentItem.title?.userPreferred || 'Title loading...';
             break;
         default:
             break;
@@ -94,10 +95,10 @@ const Banner = ({ contentType }) => {
             <div className="banner-background" style={{
                 backgroundImage: `url(${imageUrl})`,
             }}></div>
-            <div className="overlay"></div>
-            <div className="content">
-                <h1 className="title">{title || 'Title loading...'}</h1>
-                <p className="description">
+            <div className="banner-overlay"></div>
+            <div className="banner-content">
+                <h1 className="banner-title">{title || 'Title loading...'}</h1>
+                <p className="banner-description">
                     {showFullDescription
                         ? currentItem.overview || currentItem.description || 'Description loading...'
                         : (currentItem.overview || currentItem.description || 'Description loading ...').slice(0, 120)}
@@ -107,8 +108,8 @@ const Banner = ({ contentType }) => {
                     </span>
                     )}
                 </p>
-                <div className="actions">
-                    <Button text="More Info" onClick={()=> alert('This Function is not made yet please be patient!')} />
+                <div className="banner-actions">
+                    <Button text="More Info" onClick={() => alert('This Function is not made yet please be patient!')} />
                     <Button text="Watch" onClick={() => handlePlayClick(currentItem)} />
                     <Button text={isPaused ? 'Resume' : 'Pause'} onClick={handlePause} />
                 </div>

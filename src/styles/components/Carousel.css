@@ -1,7 +1,7 @@
 .carousel {
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: space-around;
     overflow: hidden;
     position: relative;
     width: 100%;
@@ -14,27 +14,28 @@
     font-size: 2rem;
     cursor: pointer;
     z-index: 1;
-    padding: 0 10px;
+    padding: 0 20px;
     height: 100%;
 }
 
 .carousel-items {
     display: flex;
     transition: transform 0.5s ease-in-out;
-    width: calc(100% - 80px); /* Adjusted width to consider the buttons */
+    width: 100%; /* Adjusted width to consider the buttons */
     overflow-x: auto;
     scroll-snap-type: x mandatory;
     scroll-behavior: smooth;
     scrollbar-color: rgba(168, 55, 55, 0.5) transparent;
+    justify-content: space-around;
 }
 
 .carousel-item {
-    min-width: calc(100% / 5); /* Adjust this value based on itemsPerPage */
+    min-width: calc(80% / 5)  ; /* Adjust this value based on itemsPerPage */
     transition: transform 0.5s ease-in-out;
     padding: 5px; /* Add padding between items if needed */
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 1400px) {
     .carousel-item {
         min-width: calc(100% / 4);
     }
@@ -55,5 +56,13 @@
 @media (max-width: 576px) {
     .carousel-item {
         min-width: 100%;
+
     }
+    .carousel-items {
+        width: calc(100% - 140px);
+    }
+    .carousel-button {
+        scale: 150%;
+    }
+
 }

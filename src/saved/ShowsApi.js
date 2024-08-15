@@ -1,4 +1,4 @@
-import { handleApiErrors, BASE_URL } from './apiHelpers';
+import { handleApiErrors, BASE_URL } from '../api/apiHelpers';
 
 
 export const fetchShows = async (token, page, pageSize) => {

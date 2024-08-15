@@ -4,7 +4,7 @@ import {FaBars, FaChevronDown, FaTimes, FaUserCircle} from 'react-icons/fa';
 import {UserContext} from '../../contexts/UserContext';
 import {TabContext} from '../../contexts/TabContext';
 import '../../styles/components/Header.css';
-import logoImage from '../../assets/logo-nobg_resized.png';
+import logoImage from '../../utils/logo-nobg_resized.png';
 
 const Header = ({onSearchClick}) => {
     const {user, logout} = useContext(UserContext);
@@ -72,45 +72,43 @@ const Header = ({onSearchClick}) => {
         navigate('/' + tab);
         closeMenu();
     };
-
-    return (
-        <header className="header">
-            <div className="left-container">
-                <div className="menu-container" onClick={toggleMenu}>
+/* menu left
+<div className="menu-container" onClick={toggleMenu}>
                     {menuOpen ? <FaTimes size={26} /> : <FaBars size={24} />}
                 </div>
                 {menuOpen && <div className="menu-overlay" onClick={closeMenu}></div>}
                 <div className={`slide-menu ${menuOpen ? 'show' : ''}`}>
                     <Link to="#" className="menu-item" onClick={closeMenu}>coming soon... </Link>
                 </div>
+ */
+    return (
+        <header className="header">
+            <div className="left-container">
+                <img src={logoImage} alt="Logo" className="logo-image"/>
                 <nav className="nav-links">
-                    <div className="nav-link" id="homeTab"   onClick={() => handleTabClick('home')}>Home</div>
+                    <div className="nav-link" id="homeTab" onClick={() => handleTabClick('home')}>Home</div>
                     <div className="nav-link" id="moviesTab" onClick={() => handleTabClick('movies')}>Movies</div>
                     <div className="nav-link" id="showsTab" onClick={() => handleTabClick('shows')}>Shows</div>
                     <div className="nav-link" id="animeTab" onClick={() => handleTabClick('anime')}>Anime</div>
                 </nav>
+                <div className="mobile-nav">
+                    <FaChevronDown size={24} onClick={toggleMobileNav}/>
+                    {mobileNavOpen && (
+                        <div className="mobile-nav-menu">
+                            <div className="mobile-nav-item" onClick={() => handleTabClick('home')}>Home</div>
+                            <div className="mobile-nav-item" onClick={() => handleTabClick('movies')}>Movies</div>
+                            <div className="mobile-nav-item" onClick={() => handleTabClick('shows')}>Shows</div>
+                            <div className="mobile-nav-item" onClick={() => handleTabClick('animeShows')}>Anime</div>
+                        </div>
+                    )}
+                </div>
             </div>
 
-            <div className="mobile-nav">
-                <FaChevronDown size={24} onClick={toggleMobileNav} />
-                {mobileNavOpen && (
-                    <div className="mobile-nav-menu">
-                        <div className="mobile-nav-item" onClick={() => handleTabClick('home')}>Home</div>
-                        <div className="mobile-nav-item" onClick={() => handleTabClick('movies')}>Movies</div>
-                        <div className="mobile-nav-item" onClick={() => handleTabClick('shows')}>Shows</div>
-                        <div className="mobile-nav-item" onClick={() => handleTabClick('animeShows')}>Anime</div>
-                        <div className="mobile-nav-item" onClick={() => handleTabClick('animeMovies')}>Anime Movies</div>
-                    </div>
-                )}
-            </div>
-            <Link to="/home" className="logo-link">
-                <img src={logoImage} alt="Logo" className="logo-image"/>
-            </Link>
 
             <div className="right-container">
                 <div className="nav-icons">
-                    <div className={"user-controls"}  onClick={onSearchClick}>
-                        <img className="search-icon"  src={"./search.png"}
+                    <div className={"user-controls"} onClick={onSearchClick}>
+                        <img className="search-icon" src={"./search.png"}
                              alt={"search icon"}/>
                         <div className="username">Search</div>
 
@@ -119,7 +117,7 @@ const Header = ({onSearchClick}) => {
                 <div className="nav-icons">
                     {user ? (
                         <div className="user-controls" onClick={() => setDropdownOpen(!dropdownOpen)}>
-                            <img className="search-icon"  src={"./profile.png"}
+                            <img className="search-icon" src={"./profile.png"}
                                  alt={"search icon"}/>
                             <div className="username">{user.user.username}</div>
                             {dropdownOpen && (

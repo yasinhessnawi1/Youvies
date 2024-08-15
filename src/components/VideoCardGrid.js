@@ -1,3 +1,5 @@
+// VideoCardGrid.js
+
 import React, { useEffect, useState, useRef } from 'react';
 import { useItemContext } from '../contexts/ItemContext';
 import Carousel from './Carousel';
@@ -48,10 +50,8 @@ const VideoCardGrid = ({ contentType, genres, isHomePage }) => {
     };
 
     const handleFetchMore = async () => {
-        const token = JSON.parse(localStorage.getItem('user'))?.token;
-        console.log('Fetching more items...', contentType);
         const genre = selectedGenre || null;
-        await fetchMoreItems(token, contentType, genre);
+        await fetchMoreItems( contentType, genre);
     };
 
     if (isLoading && currentItems.length === 0) return <LoadingIndicator />;

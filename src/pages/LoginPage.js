@@ -20,7 +20,7 @@ const LoginPage = () => {
         setIsLoading(true);
         try {
             await login(username, password);
-            navigate('/home');
+            if(localStorage.getItem('user')) navigate('/home');
         } catch (error) {
             alert('Login failed: ' + error.message);
             setIsLoading(false);

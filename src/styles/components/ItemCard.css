@@ -53,8 +53,10 @@
 
 .item-card .actions {
     display: flex;
-    justify-content: space-around;
+    justify-content: space-between;
     margin-top: 10px;
+    gap: 5%;
+
 }
 
 .item-card .button {

@@ -21,7 +21,8 @@
     left: 0;
     width: 100%;
     max-height: 300px;
-    overflow-y: auto;
+    overflow-y: scroll;
+    overflow-x: hidden;
     background-color: rgba(0, 0, 0, 0.85);
     backdrop-filter: blur(10px);
     border-radius: 5px;
@@ -37,7 +38,6 @@
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     cursor: pointer;
     transition: background-color 0.2s ease-in-out;
-    width: 100%;
 }
 
 .search-result-item:hover {
@@ -311,4 +311,63 @@
     position: absolute;
     left: 20px;
     top: 15px;
+}
+/* Adjust layout for smaller devices */
+@media (max-width: 576px) {
+    .search-result-item {
+        display: flex;
+        align-items: flex-start; /* Align content to the start */
+        padding: 8px;
+        font-size: 14px;
+    }
+
+    .search-result-image {
+        width: 100px;
+        height: 100px;
+        margin-bottom: 8px; /* Add space below the image */
+        border-radius: 5px; /* Keep image rounded */
+    }
+
+    .search-result-info {
+        display: flex;
+        flex-direction: column; /* Stack title on top of the buttons */
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+    }
+
+    .search-result-info h4 {
+        font-size: 14px;
+        color: #fff;
+        margin-bottom: 10%; /* Space between title and buttons */
+    }
+
+    .search-result-actions {
+        display: flex;
+        justify-content: flex-start; /* Align buttons to the start */
+        gap: 5px;
+        margin-top: 0; /* Remove extra margin */
+        width: 100%; /* Ensure buttons take full width */
+    }
+
+    .search-result-actions button {
+        flex-grow: 1; /* Allow buttons to expand and take equal space */
+        font-size: 12px; /* Smaller font for buttons */
+    }
+}
+
+/* Further adjustments for extra small devices */
+@media (max-width: 400px) {
+    .search-result-item {
+        padding: 6px;
+    }
+
+    .search-result-info h4 {
+        font-size: 12px;
+    }
+
+    .search-result-actions button {
+        font-size: 10px;
+        padding: 6px; /* Adjust padding for smaller buttons */
+    }
 }
