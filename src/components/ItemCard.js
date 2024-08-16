@@ -20,7 +20,7 @@ const ItemCard = ({ item }) => {
         let itemTitle = '';
 
         if (['movies', 'shows'].includes(item.type)) {
-            itemTitle =  item.name ||'Title not found'; // Ensure it's a string
+            itemTitle =  item.name || item.title ||'Title not found'; // Ensure it's a string
             ratingValue = item.vote_average || 0;
             imagePath = item.poster_path
                 ? `https://image.tmdb.org/t/p/original${item.poster_path}`

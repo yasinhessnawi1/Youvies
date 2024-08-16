@@ -30,8 +30,8 @@ const Banner = ({ contentType }) => {
         if (isPaused || isLoading) return;
         const interval = setInterval(() => {
             const itemKey = `home-${contentType}`;
-            setCurrentIndex((prevIndex) => (prevIndex + 1) % (items[itemKey]?.length || 1));
-        }, 15000);
+            setCurrentIndex((prevIndex) => (prevIndex + 1) % (items[itemKey]?.length || 20));// 20 is the default number of items to show
+        }, 10000);
 
         return () => clearInterval(interval);
     }, [items, contentType, isPaused, isLoading]);
