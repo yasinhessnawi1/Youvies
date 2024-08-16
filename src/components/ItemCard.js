@@ -11,7 +11,7 @@ const ItemCard = ({ item, contentType }) => {
     const { user, addToWatchedList } = useContext(UserContext);
     const { showVideoPlayer } = useContext(VideoPlayerContext);
 
-    const isWatched = useMemo(() => user?.watched?.includes(item.title) || false, [user, item.title]);
+    const isWatched = useMemo(function(){return undefined;}, undefined);
 
     const handlePlayClick = async (isContinue) => {
         const watchedItem = `${contentType}:${item.title}:1:1`;
@@ -30,7 +30,7 @@ const ItemCard = ({ item, contentType }) => {
         let itemTitle = '';
 
         if (['movies', 'shows'].includes(contentType)) {
-            itemTitle =  item.title || item.name ||'Title not found'; // Ensure it's a string
+            itemTitle =  item.name ||'Title not found'; // Ensure it's a string
             ratingValue = item.vote_average || 0;
             imagePath = item.poster_path
                 ? `https://image.tmdb.org/t/p/original${item.poster_path}`
@@ -38,8 +38,6 @@ const ItemCard = ({ item, contentType }) => {
         } else if (['anime'].includes(contentType)) {
             if (typeof item.title === 'object' && item.title !== null) {
                 itemTitle = item.title.userPreferred || item.title.romaji || item.title.english || item.title.native || 'Unknown Title'; // Handle object
-            } else {
-                itemTitle = 'Unknown Title';
             }
             ratingValue = item.rating / 10|| 0;
             imagePath = item.image || item.cover || `https://via.placeholder.com/300x450?text=No+Image`;
@@ -50,7 +48,7 @@ const ItemCard = ({ item, contentType }) => {
             rating: ratingValue,
             imageUrl: imagePath,
         };
-    }, [contentType, item]);
+    }, [contentType, item.title, item.name, item.vote_average, item.poster_path, item.rating, item.image, item.cover]);
 
     return (
         <div className="item-card">

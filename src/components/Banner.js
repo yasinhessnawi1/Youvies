@@ -18,13 +18,13 @@ const Banner = ({ contentType }) => {
     const hasFetched = useRef(false);
 
     useEffect(() => {
-        if (!user || !contentType || hasFetched.current || isLoading) return;
+        if (!contentType || hasFetched.current || isLoading) return;
         const itemKey = `home-${contentType}`;
         if ((!items[itemKey] || items[itemKey].length === 0) && !hasFetched) {
-            fetchAllItems(user.token);
+            fetchAllItems();
         }
         hasFetched.current = true;
-    }, [user, contentType, items, fetchAllItems]);
+    }, [contentType, items, fetchAllItems]);
 
     useEffect(() => {
         if (isPaused || isLoading) return;
@@ -80,7 +80,7 @@ const Banner = ({ contentType }) => {
         case 'shows':
             imageUrl = currentItem.backdrop_path ? `https://image.tmdb.org/t/p/original${currentItem.backdrop_path}` :
                 currentItem.poster_path ?  `https://image.tmdb.org/t/p/original${currentItem.poster_path}`: `https://via.placeholder.com/300x450?text=Loading...`;
-            title = currentItem.title || 'Title loading...';
+            title = currentItem.title || currentItem.name ||'Title loading...';
             break;
         case 'anime':
             imageUrl = currentItem.cover || currentItem.image || 'https://via.placeholder.com/300x450?text=Image+Not+Found.';

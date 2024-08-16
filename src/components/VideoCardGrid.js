@@ -1,5 +1,3 @@
-// VideoCardGrid.js
-
 import React, { useEffect, useState, useRef } from 'react';
 import { useItemContext } from '../contexts/ItemContext';
 import Carousel from './Carousel';
@@ -10,48 +8,35 @@ import { FaArrowDown, FaSymfony } from "react-icons/fa";
 const VideoCardGrid = ({ contentType, genres, isHomePage }) => {
     const { items, selectedGenre, setSelectedGenre, isLoading, fetchGenreItems, fetchMoreItems } = useItemContext();
     const [currentItems, setCurrentItems] = useState([]);
-    const hasFetched = useRef(false);
+    const hasFetched = useRef({}); // Use an object to track fetches for each genre/contentType combination
 
     useEffect(() => {
-        setCurrentItems([]);
-
-        if (!selectedGenre && !isHomePage) return;
-
         const itemKey = isHomePage ? `${contentType}-home` : `${contentType}-${selectedGenre}`;
+
+        // Check if items for the current genre/contentType are already cached
         if (items[itemKey]) {
             setCurrentItems(items[itemKey]);
-        } else if (!hasFetched.current && !isHomePage) {
-            const token = JSON.parse(localStorage.getItem('user'))?.token;
-            if (token && selectedGenre && !isLoading) {
-                fetchGenreItems(token, contentType, selectedGenre);
-                hasFetched.current = true;
-            }
+        } else if (!hasFetched.current[itemKey] && selectedGenre && !isHomePage) {
+            fetchGenreItems(contentType, selectedGenre).then(() => {
+                hasFetched.current[itemKey] = true; // Mark as fetched
+                setCurrentItems(items[itemKey]);
+            });
         }
-    }, [selectedGenre, contentType, items, fetchGenreItems, isHomePage]);
+    }, [selectedGenre, contentType, fetchGenreItems, isHomePage, items]);
 
     const handleGenreChange = (newGenre) => {
         if (newGenre !== selectedGenre) {
-            hasFetched.current = false;  // Reset fetch flag if the genre changes
-            setSelectedGenre(newGenre);
-        }
-    };
-
-    const getName = (contentType) => {
-        switch (contentType) {
-            case 'movies':
-                return 'Latest Movies:';
-            case 'shows':
-                return 'Latest TV Shows:';
-            case 'anime':
-                return 'Top Rated Anime Shows';
-            default:
-                return '';
+            if (contentType !== "anime") {
+                setSelectedGenre(newGenre.id);
+            } else {
+                setSelectedGenre(newGenre.name);
+            }
         }
     };
 
     const handleFetchMore = async () => {
         const genre = selectedGenre || null;
-        await fetchMoreItems( contentType, genre);
+        await fetchMoreItems(contentType, genre);
     };
 
     if (isLoading && currentItems.length === 0) return <LoadingIndicator />;
@@ -61,11 +46,7 @@ const VideoCardGrid = ({ contentType, genres, isHomePage }) => {
             <div className="gridHeader">
                 <div className="grid-title">
                     <h4 className="content-title">
-                        {isHomePage ? getName(contentType) : (
-                            <span className="grid-title"> Genre
-                                <FaSymfony size={28} className="genre-icon"/> {" " + selectedGenre}
-                            </span>
-                        )}
+                        {isHomePage ? `${contentType.charAt(0).toUpperCase() + contentType.slice(1)}:` : `Genre: ${genres.find(genre => genre.id === selectedGenre)?.name}`}
                     </h4>
                     {!isHomePage && genres && genres.length > 1 && (
                         <div className="dropdown">
@@ -73,8 +54,8 @@ const VideoCardGrid = ({ contentType, genres, isHomePage }) => {
                                 <FaArrowDown className={"arrow-down"} />
                             </button>
                             <div className="dropdown-content">
-                                {genres.map((genre) => (
-                                    <span key={genre.id} onClick={() => handleGenreChange(genre.name)}>
+                                {genres.map(genre => (
+                                    <span key={genre.id} onClick={() => handleGenreChange(genre)}>
                                         {genre.name}
                                     </span>
                                 ))}
@@ -83,7 +64,7 @@ const VideoCardGrid = ({ contentType, genres, isHomePage }) => {
                     )}
                 </div>
                 <div className="item-counter-container">
-                    <span className="item-counter">{currentItems.length}</span>
+                    <span className="item-counter">{currentItems?.length || 0}</span>
                     <button className="load-more-button" onClick={handleFetchMore}>
                         Load More
                     </button>

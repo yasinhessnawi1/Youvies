@@ -98,7 +98,7 @@ const Header = ({onSearchClick}) => {
                             <div className="mobile-nav-item" onClick={() => handleTabClick('home')}>Home</div>
                             <div className="mobile-nav-item" onClick={() => handleTabClick('movies')}>Movies</div>
                             <div className="mobile-nav-item" onClick={() => handleTabClick('shows')}>Shows</div>
-                            <div className="mobile-nav-item" onClick={() => handleTabClick('animeShows')}>Anime</div>
+                            <div className="mobile-nav-item" onClick={() => handleTabClick('anime')}>Anime</div>
                         </div>
                     )}
                 </div>
@@ -123,7 +123,7 @@ const Header = ({onSearchClick}) => {
                             {dropdownOpen && (
                                 <div className="dropdown-menu">
                                     <div className="dropdown-item" onClick={handleLogout}>Logout</div>
-                                    <div className="dropdown-item" onClick={() => navigate('/profile')}>Profile</div>
+                                    <div className="dropdown-item" onClick={() => navigate('/')}>Profile</div>
                                 </div>
                             )}
                         </div>

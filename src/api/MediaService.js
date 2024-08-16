@@ -31,7 +31,7 @@ export const fetchMoviesByGenre = async (genreId, page = 1) => {
     return await fetchFromTmdb('/discover/movie', {
         with_genres: genreId,
         page,
-    });
+    }).then();
 };
 
 // Functions for TV Shows

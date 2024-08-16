@@ -1,18 +1,21 @@
 .footer-container {
     display: flex;
-    justify-content: space-between;
+    justify-content: space-evenly;
     align-items: center;
     background-color: #111;
     padding: 20px;
     color: #fff;
     width: 100%;
     position: relative;
+    border-radius: 10px;
 }
 
 .footer-info {
-    max-width: 300px;
     display: flex;
     flex-direction: column;
+
+    justify-content: center;
+    align-items: center;
     gap: 10px;
 }
 .footer-links {

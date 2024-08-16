@@ -24,18 +24,17 @@ const HomePage = () => {
         fetchAllItems,
     } = useItemContext();
 
-    const user = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')) : null;
     const hasFetched = useRef(false);
 
     useEffect(() => {
-        if (user?.token && !hasFetched.current) {
-            fetchAllItems(user.token);
+        if (!hasFetched.current && !items['movies-home'] && !items['shows-home'] && !items['anime-home']) {
+            fetchAllItems();
             hasFetched.current = true;
         }
-    }, [user?.token, fetchAllItems]);
+    }, [fetchAllItems]);
 
     useEffect(() => {
-        if (user?.token && activeTab !== 'home') {
+        if (activeTab !== 'home') {
             const loadGenres = () => {
                 let genresData = [];
                 switch (activeTab) {
@@ -104,12 +103,18 @@ const HomePage = () => {
                 }
 
                 setGenres(genresData);
-                setSelectedGenre(genresData.length > 0 ? genresData[0].name : '');
+                if (activeTab !== 'anime'){
+                    setSelectedGenre(genresData.length > 0 ? genresData[0].id : '');
+
+                }else {
+                    setSelectedGenre(genresData.length > 0 ? genresData[0].name : '');
+                }
+
             };
 
             loadGenres();
         }
-    }, [user?.token, activeTab, setGenres, setSelectedGenre]);
+    }, [ activeTab, setGenres, setSelectedGenre]);
 
     const renderContent = () => {
         if (isLoading) {
