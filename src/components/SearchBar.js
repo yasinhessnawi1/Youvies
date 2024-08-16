@@ -5,7 +5,7 @@ import '../styles/components/SearchBar.css';
 import { VideoPlayerContext } from "../contexts/VideoPlayerContext";
 import Button from "./Button";
 import LoadingIndicator from "./static/LoadingIndicator";
-import { debounce } from '../utils/debounce'; // Import debounce utility
+import { debounce } from '../utils/debounce';
 
 const SearchBar = ({ activeTab }) => {
     const { user } = useContext(UserContext);
@@ -79,7 +79,7 @@ const SearchBar = ({ activeTab }) => {
         setIsSearching(false);
     };
 
-    const debouncedFetchSuggestions = useCallback(debounce(fetchSuggestions, 400), [activeTab]);
+    const debouncedFetchSuggestions = useCallback(debounce(fetchSuggestions, 400), []);
 
 
     const handleKeyDown = (e) => {
@@ -102,22 +102,21 @@ const SearchBar = ({ activeTab }) => {
     }, [dropdownRef]);
 
     const getTitle = (currentItem) => {
-        if (typeof currentItem.title === 'object' && currentItem.title !== null) {
+        if (currentItem.type === 'anime') {
             return "Anime: " + (currentItem.title.userPreferred || currentItem.title.romaji || currentItem.title.english || currentItem.title.native || 'Unknown Title');
-        } else if (currentItem.title) {
-            return "Movie: " + currentItem.title;
-        } else if (currentItem.name) {
+        }
+        else if (currentItem.type === 'shows') {
             return "Show: " + currentItem.name;
-        } else {
-            return 'Unknown Title';
+        }else {
+            return "Movie: " + currentItem.title;
         }
     };
 
     const handlePlayClick = async (item, isContinue) => {
         if (isContinue) {
-            showVideoPlayer(item.id, item, true);
+            showVideoPlayer(item.id, item.type);
         } else {
-            showVideoPlayer(item.id, item);
+            showVideoPlayer(item.id, item.type);
         }
     };
 
@@ -127,19 +126,20 @@ const SearchBar = ({ activeTab }) => {
             case 'shows':
                 return currentItem.poster_path ? `https://image.tmdb.org/t/p/original${currentItem.poster_path}` : `https://via.placeholder.com/300x450?text=Loading...`;
             case 'anime':
-                return currentItem.cover ? currentItem.cover : currentItem.image ? currentItem.image : 'https://via.placeholder.com/300x450?text=Loading...';
+                return currentItem.image  ? currentItem.image : currentItem.cover ? currentItem.cover : 'https://via.placeholder.com/300x450?text=Loading...';
             case 'home':
                 return currentItem.poster_path ? `https://image.tmdb.org/t/p/original${currentItem.poster_path}` : currentItem.image ? currentItem.image : 'https://via.placeholder.com/300x450?text=Loading...';
             default:
-                return 'https://via.placeholder.com/45x45?text=Not Found';
+                return 'https://via.placeholder.com/45x45?text=Loading...';
         }
     };
 
     return (
-        <div className="search-bar-container" id="poda">
+        <div className="search-bar-container" id="poda" title={"Search Bar"}>
             <div className="border"></div>
             <div id="main">
                 <input
+                    title={"Type inn the title of the video you want to search for.(Please note that this is case sensitive, so its better to type in the correct title)"}
                     type="text"
                     placeholder="Search..."
                     value={searchQuery}
@@ -150,7 +150,7 @@ const SearchBar = ({ activeTab }) => {
                 <div id="input-mask"></div>
                 <div id="pink-mask"></div>
                 <div className="filterBorder"></div>
-                <div id="filter-icon" onClick={() => fetchSuggestions(searchQuery)}>
+                <div id="filter-icon" onClick={() => fetchSuggestions(searchQuery)} title={"Search"}>
                     <svg
                         preserveAspectRatio="none"
                         height="27"

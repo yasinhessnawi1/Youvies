@@ -43,7 +43,7 @@ export const ItemProvider = ({ children }) => {
             const moreItems = genre
                 ? await fetchItemsByGenre(contentType, genre, nextPage, 20)
                 : await fetchItems(contentType, nextPage, 20);
-
+            moreItems.forEach(item => (item.type = contentType));
             setItems(prevItems => ({
                 ...prevItems,
                 [key]: [...(prevItems[key] || []), ...moreItems], // Append new items
@@ -72,7 +72,9 @@ export const ItemProvider = ({ children }) => {
                 fetchItems('shows', 1, 20),
                 fetchItems('anime', 1, 50),
             ]);
-
+            movies.forEach(item => (item.type = 'movies'));
+            shows.forEach(item => (item.type = 'shows'));
+            anime.forEach(item => (item.type = 'anime'));
             const fetchedItems = {
                 'movies-home': movies,
                 'shows-home': shows,
@@ -97,6 +99,7 @@ export const ItemProvider = ({ children }) => {
         setIsLoading(true);
         try {
             const genreItems = await fetchItemsByGenre(contentType, genre, 1, 20);
+            genreItems.forEach(item => (item.type = contentType));
             setItems(prevItems => ({
                 ...prevItems,
                 [key]: genreItems,

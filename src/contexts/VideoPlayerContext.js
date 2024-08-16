@@ -5,38 +5,30 @@ import {fetchOneItem} from "../api/ItemsApi";
 export const VideoPlayerContext = createContext();
 
 export const VideoPlayerProvider = ({ children }) => {
-    const { user } = useContext(UserContext); // Access user context to get the watched list
     const [item, setItem] = useState(null);
     const [videoPlayerState, setVideoPlayerState] = useState({
         isVisible: false,
         tmdbId: null,
+        type: null,
         provider: '2embed', // default provider
         season: 1, // default season
         episode: 1, // default episode
     });
 
-    const showVideoPlayer = async (tmdbId, item, continueWatching = false, category) => {
+    const showVideoPlayer = async (tmdbId, type) => {
         let season = 1;
         let episode = 1;
-        if (continueWatching && user?.watched && user.watched.length > 0) {
-            const watchedItem = user.watched.find(w => w.includes(`${item.title || item.title.userPreferred}`));
-            if (watchedItem) {
-                const [, , watchedSeason, watchedEpisode] = watchedItem.split(':');
-                season = parseInt(watchedSeason, 10);
-                episode = parseInt(watchedEpisode, 10);
-            }
-        }
 
         try {
-            const fetchedItem = await fetchOneItem(category, tmdbId);
+            const fetchedItem = await fetchOneItem(type, tmdbId);
             setItem(fetchedItem);
         } catch (err) {
             console.error('Failed to load item details.');
         }
-        console.log('item', item);
         setVideoPlayerState({
             isVisible: true,
             tmdbId,
+            type,
             provider: '2embed', // default provider when showing player
             season,
             episode,
@@ -46,6 +38,7 @@ export const VideoPlayerProvider = ({ children }) => {
     const hideVideoPlayer = () => {
         setVideoPlayerState({
             isVisible: false,
+            type: null,
             tmdbId: null,
             provider: '2embed',
             season: 1,

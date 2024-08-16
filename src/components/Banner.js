@@ -50,32 +50,16 @@ const Banner = ({ contentType }) => {
 
     const handlePlayClick = async (item) => {
         if (!user) return;
-        const itemType = determineItemType(contentType);
-        if (itemType.includes("Show") && user.watched.includes(`${itemType}:${item.title}:1:1`)) {
-            showVideoPlayer(item.id, item, true);
+        if (item.type.includes("Show") && user.watched.includes(`${item.type}:${item.title}:1:1`)) {
+            showVideoPlayer(item.id, item.type);
         } else {
-            const watchedItem = `${itemType}:${item.title}:${1}:${1}`;
-            addToWatchedList(user, watchedItem);
-            showVideoPlayer(item.id, item);
-        }
-    };
-
-    const determineItemType = (contentType) => {
-        switch (contentType) {
-            case 'movies':
-                return 'Movie';
-            case 'shows':
-                return 'Show';
-            case 'anime':
-                return 'Anime';
-            default:
-                return 'Unknown';
+            showVideoPlayer(item.id, item.type);
         }
     };
 
     let imageUrl = '';
     let title = '';
-    switch (contentType) {
+    switch (currentItem.type) {
         case 'movies':
         case 'shows':
             imageUrl = currentItem.backdrop_path ? `https://image.tmdb.org/t/p/original${currentItem.backdrop_path}` :
@@ -109,9 +93,9 @@ const Banner = ({ contentType }) => {
                     )}
                 </p>
                 <div className="banner-actions">
-                    <Button text="More Info" onClick={() => alert('This Function is not made yet please be patient!')} />
-                    <Button text="Watch" onClick={() => handlePlayClick(currentItem)} />
-                    <Button text={isPaused ? 'Resume' : 'Pause'} onClick={handlePause} />
+                    <Button text="More Info" onClick={() => alert('This Function is not made yet please be patient!')} title={"Display more information."}/>
+                    <Button text="Watch" onClick={() => handlePlayClick(currentItem)} title={"Watch this video"}/>
+                    <Button text={isPaused ? 'Resume' : 'Pause'} onClick={handlePause} title={"Pause the suggestions shuffling."}/>
                 </div>
             </div>
         </div>

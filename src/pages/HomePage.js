@@ -125,12 +125,9 @@ const HomePage = () => {
             return (
                 <>
                     <Banner contentType="movies" /> {/* Banner displaying movies on the homepage */}
-                    <h2>Movies:</h2>
-                    <VideoCardGrid contentType="movies" isHomePage />
-                    <h2>TV Shows:</h2>
-                    <VideoCardGrid contentType="shows" isHomePage />
-                    <h2>Anime:</h2>
-                    <VideoCardGrid contentType="anime" isHomePage />
+                    <VideoCardGrid contentType="movies" isHomePage title={"Latest Movies"}/>
+                    <VideoCardGrid contentType="shows" isHomePage title={"Airing Now Shows"}/>
+                    <VideoCardGrid contentType="anime" isHomePage title={"Trending Anime"} />
                 </>
             );
         } else {
@@ -138,7 +135,7 @@ const HomePage = () => {
                 <>
                     <Banner contentType={activeTab} />
                     <VideoCardGrid contentType={activeTab} genre={selectedGenre} genres={genres} />
-                    <VideoCardGrid contentType={activeTab} isHomePage />
+                    <VideoCardGrid contentType={activeTab} isHomePage title={`Trending ${activeTab}`} />
                 </>
             );
         }

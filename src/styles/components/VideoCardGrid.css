@@ -82,15 +82,16 @@
 }
 
 .content-title {
-    margin-bottom: 10px;
-    font-size: 24px;
+    font-size: 20px;
+    width: 100%;
     color: #fff;
 }
 .grid-title {
     font-weight: bold;
     color: white;
-    margin: 0 -0.55rem 0 1rem;
+    margin: 1rem;
     display: flex;
+    flex-direction: row;
     justify-content: flex-end;
     align-items: flex-start;
     gap: 2%;

@@ -1,6 +1,6 @@
 import React, {useContext, useEffect, useRef, useState} from 'react';
 import {Link, useNavigate} from 'react-router-dom';
-import {FaBars, FaChevronDown, FaTimes, FaUserCircle} from 'react-icons/fa';
+import {FaChevronDown, FaTimes, FaUserCircle} from 'react-icons/fa';
 import {UserContext} from '../../contexts/UserContext';
 import {TabContext} from '../../contexts/TabContext';
 import '../../styles/components/Header.css';
@@ -21,6 +21,7 @@ const Header = ({onSearchClick}) => {
                 setDropdownOpen(false);
             }
         }
+
         document.addEventListener('mousedown', handleClickOutside);
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
@@ -46,7 +47,7 @@ const Header = ({onSearchClick}) => {
     };
 
     const handleTabClick = (tab) => {
-        document.getElementById(tab+'Tab').style.color = '#cf30aa';
+        document.getElementById(tab + 'Tab').style.color = '#cf30aa';
         switch (tab) {
             case 'home':
                 document.getElementById('moviesTab').style.color = 'white';
@@ -72,24 +73,16 @@ const Header = ({onSearchClick}) => {
         navigate('/' + tab);
         closeMenu();
     };
-/* menu left
-<div className="menu-container" onClick={toggleMenu}>
-                    {menuOpen ? <FaTimes size={26} /> : <FaBars size={24} />}
-                </div>
-                {menuOpen && <div className="menu-overlay" onClick={closeMenu}></div>}
-                <div className={`slide-menu ${menuOpen ? 'show' : ''}`}>
-                    <Link to="#" className="menu-item" onClick={closeMenu}>coming soon... </Link>
-                </div>
- */
+
     return (
         <header className="header">
             <div className="left-container">
                 <img src={logoImage} alt="Logo" className="logo-image"/>
                 <nav className="nav-links">
-                    <div className="nav-link" id="homeTab" onClick={() => handleTabClick('home')}>Home</div>
-                    <div className="nav-link" id="moviesTab" onClick={() => handleTabClick('movies')}>Movies</div>
-                    <div className="nav-link" id="showsTab" onClick={() => handleTabClick('shows')}>Shows</div>
-                    <div className="nav-link" id="animeTab" onClick={() => handleTabClick('anime')}>Anime</div>
+                    <div className="nav-link" id="homeTab" onClick={() => handleTabClick('home')} title={"Go to home page"}>Home</div>
+                    <div className="nav-link" id="moviesTab" onClick={() => handleTabClick('movies')} title={"Go to movies only section"}>Movies</div>
+                    <div className="nav-link" id="showsTab" onClick={() => handleTabClick('shows')} title={"Go to shows only section"}>Shows</div>
+                    <div className="nav-link" id="animeTab" onClick={() => handleTabClick('anime')} title={"Go to asnime only section"}>Anime</div>
                 </nav>
                 <div className="mobile-nav">
                     <FaChevronDown size={24} onClick={toggleMobileNav}/>
@@ -107,7 +100,7 @@ const Header = ({onSearchClick}) => {
 
             <div className="right-container">
                 <div className="nav-icons">
-                    <div className={"user-controls"} onClick={onSearchClick}>
+                    <div className={"user-controls"} onClick={onSearchClick} title={"Show or hide the search bar"}>
                         <img className="search-icon" src={"./search.png"}
                              alt={"search icon"}/>
                         <div className="username">Search</div>
@@ -116,7 +109,8 @@ const Header = ({onSearchClick}) => {
                 </div>
                 <div className="nav-icons">
                     {user ? (
-                        <div className="user-controls" onClick={() => setDropdownOpen(!dropdownOpen)}>
+                        <div className="user-controls" onClick={() => setDropdownOpen(!dropdownOpen)}
+                             title={"User settings"}>
                             <img className="search-icon" src={"./profile.png"}
                                  alt={"search icon"}/>
                             <div className="username">{user.user.username}</div>
@@ -136,6 +130,18 @@ const Header = ({onSearchClick}) => {
                         </Link>
                     )}
                 </div>
+                <div className="menu-container" onClick={toggleMenu}>
+                    {menuOpen ? <FaTimes size={45} className={"nav-link"}/> :
+                        <img src={"./menu.png"} height={45} alt={"hamburger menu picture."}
+                             title={"Menu with extra features"} className={"nav-link"}/>}
+                </div>
+                {menuOpen && <div className="menu-overlay" onClick={closeMenu}></div>}
+
+                <div className={`slide-menu ${menuOpen ? 'show' : ''}`}>
+                    <FaTimes size={24} className={"nav-link"} onClick={closeMenu}/>
+                    <Link to="#" className="menu-item" onClick={closeMenu}>coming soon... </Link>
+                </div>
+
             </div>
         </header>
     );

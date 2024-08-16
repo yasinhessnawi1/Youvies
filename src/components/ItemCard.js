@@ -7,21 +7,11 @@ import { VideoPlayerContext } from '../contexts/VideoPlayerContext';
 import '../styles/components/ItemCard.css';
 import Button from "./Button";
 
-const ItemCard = ({ item, contentType }) => {
-    const { user, addToWatchedList } = useContext(UserContext);
+const ItemCard = ({ item }) => {
     const { showVideoPlayer } = useContext(VideoPlayerContext);
-
     const isWatched = useMemo(function(){return undefined;}, undefined);
-
-    const handlePlayClick = async (isContinue) => {
-        const watchedItem = `${contentType}:${item.title}:1:1`;
-
-        if (isContinue) {
-            showVideoPlayer(item.id, item, true, contentType);
-        } else {
-            if (!isWatched) addToWatchedList(user, watchedItem);
-            showVideoPlayer(item.id, item, false, contentType);
-        }
+    const handlePlayClick = async () => {
+        showVideoPlayer(item.id, item.type);
     };
 
     const { title, rating, imageUrl } = useMemo(() => {
@@ -29,15 +19,22 @@ const ItemCard = ({ item, contentType }) => {
         let imagePath = '';
         let itemTitle = '';
 
-        if (['movies', 'shows'].includes(contentType)) {
+        if (['movies', 'shows'].includes(item.type)) {
             itemTitle =  item.name ||'Title not found'; // Ensure it's a string
             ratingValue = item.vote_average || 0;
             imagePath = item.poster_path
                 ? `https://image.tmdb.org/t/p/original${item.poster_path}`
                 : `https://via.placeholder.com/300x450?text=No+Image`;
-        } else if (['anime'].includes(contentType)) {
-            if (typeof item.title === 'object' && item.title !== null) {
-                itemTitle = item.title.userPreferred || item.title.romaji || item.title.english || item.title.native || 'Unknown Title'; // Handle object
+        } else if (item.type === 'anime') {
+            console.log("Anime :" , item);
+            switch (typeof item?.title) {
+                case "object":
+                    itemTitle = item.title.userPreferred || item.title.romaji || item.title.english || item.title.native || 'Unknown Title'; // Handle object
+                    break;
+                case "string":
+                    itemTitle = item.title;
+                    console.log("Anime registered with title : " ,itemTitle);
+                    break;
             }
             ratingValue = item.rating / 10|| 0;
             imagePath = item.image || item.cover || `https://via.placeholder.com/300x450?text=No+Image`;
@@ -48,12 +45,12 @@ const ItemCard = ({ item, contentType }) => {
             rating: ratingValue,
             imageUrl: imagePath,
         };
-    }, [contentType, item.title, item.name, item.vote_average, item.poster_path, item.rating, item.image, item.cover]);
+    }, [item.name, item.vote_average, item.poster_path, item.rating, item.image, item.cover, item.type]);
 
     return (
         <div className="item-card">
             <div className="item-image" style={{ backgroundImage: `url(${imageUrl})` }}>
-                <div className="watched-icon">
+                <div className="watched-icon" title={"If you have watched this item before this will be green otherwise white"}>
                     {isWatched ? <FaCheckCircle color="green" /> : <FaRegCircle />}
                 </div>
             </div>
@@ -65,8 +62,8 @@ const ItemCard = ({ item, contentType }) => {
                     ))}
                 </div>
                 <div className="actions">
-                    <Button text="Info" onClick={() => alert('This Function is not made yet please be patient!')} />
-                    <Button text="Watch" onClick={() => handlePlayClick(false)} />
+                    <Button text="Info" title={"Display more information about this item"} onClick={() => alert('This Function is not made yet please be patient!')} />
+                    <Button text="Watch" title={"Watch this video"} onClick={() => handlePlayClick()} />
                 </div>
             </div>
         </div>

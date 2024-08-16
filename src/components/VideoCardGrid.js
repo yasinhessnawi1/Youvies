@@ -5,7 +5,7 @@ import '../styles/components/VideoCardGrid.css';
 import LoadingIndicator from './static/LoadingIndicator';
 import { FaArrowDown, FaSymfony } from "react-icons/fa";
 
-const VideoCardGrid = ({ contentType, genres, isHomePage }) => {
+const VideoCardGrid = ({ contentType, genres, isHomePage , title = "" }) => {
     const { items, selectedGenre, setSelectedGenre, isLoading, fetchGenreItems, fetchMoreItems } = useItemContext();
     const [currentItems, setCurrentItems] = useState([]);
     const hasFetched = useRef({}); // Use an object to track fetches for each genre/contentType combination
@@ -46,16 +46,16 @@ const VideoCardGrid = ({ contentType, genres, isHomePage }) => {
             <div className="gridHeader">
                 <div className="grid-title">
                     <h4 className="content-title">
-                        {isHomePage ? `${contentType.charAt(0).toUpperCase() + contentType.slice(1)}:` : `Genre: ${genres.find(genre => genre.id === selectedGenre)?.name}`}
+                        {isHomePage ? `${title}:` : `${genres.find(genre => genre.id === selectedGenre)?.name.toString().toUpperCase()} `}
                     </h4>
                     {!isHomePage && genres && genres.length > 1 && (
                         <div className="dropdown">
-                            <button className="dropdown-button">
+                            <button className="dropdown-button" title={"Select a genre to change the list"}>
                                 <FaArrowDown className={"arrow-down"} />
                             </button>
                             <div className="dropdown-content">
                                 {genres.map(genre => (
-                                    <span key={genre.id} onClick={() => handleGenreChange(genre)}>
+                                    <span key={genre.id} onClick={() => handleGenreChange(genre)} title={"Select this genre"}>
                                         {genre.name}
                                     </span>
                                 ))}
@@ -64,13 +64,13 @@ const VideoCardGrid = ({ contentType, genres, isHomePage }) => {
                     )}
                 </div>
                 <div className="item-counter-container">
-                    <span className="item-counter">{currentItems?.length || 0}</span>
-                    <button className="load-more-button" onClick={handleFetchMore}>
+                    <span className="item-counter" title={`There are Totally ${currentItems?.length || 0} items currently in this list.`}>{currentItems?.length || 0}</span>
+                    <button className="load-more-button" onClick={handleFetchMore} title={"Load more items to be added to the current list."}>
                         Load More
                     </button>
                 </div>
             </div>
-            <Carousel items={currentItems} contentType={contentType} />
+            <Carousel items={currentItems} />
         </div>
     );
 };
