@@ -1,14 +1,14 @@
-import React, {useContext, useEffect, useRef, useState} from 'react';
-import {Link, useNavigate} from 'react-router-dom';
-import {FaChevronDown, FaTimes, FaUserCircle} from 'react-icons/fa';
-import {UserContext} from '../../contexts/UserContext';
-import {TabContext} from '../../contexts/TabContext';
+import React, { useContext, useEffect, useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { FaChevronDown, FaTimes, FaUserCircle } from 'react-icons/fa';
+import { UserContext } from '../../contexts/UserContext';
+import { TabContext } from '../../contexts/TabContext';
 import '../../styles/components/Header.css';
 import logoImage from '../../utils/logo-nobg_resized.png';
 
-const Header = ({onSearchClick}) => {
-    const {user, logout} = useContext(UserContext);
-    const {setActiveTab} = useContext(TabContext);
+const Header = ({ onSearchClick }) => {
+    const { user, logout } = useContext(UserContext);
+    const { activeTab, setActiveTab } = useContext(TabContext);
     const [menuOpen, setMenuOpen] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -30,7 +30,6 @@ const Header = ({onSearchClick}) => {
 
     const handleLogout = () => {
         logout();
-        navigate('/login');
     };
 
     const toggleDropdown = () => setDropdownOpen(!dropdownOpen);
@@ -47,28 +46,6 @@ const Header = ({onSearchClick}) => {
     };
 
     const handleTabClick = (tab) => {
-        document.getElementById(tab + 'Tab').style.color = '#cf30aa';
-        switch (tab) {
-            case 'home':
-                document.getElementById('moviesTab').style.color = 'white';
-                document.getElementById('showsTab').style.color = 'white';
-                document.getElementById('animeTab').style.color = 'white';
-                break;
-            case 'movies':
-                document.getElementById('homeTab').style.color = 'white';
-                document.getElementById('showsTab').style.color = 'white';
-                document.getElementById('animeTab').style.color = 'white';
-                break;
-            case 'shows':
-                document.getElementById('homeTab').style.color = 'white';
-                document.getElementById('moviesTab').style.color = 'white';
-                document.getElementById('animeTab').style.color = 'white';
-                break;
-            case 'anime':
-                document.getElementById('homeTab').style.color = 'white';
-                document.getElementById('moviesTab').style.color = 'white';
-                document.getElementById('showsTab').style.color = 'white';
-        }
         setActiveTab(tab);
         navigate('/' + tab);
         closeMenu();
@@ -77,15 +54,39 @@ const Header = ({onSearchClick}) => {
     return (
         <header className="header">
             <div className="left-container">
-                <img src={logoImage} alt="Logo" className="logo-image"/>
+                <img src={logoImage} alt="Logo" className="logo-image" />
                 <nav className="nav-links">
-                    <div className="nav-link" id="homeTab" onClick={() => handleTabClick('home')} title={"Go to home page"}>Home</div>
-                    <div className="nav-link" id="moviesTab" onClick={() => handleTabClick('movies')} title={"Go to movies only section"}>Movies</div>
-                    <div className="nav-link" id="showsTab" onClick={() => handleTabClick('shows')} title={"Go to shows only section"}>Shows</div>
-                    <div className="nav-link" id="animeTab" onClick={() => handleTabClick('anime')} title={"Go to asnime only section"}>Anime</div>
+                    <div
+                        className={`nav-link ${activeTab === 'home' ? 'active-tab' : ''}`}
+                        onClick={() => handleTabClick('home')}
+                        title="Go to home page"
+                    >
+                        Home
+                    </div>
+                    <div
+                        className={`nav-link ${activeTab === 'movies' ? 'active-tab' : ''}`}
+                        onClick={() => handleTabClick('movies')}
+                        title="Go to movies only section"
+                    >
+                        Movies
+                    </div>
+                    <div
+                        className={`nav-link ${activeTab === 'shows' ? 'active-tab' : ''}`}
+                        onClick={() => handleTabClick('shows')}
+                        title="Go to shows only section"
+                    >
+                        Shows
+                    </div>
+                    <div
+                        className={`nav-link ${activeTab === 'anime' ? 'active-tab' : ''}`}
+                        onClick={() => handleTabClick('anime')}
+                        title="Go to anime only section"
+                    >
+                        Anime
+                    </div>
                 </nav>
                 <div className="mobile-nav">
-                    <FaChevronDown size={24} onClick={toggleMobileNav}/>
+                    <FaChevronDown size={24} onClick={toggleMobileNav} />
                     {mobileNavOpen && (
                         <div className="mobile-nav-menu">
                             <div className="mobile-nav-item" onClick={() => handleTabClick('home')}>Home</div>
@@ -96,23 +97,17 @@ const Header = ({onSearchClick}) => {
                     )}
                 </div>
             </div>
-
-
             <div className="right-container">
                 <div className="nav-icons">
-                    <div className={"user-controls"} onClick={onSearchClick} title={"Show or hide the search bar"}>
-                        <img className="search-icon" src={"./search.png"}
-                             alt={"search icon"}/>
+                    <div className="user-controls" onClick={onSearchClick} title="Show or hide the search bar">
+                        <img className="search-icon" src={"./search.png"} alt={"search icon"} />
                         <div className="username">Search</div>
-
                     </div>
                 </div>
                 <div className="nav-icons">
                     {user ? (
-                        <div className="user-controls" onClick={() => setDropdownOpen(!dropdownOpen)}
-                             title={"User settings"}>
-                            <img className="search-icon" src={"./profile.png"}
-                                 alt={"search icon"}/>
+                        <div className="user-controls" onClick={() => setDropdownOpen(!dropdownOpen)} title="User settings">
+                            <img className="search-icon" src={"./profile.png"} alt={"search icon"} />
                             <div className="username">{user.user.username}</div>
                             {dropdownOpen && (
                                 <div className="dropdown-menu">
@@ -124,24 +119,21 @@ const Header = ({onSearchClick}) => {
                     ) : (
                         <Link to="/login">
                             <div className="login-container">
-                                <FaUserCircle size={24}/>
+                                <FaUserCircle size={24} />
                                 <span>Login</span>
                             </div>
                         </Link>
                     )}
                 </div>
                 <div className="menu-container" onClick={toggleMenu}>
-                    {menuOpen ? <FaTimes size={45} className={"nav-link"}/> :
-                        <img src={"./menu.png"} height={45} alt={"hamburger menu picture."}
-                             title={"Menu with extra features"} className={"nav-link"}/>}
+                    {menuOpen ? <FaTimes size={45} className="nav-link" /> :
+                        <img src={"./menu.png"} height={45} alt={"hamburger menu"} title={"Menu with extra features"} className="nav-link" />}
                 </div>
                 {menuOpen && <div className="menu-overlay" onClick={closeMenu}></div>}
-
                 <div className={`slide-menu ${menuOpen ? 'show' : ''}`}>
-                    <FaTimes size={24} className={"nav-link"} onClick={closeMenu}/>
-                    <Link to="#" className="menu-item" onClick={closeMenu}>coming soon... </Link>
+                    <FaTimes size={24} className="nav-link" onClick={closeMenu} />
+                    <Link to="#" className="menu-item" onClick={closeMenu}>Coming soon... </Link>
                 </div>
-
             </div>
         </header>
     );

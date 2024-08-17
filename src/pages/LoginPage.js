@@ -66,10 +66,10 @@ const LoginPage = () => {
                                     <div className="title">Log in</div>
                                     <form onSubmit={handleLogin} className="flip-card__form"
                                     >
-                                        <input type="text" value={username}
+                                        <input type="text" value={username} autoComplete={'username'}
                                                onChange={(e) => setUsername(e.target.value)} placeholder="Username"
                                                name="username" className="flip-card__input" required/>
-                                        <input type="password" value={password}
+                                        <input type="password" value={password} autoComplete={'current-password'}
                                                onChange={(e) => setPassword(e.target.value)} placeholder="Password"
                                                name="password" className="flip-card__input" required/>
                                         <button type="submit" className="flip-card__btn" value={username}>Let’s go!
@@ -80,14 +80,14 @@ const LoginPage = () => {
                                     <div className="title">Sign up</div>
                                     <form onSubmit={handleSignUp} className="flip-card__form">
                                         <input type="text" placeholder="Username" name="name" className="flip-card__input"
-                                               value={username}
+                                               value={username} autoComplete={'username'}
                                                onChange={(e) => setUsername(e.target.value)}
                                                required/>
                                         <input type="email" placeholder="Email" name="email"
                                                value={email}
                                                onChange={(e) => setEmail(e.target.value)}
                                                className="flip-card__input" required/>
-                                        <input type="password" placeholder="Password" name="password"
+                                        <input type="password" placeholder="Password" name="password" autoComplete={'new-password'}
                                                value={password}
                                                onChange={(e) => setPassword(e.target.value)}
                                                className="flip-card__input" required/>

@@ -2,7 +2,7 @@
 
 
 
-import {BASE_URL} from "../saved/AnimeShowsApi";
+import {BASE_URL} from "./apiHelpers";
 
 export const loginUser = async (username, password) => {
     try {
@@ -38,7 +38,8 @@ export const registerUser = async (user) => {
         });
 
         if (!response.ok) {
-            throw new Error('Registration failed');
+            const error = await response.json();
+            throw new Error('Registration failed ' + error.error);
         }
 
         return await response.json();
