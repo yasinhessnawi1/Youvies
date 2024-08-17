@@ -25,6 +25,9 @@ const HomePage = () => {
     } = useItemContext();
 
     const hasFetched = useRef(false);
+    useEffect(() => {
+        setIsSearchVisible(false);
+    }, [activeTab]);
 
     useEffect(() => {
         if (!hasFetched.current && !items['movies-home'] && !items['shows-home'] && !items['anime-home']) {

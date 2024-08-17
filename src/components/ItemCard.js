@@ -9,7 +9,19 @@ import Button from "./Button";
 
 const ItemCard = ({ item }) => {
     const { showVideoPlayer } = useContext(VideoPlayerContext);
-    const isWatched = useMemo(function(){return undefined;}, undefined);
+    const { user, getWatchedItem } = useContext(UserContext);
+
+
+    const getTitle = () => {
+        if (item.type === 'anime') {
+            return item.title.userPreferred || item.title.romaji || item.title.english || item.title.native || 'Unknown Title';
+        } else {
+            return item.name || item.title || 'Title not found';
+        }
+    }
+    const isWatched = useMemo(() => {
+        return getWatchedItem(item.type, getTitle()) !== null;
+    }, [getWatchedItem, item.type]);
     const handlePlayClick = async () => {
         showVideoPlayer(item.id, item.type);
     };
@@ -20,23 +32,14 @@ const ItemCard = ({ item }) => {
         let itemTitle = '';
 
         if (['movies', 'shows'].includes(item.type)) {
-            itemTitle =  item.name || item.title ||'Title not found'; // Ensure it's a string
+            itemTitle = item.name || item.title || 'Title not found'; // Ensure it's a string
             ratingValue = item.vote_average || 0;
             imagePath = item.poster_path
                 ? `https://image.tmdb.org/t/p/original${item.poster_path}`
                 : `https://via.placeholder.com/300x450?text=No+Image`;
         } else if (item.type === 'anime') {
-            console.log("Anime :" , item);
-            switch (typeof item?.title) {
-                case "object":
-                    itemTitle = item.title.userPreferred || item.title.romaji || item.title.english || item.title.native || 'Unknown Title'; // Handle object
-                    break;
-                case "string":
-                    itemTitle = item.title;
-                    console.log("Anime registered with title : " ,itemTitle);
-                    break;
-            }
-            ratingValue = item.rating / 10|| 0;
+            itemTitle = item.title.userPreferred || item.title.romaji || item.title.english || item.title.native || 'Unknown Title';
+            ratingValue = item.rating / 10 || 0;
             imagePath = item.image || item.cover || `https://via.placeholder.com/300x450?text=No+Image`;
         }
 
@@ -45,12 +48,12 @@ const ItemCard = ({ item }) => {
             rating: ratingValue,
             imageUrl: imagePath,
         };
-    }, [item.name, item.vote_average, item.poster_path, item.rating, item.image, item.cover, item.type]);
+    }, [item.name, item.vote_average, item.poster_path, item.rating, item.image, item.cover, item.type, item.title]);
 
     return (
         <div className="item-card">
             <div className="item-image" style={{ backgroundImage: `url(${imageUrl})` }}>
-                <div className="watched-icon" title={"If you have watched this item before this will be green otherwise white"}>
+                <div className="watched-icon">
                     {isWatched ? <FaCheckCircle color="green" /> : <FaRegCircle />}
                 </div>
             </div>
@@ -62,8 +65,8 @@ const ItemCard = ({ item }) => {
                     ))}
                 </div>
                 <div className="actions">
-                    <Button text="Info" title={"Display more information about this item"} onClick={() => alert('This Function is not made yet please be patient!')} />
-                    <Button text="Watch" title={"Watch this video"} onClick={() => handlePlayClick()} />
+                    <Button text="Info" onClick={() => alert('This Function is not made yet please be patient!')} />
+                    <Button text="Watch" onClick={() => handlePlayClick()} />
                 </div>
             </div>
         </div>

@@ -14,6 +14,11 @@
     left: 0;
 
 }
+.nav-link.active-tab {
+    color: #cf30aa;
+    border-bottom: 2px solid #cf30aa;
+    font-weight: bold;
+}
 
 .left-container {
     display: flex;
