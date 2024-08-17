@@ -25,6 +25,9 @@ const HomePage = () => {
     } = useItemContext();
 
     const hasFetched = useRef(false);
+    useEffect(() => {
+        setIsSearchVisible(false);
+    }, [activeTab]);
 
     useEffect(() => {
         if (!hasFetched.current && !items['movies-home'] && !items['shows-home'] && !items['anime-home']) {
@@ -134,7 +137,7 @@ const HomePage = () => {
             return (
                 <>
                     <Banner contentType={activeTab} />
-                    <VideoCardGrid contentType={activeTab} genre={selectedGenre} genres={genres} />
+                    <VideoCardGrid contentType={activeTab} genre={selectedGenre || ''} genres={genres} />
                     <VideoCardGrid contentType={activeTab} isHomePage title={`Trending ${activeTab}`} />
                 </>
             );

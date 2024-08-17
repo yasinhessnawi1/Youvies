@@ -11,6 +11,14 @@
     align-items: center;
     z-index: 2;
 }
+/* LoginPage.css */
+
+.error-message {
+    color: #a8426b;
+    font-size:  100%;
+    text-align: center;
+}
+
 
 .login-page {
     display: flex;

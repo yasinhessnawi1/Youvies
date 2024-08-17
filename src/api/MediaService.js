@@ -70,3 +70,32 @@ export const searchShows = async (query, page = 1) => {
         page,
     });
 };
+
+
+/**
+ * Fetches season details for a given TV series.
+ * @param {number|string} seriesId - The ID of the TV series.
+ * @param {number|string} seasonNumber - The season number to fetch details for.
+ * @returns {Promise<object>} The season details including episodes.
+ */
+export const fetchTvSeasonDetails = async (seriesId, seasonNumber) => {
+        return await fetchFromTmdb(`/tv/${seriesId}/season/${seasonNumber}`, {});
+};
+
+/**
+ * Fetches episode details for a specific episode in a season.
+ * @param {number|string} seriesId - The ID of the TV series.
+ * @param {number|string} seasonNumber - The season number.
+ * @param {number|string} episodeNumber - The episode number to fetch details for.
+ * @returns {Promise<object>} The episode details.
+ */
+export const fetchTvEpisodeDetails = async (seriesId, seasonNumber, episodeNumber) => {
+        return fetchFromTmdb(`/tv/${seriesId}/season/${seasonNumber}/episode/${episodeNumber}`, {});
+};
+
+
+// Functions for fetching recommendation for movies:
+export const fetchRecommendations = async (movieId, type) => {
+    type = type === 'movies' ? 'movie' : 'tv';
+    return await fetchFromTmdb(`/${type}/${movieId}/recommendations`);
+};

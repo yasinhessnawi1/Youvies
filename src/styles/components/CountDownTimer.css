@@ -1,0 +1,8 @@
+.countdown-timer {
+    font-weight: bold;
+    color: #ff4081;
+}
+
+.countdown-timer span {
+    margin-right: 5px;
+}

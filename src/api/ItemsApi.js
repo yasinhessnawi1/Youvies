@@ -61,6 +61,7 @@ export const fetchOneItem = async (category, id, type) => {
 };
 
 export const searchItems = async (category, title) => {
+    //remove spetial carachters from title
     switch (category) {
         case 'movies':
             return await searchMovies(title).then((movies) => movies.map((movie) => ({...movie, type: 'movies'})));

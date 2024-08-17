@@ -1,5 +1,6 @@
 import React, { createContext, useState, useEffect } from 'react';
-import { fetchItems, fetchItemsByGenre } from '../api/ItemsApi';
+import { fetchItems, fetchItemsByGenre, fetchOneItem } from '../api/ItemsApi';
+import { fetchRecommendations, fetchTvSeasonDetails } from "../api/MediaService";
 
 const ItemContext = createContext();
 
@@ -12,6 +13,7 @@ export const ItemProvider = ({ children }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [pageTracker, setPageTracker] = useState({}); // Track the page number for each content type and genre
     const [cacheTime, setCacheTime] = useState(Date.now());
+    const [itemsCache, setItemsCache] = useState({});
 
     useEffect(() => {
         const cachedItems = localStorage.getItem('cachedItems');
@@ -112,16 +114,77 @@ export const ItemProvider = ({ children }) => {
         }
     };
 
+    const fetchMediaInfo = async (mediaId, category) => {
+        const cacheKey = `${category}-${mediaId}`;
+        if (itemsCache[cacheKey]) {
+            return itemsCache[cacheKey]; // Return cached item if available
+        }
+        setIsLoading(true);
+        try {
+            const item = await fetchOneItem(category, mediaId);
+             if (category === 'movies') {
+                // Fetch related movies if the item is a movie
+                item.relatedMovies = await fetchRecommendations(mediaId, 'movies');
+            }else if (category === 'shows') {
+                 item.episodes = [];
+                 item.recommendations = await fetchRecommendations(mediaId, 'shows').then((response) => response.map((show) => ({...show, type: 'shows'})));
+            }else if (category === 'anime') {
+                item.recommendations = item.recommendations.map((anime) => ({...anime, type: 'anime'}));
+             }
+
+            // Store the item in the cache
+            setItemsCache(prevCache => ({
+                ...prevCache,
+                [cacheKey]: item
+            }));
+
+            return item;
+        } catch (error) {
+            console.error('Error fetching media info:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+
+    const fetchSeasonEpisodes = async (mediaId, seasonNumber) => {
+        const cacheKey = `${mediaId}-season-${seasonNumber}`;
+
+        if (itemsCache[cacheKey]) {
+            return itemsCache[cacheKey]; // Return cached episodes if available
+        }
+
+        setIsLoading(true);
+        try {
+            const episodes = await fetchTvSeasonDetails(mediaId, seasonNumber); // Fetch episodes
+
+            // Store in cache
+            setItemsCache(prevCache => ({
+                ...prevCache,
+                [cacheKey]: episodes
+            }));
+
+            return episodes;
+        } catch (error) {
+            console.error(`Error fetching episodes for season ${seasonNumber}:`, error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const value = {
         items,
         genres,
         selectedGenre,
         setSelectedGenre,
+        setGenres,
         isLoading,
         fetchAllItems,
         fetchGenreItems,
         fetchMoreItems,
-        setGenres,
+        fetchMediaInfo,
+        fetchSeasonEpisodes,
+        itemsCache, // Expose the itemsCache to the context
     };
 
     return <ItemContext.Provider value={value}>{children}</ItemContext.Provider>;

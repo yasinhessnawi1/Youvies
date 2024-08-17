@@ -55,7 +55,7 @@
 
 .item-card .actions {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     margin-top: 10px;
     gap: 5%;
 

@@ -54,9 +54,8 @@ const Footer = () => {
                 ))}
             </div>
             <div className="footer-info">
-                <h4>Youvies.Online</h4>
-                <p>Copyright © All Rights Reserved
-                    This site does not store any files on its server. All contents are provided by non-affiliated third parties.</p>
+                <h4>© Youvies.Online with ♥</h4>
+                <p>  This site does not store any files on its server. All contents are provided by non-affiliated third parties.</p>
                 <div className="footer-links">
                     <a href="#" className="footer-link">About Us</a>
                     <a href="#" className="footer-link">Contact</a>

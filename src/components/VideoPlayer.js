@@ -1,9 +1,12 @@
-import React, {useContext, useEffect, useState} from 'react';
-import {VideoPlayerContext} from '../contexts/VideoPlayerContext';
-import {useLoading} from '../contexts/LoadingContext';
+// VideoPlayer.js
+
+import React, { useContext, useEffect, useState } from 'react';
+import { VideoPlayerContext } from '../contexts/VideoPlayerContext';
+import { useLoading } from '../contexts/LoadingContext';
+import { UserContext } from '../contexts/UserContext';
 import LoadingIndicator from './static/LoadingIndicator';
 import '../styles/components/VideoPlayer.css';
-import {FaArrowDown, FaEllipsisH, FaTimes} from 'react-icons/fa';
+import { FaArrowDown, FaEllipsisH, FaTimes } from 'react-icons/fa';
 
 const VideoPlayer = () => {
     const {
@@ -14,14 +17,44 @@ const VideoPlayer = () => {
         changeEpisode,
         item
     } = useContext(VideoPlayerContext);
-    const {isLoading, setIsLoading} = useLoading();
+    const { isLoading, setIsLoading } = useLoading();
+    const { user, addToWatchedList, getWatchedItem } = useContext(UserContext);
+
     const [showOverlay, setShowOverlay] = useState(false);
     const [error, setError] = useState('');
     const [selectedSeason, setSelectedSeason] = useState(videoPlayerState.season);
     const [selectedEpisode, setSelectedEpisode] = useState(videoPlayerState.episode);
     const [isSeasonDropdownOpen, setIsSeasonDropdownOpen] = useState(false);
     const [isEpisodeDropdownOpen, setIsEpisodeDropdownOpen] = useState(false);
-
+    const getTitle = (item) => {
+        let title = '';
+        switch (videoPlayerState.type) {
+            case 'movies':
+                title = item.title || '';
+                break;
+            case 'shows':
+                title =  item.name ||'';
+                break;
+            case 'anime':
+                title = item.title.userPreferred || item.title.romaji || item.title.english || item.title.native || '';
+                break;
+        }
+        return title;
+    }
+    useEffect(() => {
+        if (!item) return;
+       const title = getTitle(item);
+        const watchedItem = getWatchedItem(videoPlayerState.type, title);
+        if (watchedItem) {
+            const [, , season, episode] = watchedItem.split(':');
+            setSelectedSeason(parseInt(season, 10));
+            setSelectedEpisode(parseInt(episode, 10));
+        } else {
+            addToWatchedList(`${videoPlayerState.type}:${title}:1:1`);
+            setSelectedSeason(1);
+            setSelectedEpisode(1);
+        }
+    }, [item, videoPlayerState.type]);
     // Determine the content type (Show, Anime, or Movie)
     const determineContentType = () => {
         if (videoPlayerState.type === 'shows') {
@@ -33,8 +66,8 @@ const VideoPlayer = () => {
         }
     };
 
-    const contentType = determineContentType();
 
+    const contentType = determineContentType();
     const constructVideoUrl = (provider, season = 1, episode = 1) => {
         const id = item.id;
 
@@ -65,7 +98,6 @@ const VideoPlayer = () => {
                 return '';
         }
     };
-
     const videoSrc = item ? constructVideoUrl(videoPlayerState.provider, selectedSeason, selectedEpisode) : '';
 
     useEffect(() => {
@@ -79,6 +111,7 @@ const VideoPlayer = () => {
         if (season === selectedSeason) return;
         setSelectedSeason(season);
         setSelectedEpisode(1);
+        handleEpisodeChange(1);
         changeSeason(season);
         setIsLoading(true);
         setIsSeasonDropdownOpen(false);
@@ -90,11 +123,31 @@ const VideoPlayer = () => {
         changeEpisode(episode);
         switchProvider(videoPlayerState.provider, selectedSeason, episode);
         setIsLoading(true);
+        addToWatchedList(`${videoPlayerState.type}:${getTitle(item)}:${selectedSeason}:${episode}`);
         setIsEpisodeDropdownOpen(false);
+    };
+
+    const handleNextEpisode = () => {
+        const totalEpisodes = contentType === 'Show'
+            ? item.seasons[selectedSeason - 1]?.episode_count || 1
+            : item.totalEpisodes || 1;
+
+        if (selectedEpisode < totalEpisodes) {
+            handleEpisodeChange(selectedEpisode + 1);
+        } else if (selectedSeason < item.seasons?.length) {
+            handleSeasonChange(selectedSeason + 1);
+            handleEpisodeChange(1);
+        }
+    };
+
+    const handleRestart = () => {
+        handleSeasonChange(1);
+        handleEpisodeChange(1);
     };
 
     const handleContentLoad = () => {
         setIsLoading(false);
+
     };
 
     const toggleOverlay = () => {
@@ -106,11 +159,11 @@ const VideoPlayer = () => {
     };
 
     const toggleSeasonDropdown = () => {
-        setIsSeasonDropdownOpen((prev) => !prev);
+        setIsSeasonDropdownOpen(prev => !prev);
     };
 
     const toggleEpisodeDropdown = () => {
-        setIsEpisodeDropdownOpen((prev) => !prev);
+        setIsEpisodeDropdownOpen(prev => !prev);
     };
 
     if (!videoPlayerState.isVisible) {
@@ -119,12 +172,13 @@ const VideoPlayer = () => {
 
     return (
         <div className="player-video-player-overlay">
-            {isLoading && <LoadingIndicator/>}
+            {isLoading && <LoadingIndicator />}
             <iframe
                 src={videoSrc}
-                title="Video player with external sources. If the video doesn't play, try switching the server. Ads are from the video source not from us, please use adblock."
+                title="Video player"
                 width="100%"
                 height="100%"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 frameBorder="0"
                 allowFullScreen
                 onLoad={handleContentLoad}
@@ -134,7 +188,7 @@ const VideoPlayer = () => {
                 }}
             ></iframe>
             <div className={`player-overlay-menu-button ${showOverlay ? 'active' : ''}`} onClick={toggleOverlay}>
-                {showOverlay ? <FaTimes size={24} title={"Close This Menu"}/> : <FaEllipsisH size={24} title={"Settings (example: change episodes and servers...)"}/>}
+                {showOverlay ? <FaTimes size={24} title="Close This Menu" /> : <FaEllipsisH size={24} title="Settings" />}
             </div>
             {showOverlay && (
                 <div className="player-overlay-menu">
@@ -142,10 +196,8 @@ const VideoPlayer = () => {
                         <>
                             <div className="player-dropdown-container">
                                 <div className="player-dropdown">
-                                    <button className="player-dropdown-button" onClick={toggleSeasonDropdown}
-                                            title={"Change the season."}
-                                    >
-                                        Season {selectedSeason} <FaArrowDown className={"arrow-down"}/>
+                                    <button className="player-dropdown-button" onClick={toggleSeasonDropdown}>
+                                        Season {selectedSeason} <FaArrowDown />
                                     </button>
                                     {isSeasonDropdownOpen && (
                                         <div className="player-dropdown-content">
@@ -160,7 +212,6 @@ const VideoPlayer = () => {
                                             ))}
                                             {contentType === 'Anime' && (
                                                 <span
-                                                    title={"Change the season to watch."}
                                                     className={`player-dropdown-item ${selectedSeason === 1 ? 'highlight' : ''}`}
                                                     onClick={() => handleSeasonChange(1)}
                                                 >
@@ -173,10 +224,8 @@ const VideoPlayer = () => {
                             </div>
                             <div className="player-dropdown-container">
                                 <div className="player-dropdown">
-                                    <button  className="player-dropdown-button" onClick={toggleEpisodeDropdown}
-                                             title={"Change the episode."}
-                                    >
-                                        Episode {selectedEpisode} <FaArrowDown className={"arrow-down"}/>
+                                    <button className="player-dropdown-button" onClick={toggleEpisodeDropdown}>
+                                        Episode {selectedEpisode} <FaArrowDown />
                                     </button>
                                     {isEpisodeDropdownOpen && (
                                         <div className="player-dropdown-content">
@@ -186,7 +235,6 @@ const VideoPlayer = () => {
                                                     : item.totalEpisodes || 1
                                             }, (_, i) => i + 1).map((episode) => (
                                                 <span
-                                                    title={"Change the episode to watch."}
                                                     key={episode}
                                                     className={`player-dropdown-item ${selectedEpisode === episode ? 'highlight' : ''}`}
                                                     onClick={() => handleEpisodeChange(episode)}
@@ -198,35 +246,31 @@ const VideoPlayer = () => {
                                     )}
                                 </div>
                             </div>
+                            <button className={"player-control-button"} onClick={handleNextEpisode}>Next Episode</button>
+                            <button className={"player-control-button"} onClick={handleRestart}>Restart from Beginning</button>
                         </>
                     )}
                     <div className="player-server-switch-container">
                         <span className="player-server-switch-label">Video troubles? Try switching server:</span>
                         <div className="player-server-buttons">
                             <button
-                                title={"No subtitles server. Use this if you don't need subtitles."}
                                 className={`player-control-button ${videoPlayerState.provider === 'SuperEmbed' ? 'active' : ''}`}
                                 onClick={() => switchProvider('SuperEmbed')}>No CC
-
                             </button>
                             <button
-                                title={"English subtitles. Use this if you mostly need English subtitles."}
                                 className={`player-control-button ${videoPlayerState.provider === '2embed' ? 'active' : ''}`}
                                 onClick={() => switchProvider('2embed')}>English CC
                             </button>
                             <button
-                                title={"Multi-language subtitles. Use this if you need subtitles in multiple languages."}
                                 className={`player-control-button ${videoPlayerState.provider === 'NontonGo' ? 'active' : ''}`}
                                 onClick={() => switchProvider('NontonGo')}>Multi CC
                             </button>
                         </div>
                     </div>
-                    <button className="player-control-button player-close-button" onClick={hidePlayer}
-                            title={"Close the video player and go back home."}>Close Video
-                    </button>
+                    <button className="player-control-button player-close-button" onClick={hidePlayer}>Close Video</button>
                 </div>
             )}
-            {error && <div className="player-error-message" title={"This error means the video is not found and changing a server could solve it."}>{error}</div>}
+            {error && <div className="player-error-message">{error}</div>}
         </div>
     );
 };

@@ -3,7 +3,7 @@ import ItemCard from './ItemCard';
 import '../styles/components/Carousel.css';
 import { useItemContext } from '../contexts/ItemContext';
 
-const Carousel = ({ items = [], onReachEnd }) => {
+const Carousel = ({ items = [], onReachEnd , isRelated}) => {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [itemsPerPage, setItemsPerPage] = useState(1);
     const { isLoading } = useItemContext();
@@ -56,7 +56,7 @@ const Carousel = ({ items = [], onReachEnd }) => {
             <div className="carousel-items">
                 {getVisibleItems().map((item, index) => (
                     <div key={`${item.id}-${index}`} className="carousel-item">
-                        <ItemCard item={item} contentType={item.type} />
+                        <ItemCard item={item} contentType={item.type} isRelated={isRelated}/>
                     </div>
                 ))}
                 {isLoading && <div className="loading-indicator">Loading...</div>}

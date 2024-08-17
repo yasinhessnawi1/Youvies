@@ -11,6 +11,7 @@ import {TabProvider} from './contexts/TabContext';
 import VideoPlayer from './components/VideoPlayer';
 import './styles/Global.css';
 import ErrorBoundary from "./components/static/ErrorBoundary";
+import InfoPage from "./pages/InfoPage";
 
 function App() {
     return (
@@ -23,6 +24,7 @@ function App() {
                                 <TabProvider>
                                     <Routes>
                                         <Route path="/login" element={<LoginPage/>}/>
+                                        <Route path="/info/:mediaId/:category" element={<InfoPage />} />
                                         <Route path="/home" element={<HomePage/>}/>
                                         <Route path="/movies" element={<HomePage/>}/>
                                         <Route path="/shows" element={<HomePage/>}/>
