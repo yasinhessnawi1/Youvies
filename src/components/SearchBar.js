@@ -212,7 +212,7 @@ const SearchBar = ({ activeTab }) => {
                             <div className="search-result-info">
                                 <h4>{getTitle(item)}</h4>
                                 <div className="search-result-actions">
-                                    <Button text="More Info" onClick={() => alert('This Function is not made yet please be patient!')} />
+                                    <Button text="Info" category={item.type} id={item.id} />
                                     <Button text="Watch" onClick={() => handlePlayClick(item, false)} />
                                 </div>
                             </div>

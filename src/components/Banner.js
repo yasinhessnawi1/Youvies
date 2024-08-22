@@ -93,7 +93,7 @@ const Banner = ({ contentType }) => {
                     )}
                 </p>
                 <div className="banner-actions">
-                    <Button text="More Info" onClick={() => alert('This Function is not made yet please be patient!')} title={"Display more information."}/>
+                    <Button text="Info" category={currentItem.type} id={currentItem.id} />
                     <Button text="Watch" onClick={() => handlePlayClick(currentItem)} title={"Watch this video"}/>
                     <Button text={isPaused ? 'Resume' : 'Pause'} onClick={handlePause} title={"Pause the suggestions shuffling."}/>
                 </div>
