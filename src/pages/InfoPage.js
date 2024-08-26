@@ -342,7 +342,6 @@ const InfoPage = () => {
                                 width="100%"
                                 height="100%"
                                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                frameBorder="0"
                                 allowFullScreen
                             ></iframe>
                             {itemInfo.type !== 'anime' && <div className="player-buttons">
@@ -379,7 +378,11 @@ const InfoPage = () => {
                                                 src={`https://image.tmdb.org/t/p/original${relatedMovie.poster_path}`}
                                                 alt={relatedMovie.title}/>
                                             <p>{relatedMovie.title}</p>
+                                            <div>
                                                 <Button text="Info" category={itemInfo.type} id={relatedMovie.id} />
+
+                                            </div>
+
                                             </div>
                                         ))}
                                     </div>

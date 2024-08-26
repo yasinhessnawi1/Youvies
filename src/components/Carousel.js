@@ -50,7 +50,7 @@ const Carousel = ({ items = [], onReachEnd , isRelated}) => {
 
     return (
         <div className="carousel">
-            {currentIndex > 0 && (
+            {currentIndex >= 0 && (
                 <button className="carousel-button prev" onClick={prevItem}>‹</button>
             )}
             <div className="carousel-items">

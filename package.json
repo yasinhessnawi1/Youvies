@@ -7,7 +7,6 @@
     "@consumet/extensions": "^1.7.0",
     "@react-buddy/ide-toolbox": "^2.4.0",
     "@videojs/http-streaming": "^3.13.2",
-    "@webtor/platform-sdk-js": "^0.2.18",
     "assert": "^2.1.0",
     "axios": "^1.7.4",
     "browserify-zlib": "^0.2.0",
@@ -16,7 +15,6 @@
     "express": "^4.19.2",
     "https-browserify": "^1.0.0",
     "pako": "^2.1.0",
-    "parse-torrent": "^11.0.17",
     "plyr": "^3.7.8",
     "process": "^0.11.10",
     "querystring-es3": "^0.2.1",
@@ -29,12 +27,10 @@
     "simplex-noise": "^4.0.1",
     "stream-browserify": "^3.0.0",
     "stream-http": "^3.2.0",
-    "torrent-stream": "^1.2.1",
     "url": "^0.11.3",
     "util": "^0.12.5",
     "video.js": "^8.16.1",
-    "vm-browserify": "^1.1.2",
-    "webtorrent": "^2.4.12"
+    "vm-browserify": "^1.1.2"
   },
   "scripts": {
     "start": "react-app-rewired start",

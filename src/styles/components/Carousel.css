@@ -14,55 +14,58 @@
     font-size: 2rem;
     cursor: pointer;
     z-index: 1;
-    padding: 0 20px;
+    margin:20px;
     height: 100%;
+}
+.carousel-button:hover {
+    transform: scale(1.5);
+    color: beige;
 }
 
 .carousel-items {
     display: flex;
     transition: transform 0.5s ease-in-out;
-    width: 100%; /* Adjusted width to consider the buttons */
-    overflow-x: auto;
+    width: 90%; /* Adjusted width to consider the buttons */
+    overflow: hidden;
     scroll-snap-type: x mandatory;
     scroll-behavior: smooth;
     scrollbar-color: rgba(168, 55, 55, 0.5) transparent;
     justify-content: space-around;
+
+}
+.carousel-button:hover .prev:hover .next:hover {
+    scale: 300%;
 }
 
 .carousel-item {
-    min-width: calc(80% / 5)  ; /* Adjust this value based on itemsPerPage */
+    max-width: calc(90% / 5)  ; /* Adjust this value based on itemsPerPage */
     transition: transform 0.5s ease-in-out;
     padding: 5px; /* Add padding between items if needed */
 }
 
 @media (max-width: 1400px) {
     .carousel-item {
-        min-width: calc(100% / 4);
+        max-width: calc(90% / 4);
     }
 }
 
 @media (max-width: 992px) {
     .carousel-item {
-        min-width: calc(100% / 3);
+        max-width: calc(90% / 3);
     }
 }
 
 @media (max-width: 768px) {
     .carousel-item {
-        min-width: calc(100% / 2);
+        max-width: calc(90% /  2);
     }
 }
 
 @media (max-width: 576px) {
     .carousel-item {
-        min-width: 100%;
+        max-width: calc(90% / 1);
+    }
 
-    }
-    .carousel-items {
-        width: calc(100% - 140px);
-    }
-    .carousel-button {
-        scale: 150%;
-    }
+
 
 }
