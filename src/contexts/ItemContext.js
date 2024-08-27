@@ -1,33 +1,75 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useContext, useRef } from 'react';
 import { fetchItems, fetchItemsByGenre, fetchOneItem } from '../api/ItemsApi';
 import { fetchRecommendations, fetchTvSeasonDetails } from "../api/MediaService";
+import { UserContext } from "./UserContext";
+import {getTitle} from "../utils/helper";
 
 const ItemContext = createContext();
-
-const CACHE_DURATION = 1000 * 60 * 60 * 3; // 3 hours
+const CACHE_DURATION = 1000 * 60 * 10 ; // 10 min
 
 export const ItemProvider = ({ children }) => {
     const [items, setItems] = useState({});
     const [genres, setGenres] = useState([]);
     const [selectedGenre, setSelectedGenre] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [pageTracker, setPageTracker] = useState({}); // Track the page number for each content type and genre
+    const [pageTracker, setPageTracker] = useState({});
     const [cacheTime, setCacheTime] = useState(Date.now());
     const [itemsCache, setItemsCache] = useState({});
+    const [watchedItems, setWatchedItems] = useState([]);
+    const { user } = useContext(UserContext);
 
-    useEffect(() => {
-        const cachedItems = localStorage.getItem('cachedItems');
-        const cachedTime = localStorage.getItem('cacheTime');
+    const previousUserWatchedRef = useRef(user?.user?.watched);
+    const previousGenreRef = useRef(null);
 
-        if (cachedItems && cachedTime && (Date.now() - cachedTime) < CACHE_DURATION) {
-            setItems(JSON.parse(cachedItems));
-            setCacheTime(parseInt(cachedTime, 10));
-        } else {
-            localStorage.removeItem('cachedItems');
-            localStorage.removeItem('cacheTime');
+    const fetchWatchedItems = async (userWatchedList) => {
+        if (!userWatchedList) return;
+
+        const newFetchedItems = [];
+        for (let i = userWatchedList.length - 1; i >= 0; i--) {
+            const [type, id, title] = userWatchedList[i].split(':');
+
+            // Find if the item already exists in the watchedItems list
+            const existingItem = watchedItems.find(
+                (item) => item.id === id && item.type === type && getTitle(item) === title
+            );
+
+            if (!existingItem) {
+                const watchedItem = await fetchOneItem(type, id);
+                if (watchedItem) {
+                    newFetchedItems.push(watchedItem);
+                }
+            }
         }
-    }, []);
 
+        // Append new items to the existing watchedItems list
+        setWatchedItems(prevItems => [...prevItems, ...newFetchedItems]);
+    };
+
+
+    // Initialize Items
+    useEffect(() => {
+        const initializeItems = async () => {
+            const cachedItems = localStorage.getItem('cachedItems');
+            const cachedTime = localStorage.getItem('cacheTime');
+
+            if (cachedItems && cachedTime && (Date.now() - cachedTime) < CACHE_DURATION) {
+                setItems(JSON.parse(cachedItems));
+                setCacheTime(parseInt(cachedTime, 10));
+            } else {
+                localStorage.removeItem('cachedItems');
+                localStorage.removeItem('cacheTime');
+            }
+
+            if (user &&user.user.watched !== previousUserWatchedRef.current) {
+                previousUserWatchedRef.current = user.user.watched;
+                await fetchWatchedItems(user.user.watched);
+            }
+        };
+
+        initializeItems();
+    }, [user]);
+
+    // Cache Management
     useEffect(() => {
         if (Object.keys(items).length > 0) {
             localStorage.setItem('cachedItems', JSON.stringify(items));
@@ -38,19 +80,27 @@ export const ItemProvider = ({ children }) => {
     const fetchMoreItems = async (contentType, genre = null) => {
         const key = `${contentType}-${genre || 'home'}`;
         const currentPage = pageTracker[key] || 1;
-        const nextPage = currentPage + 1;
+        let nextPage = currentPage + 1;
 
+        if (genre === previousGenreRef.current) {
+            return; // Avoid re-fetching if the genre is the same
+        }
+
+        previousGenreRef.current = genre;
         setIsLoading(true);
-        try {
-            const moreItems = genre
-                ? await fetchItemsByGenre(contentType, genre, nextPage, 20)
-                : await fetchItems(contentType, nextPage, 20);
-            moreItems.forEach(item => (item.type = contentType));
-            setItems(prevItems => ({
-                ...prevItems,
-                [key]: [...(prevItems[key] || []), ...moreItems], // Append new items
-            }));
 
+        try {
+            for (let i = 0; i < 5; i++) {
+                const moreItems = genre
+                    ? await fetchItemsByGenre(contentType, genre, nextPage + i, 20)
+                    : await fetchItems(contentType, nextPage + i, 20);
+                moreItems.forEach(item => (item.type = contentType));
+
+                setItems(prevItems => ({
+                    ...prevItems,
+                    [key]: [...(prevItems[key] || []), ...moreItems],
+                }));
+            }
             setPageTracker(prevTracker => ({
                 ...prevTracker,
                 [key]: nextPage,
@@ -64,7 +114,7 @@ export const ItemProvider = ({ children }) => {
 
     const fetchAllItems = async () => {
         if (items['movies-home'] && items['shows-home'] && items['anime-home']) {
-            return; // Items are already in the cache, no need to fetch
+            return;
         }
 
         setIsLoading(true);
@@ -74,6 +124,7 @@ export const ItemProvider = ({ children }) => {
                 fetchItems('shows', 1, 20),
                 fetchItems('anime', 1, 50),
             ]);
+
             movies.forEach(item => (item.type = 'movies'));
             shows.forEach(item => (item.type = 'shows'));
             anime.forEach(item => (item.type = 'anime'));
@@ -95,13 +146,14 @@ export const ItemProvider = ({ children }) => {
     const fetchGenreItems = async (contentType, genre) => {
         const key = `${contentType}-${genre}`;
         if (items[key]) {
-            return; // Items are already in the cache, no need to fetch
+            return;
         }
 
         setIsLoading(true);
         try {
             const genreItems = await fetchItemsByGenre(contentType, genre, 1, 20);
             genreItems.forEach(item => (item.type = contentType));
+
             setItems(prevItems => ({
                 ...prevItems,
                 [key]: genreItems,
@@ -117,14 +169,15 @@ export const ItemProvider = ({ children }) => {
     const fetchMediaInfo = async (mediaId, category) => {
         const cacheKey = `${category}-${mediaId}`;
         if (itemsCache[cacheKey]) {
-            return itemsCache[cacheKey]; // Return cached item if available
+            return itemsCache[cacheKey];
         }
+
         setIsLoading(true);
         try {
             const item = await fetchOneItem(category, mediaId);
              if (category === 'movies') {
                 // Fetch related movies if the item is a movie
-                item.relatedMovies = await fetchRecommendations(mediaId, 'movies');
+                item.recommendations = await fetchRecommendations(mediaId, 'movies').then((response) => response.map((movie) => ({...movie, type: 'movies'})));
             }else if (category === 'shows') {
                  item.episodes = [];
                  item.recommendations = await fetchRecommendations(mediaId, 'shows').then((response) => response.map((show) => ({...show, type: 'shows'})));
@@ -132,10 +185,9 @@ export const ItemProvider = ({ children }) => {
                 item.recommendations = item.recommendations.map((anime) => ({...anime, type: 'anime'}));
              }
 
-            // Store the item in the cache
             setItemsCache(prevCache => ({
                 ...prevCache,
-                [cacheKey]: item
+                [cacheKey]: item,
             }));
 
             return item;
@@ -146,22 +198,19 @@ export const ItemProvider = ({ children }) => {
         }
     };
 
-
     const fetchSeasonEpisodes = async (mediaId, seasonNumber) => {
         const cacheKey = `${mediaId}-season-${seasonNumber}`;
-
         if (itemsCache[cacheKey]) {
-            return itemsCache[cacheKey]; // Return cached episodes if available
+            return itemsCache[cacheKey];
         }
 
         setIsLoading(true);
         try {
-            const episodes = await fetchTvSeasonDetails(mediaId, seasonNumber); // Fetch episodes
+            const episodes = await fetchTvSeasonDetails(mediaId, seasonNumber);
 
-            // Store in cache
             setItemsCache(prevCache => ({
                 ...prevCache,
-                [cacheKey]: episodes
+                [cacheKey]: episodes,
             }));
 
             return episodes;
@@ -179,15 +228,17 @@ export const ItemProvider = ({ children }) => {
         setSelectedGenre,
         setGenres,
         isLoading,
+        watchedItems,
+        setWatchedItems,
         fetchAllItems,
         fetchGenreItems,
         fetchMoreItems,
         fetchMediaInfo,
         fetchSeasonEpisodes,
-        itemsCache, // Expose the itemsCache to the context
+        itemsCache,
     };
 
     return <ItemContext.Provider value={value}>{children}</ItemContext.Provider>;
 };
 
-export const useItemContext = () => React.useContext(ItemContext);
+export const useItemContext = () => useContext(ItemContext);

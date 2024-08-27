@@ -7,9 +7,10 @@ import { UserContext } from '../contexts/UserContext';
 import { VideoPlayerContext } from '../contexts/VideoPlayerContext';
 import { useItemContext } from '../contexts/ItemContext';
 import Button from "./Button";
+import {getTitle, playClick} from "../utils/helper";
 
 const Banner = ({ contentType }) => {
-    const { user, addToWatchedList } = useContext(UserContext);
+    const { user, addToWatchedList , getWatchedItem} = useContext(UserContext);
     const { showVideoPlayer } = useContext(VideoPlayerContext);
     const { items, isLoading, fetchAllItems } = useItemContext();
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -50,11 +51,7 @@ const Banner = ({ contentType }) => {
 
     const handlePlayClick = async (item) => {
         if (!user) return;
-        if (item.type.includes("Show") && user.watched.includes(`${item.type}:${item.title}:1:1`)) {
-            showVideoPlayer(item.id, item.type);
-        } else {
-            showVideoPlayer(item.id, item.type);
-        }
+        showVideoPlayer(item.id, item.type);
     };
 
     let imageUrl = '';

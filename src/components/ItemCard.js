@@ -6,22 +6,17 @@ import { UserContext } from '../contexts/UserContext';
 import { VideoPlayerContext } from '../contexts/VideoPlayerContext';
 import '../styles/components/ItemCard.css';
 import Button from "./Button";
+import {getTitle, playClick} from "../utils/helper";
 
 const ItemCard = ({ item , isRelated}) => {
     const { showVideoPlayer } = useContext(VideoPlayerContext);
-    const { user, getWatchedItem } = useContext(UserContext);
+    const { user, getWatchedItem , addToWatchedList} = useContext(UserContext);
 
 
-    const getTitle = () => {
-        if (item.type === 'anime') {
-            return item.title.userPreferred || item.title.romaji || item.title.english || item.title.native || 'Unknown Title';
-        } else {
-            return item.name || item.title || 'Title not found';
-        }
-    }
     const isWatched = useMemo(() => {
-        return getWatchedItem(item.type, getTitle()) !== null;
-    }, [getWatchedItem, item.type]);
+        return getWatchedItem(item.type, item.id, getTitle(item)) !== null;
+    }, [getWatchedItem, item.id, item]);
+
     const handlePlayClick = async () => {
         showVideoPlayer(item.id, item.type);
     };

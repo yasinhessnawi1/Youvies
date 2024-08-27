@@ -1,9 +1,8 @@
 // UserContext.js
 
-import React, { createContext, useState, useEffect } from 'react';
+import React, {createContext, useState, useEffect, useContext} from 'react';
 import { loginUser, logoutUser, editUser } from '../api/UserApi';
 import { useNavigate } from "react-router-dom";
-
 export const UserContext = createContext();
 
 export const UserProvider = ({ children }) => {
@@ -29,36 +28,34 @@ export const UserProvider = ({ children }) => {
 
     const logout = async () => {
         try {
-            console.table(user);
-
             if (user && user.token) {
                 await editUser(user.user, user.token);
                 await logoutUser(user.token);
             }
-            console.table(user);
             setUser(null);
             localStorage.removeItem('user');
-            navigate('/');
+            navigate('/login');
         } catch (error) {
             console.error('Logout failed:', error);
         }
     };
 
-    const addToWatchedList = (watchedItem) => {
+    const addToWatchedList = async (watchedItem) => {
         if (!user) return;
 
         // Initialize watched list if it doesn't exist
         if (!user.user.watched) user.user.watched = [];
 
         // Parse the watched item details
-        const [type, title, newSeason, newEpisode] = watchedItem.split(':');
+        const [type, id, title, newSeason, newEpisode] = watchedItem.split(':');
 
         // Find the existing watched item
-        const existingItemIndex = user.user.watched.findIndex(item => item.startsWith(`${type}:${title}`));
+        const existingItemIndex = user.user.watched.findIndex(item => item.startsWith(`${type}:${id}:${title}`));
 
         if (existingItemIndex !== -1) {
             // Replace with updated values
-            user.user.watched[existingItemIndex] = `${type}:${title}:${newSeason}:${newEpisode}`;
+            user.user.watched[existingItemIndex] = `${type}:${id}:${title}:${newSeason}:${newEpisode}`;
+
         } else {
             // New item, add it to the watched list
             user.user.watched.push(watchedItem);
@@ -67,13 +64,17 @@ export const UserProvider = ({ children }) => {
         // Update the user state and persist to localStorage
         setUser(user);
         localStorage.setItem('user', JSON.stringify(user));
+        try {
+            await editUser(user.user, user.token);
+        }catch (error) {
+            console.error('Failed to update user watched list:', error);
+        }
+
     };
 
-
-
-    const getWatchedItem = (type, title) => {
+    const getWatchedItem = (type, id, title) => {
         if (!user || !user.user.watched) return null;
-        return user.user.watched.find(item => item.startsWith(`${type}:${title}`)) || null;
+        return user.user.watched.find(item => item.startsWith(`${type}:${id}:${title}`)) || null;
     };
 
     return (

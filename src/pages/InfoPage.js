@@ -11,58 +11,52 @@ import {useLoading} from "../contexts/LoadingContext";
 import {UserContext} from "../contexts/UserContext";
 import VideoCardGrid from "../components/VideoCardGrid";
 import CountdownTimer from "../utils/CountdownTimer";
-import Button from "../components/Button";
+import {getTitle} from "../utils/helper";
 
 const InfoPage = () => {
+    const {user} = useContext(UserContext);
+    const {setWatchedItems} = useItemContext();
     const {isLoading, setIsLoading} = useLoading();
-    const [error, setError] = useState('');
     const {videoPlayerState, switchProvider} = useContext(VideoPlayerContext);
     const {mediaId, category} = useParams();
     const {fetchMediaInfo, itemsCache} = useItemContext();
     const [selectedSeason, setSelectedSeason] = useState(null);
     const [selectedEpisode, setSelectedEpisode] = useState(null);
-    const {user} = useContext(UserContext);
     const [itemInfo, setItemInfo] = useState(null);
+    const [error, setError] = useState('');
     const [isSearchVisible, setIsSearchVisible] = useState(false);
     const {addToWatchedList, getWatchedItem} = useContext(UserContext);
 
-    // Ref for the episodes grid container
+    const previousMediaIdRef = useRef(null);
+    const previousCategoryRef = useRef(null);
     const sideContentRef = useRef(null);
-
-    const getTitle = (item) => {
-        let title = '';
-        switch (item.type) {
-            case 'movies':
-                title = item.title || '';
-                break;
-            case 'shows':
-                title = item.name || '';
-                break;
-            case 'anime':
-                title = item.title.userPreferred || item.title.romaji || item.title.english || item.title.native || '';
-                break;
-        }
-        return title;
-    }
 
     useEffect(() => {
         const loadMediaInfo = async () => {
-            if (!mediaId || !category || isLoading) return;
+            if (isLoading || !mediaId || !category) return;
 
+            // Prevent unnecessary fetch if mediaId and category haven't changed
+            if (previousMediaIdRef.current === mediaId && previousCategoryRef.current === category) {
+                return;
+            }
+
+            // Update refs to current mediaId and category
+            previousMediaIdRef.current = mediaId;
+            previousCategoryRef.current = category;
+
+            // Check cache before fetching
             const cacheKey = `${category}-${mediaId}`;
-
-            // Check if the item is already in the cache
             if (itemsCache[cacheKey]) {
                 setItemInfo(itemsCache[cacheKey]);
-                initializeSelectedSeasonAndEpisode(itemsCache[cacheKey]);
-                return; // Use the cached item
+                await initializeSelectedSeasonAndEpisode(itemsCache[cacheKey]);
+                return;
             }
 
             setIsLoading(true);
             try {
                 const fetchedItem = await fetchMediaInfo(mediaId, category);
                 setItemInfo(fetchedItem);
-                initializeSelectedSeasonAndEpisode(fetchedItem);
+                await initializeSelectedSeasonAndEpisode(fetchedItem);
             } catch (err) {
                 setError('Failed to load media information.');
             } finally {
@@ -70,34 +64,37 @@ const InfoPage = () => {
             }
         };
 
-        const initializeSelectedSeasonAndEpisode = (item) => {
-            if (!item || item.type === 'movies') return;
+        const initializeSelectedSeasonAndEpisode = async (item) => {
+            if (!item || isLoading) return;
             const title = getTitle(item) || '';
-            const watchedItem = getWatchedItem(item.type, title);
-            let initialSeason = null;
+            const watchedItem = getWatchedItem(item.type, item.id, title);
+            let initialSeason = {season_number: 1, episode_count: 1};
             let initialEpisode = {episode_number: 1};
+
             if (item.type === 'anime') {
                 initialSeason = {season_number: item.season || 1, episode_count: item.totalEpisodes};
-                if (watchedItem) {
-                    const [, , season, episode] = watchedItem.split(':');
+                if (watchedItem !== null) {
+                    const [, , , season, episode] = watchedItem.split(':');
                     initialSeason = {season_number: parseInt(season, 10) || 1, episode_count: item.totalEpisodes};
                     initialEpisode = {episode_number: parseInt(episode, 10)};
                 }
-            } else {
+            } else if (item.seasons && item.seasons.length > 0) {
                 initialSeason = item.seasons[0];
                 if (watchedItem) {
-                    const [, , season, episode] = watchedItem.split(':');
+                    const [, , , season, episode] = watchedItem.split(':');
                     initialSeason = item.seasons.find(s => s.season_number === parseInt(season, 10)) || initialSeason;
                     initialEpisode = {episode_number: parseInt(episode, 10)};
                 }
             }
 
+            addToWatchedList(`${item.type}:${item.id}:${title}:${initialSeason.season_number}:${initialEpisode.episode_number}`);
+            setWatchedItems(prevItems => [item, ...prevItems]);
             setSelectedSeason(initialSeason);
             setSelectedEpisode(initialEpisode);
         };
 
         loadMediaInfo();
-    }, [mediaId, category, fetchMediaInfo, itemsCache]);
+    }, [mediaId, category]);  // Only watching mediaId and category
 
     useEffect(() => {
         if (selectedEpisode && sideContentRef.current) {
@@ -110,13 +107,10 @@ const InfoPage = () => {
                 const elementOffsetTop = episodeElement.offsetTop;
                 const elementHeight = episodeElement.clientHeight;
 
-                // Calculate the scroll position to center the selected episode
-                // Set the scrollTop of the container
                 container.scrollTop = elementOffsetTop - containerHeight / 2 + elementHeight / 2;
             }
         }
     }, [selectedEpisode]);
-
 
     const handleSeasonChange = async (season) => {
         setSelectedSeason(season);
@@ -125,9 +119,8 @@ const InfoPage = () => {
 
     const handleEpisodeChange = (episode) => {
         setSelectedEpisode(episode);
-        addToWatchedList(`${itemInfo.type}:${itemInfo.title || itemInfo.name}:${selectedSeason.season_number}:${episode.episode_number}`);
+        addToWatchedList(`${itemInfo.type}:${itemInfo.id}:${getTitle(itemInfo)}:${selectedSeason.season_number}:${episode.episode_number}`);
     };
-
 
     const constructVideoUrl = (provider, season = 1, episode = 1) => {
         const id = itemInfo?.id;
@@ -366,28 +359,9 @@ const InfoPage = () => {
                             </div>
                             }
                     </div>
-
+                        {itemInfo.type !== 'movies' &&
                     <div className="side-content" ref={sideContentRef}>
-                        {itemInfo.type === 'movies' ? (
-                            <div className="related-videos">
-                                <h2>Related Movies</h2>
-                                <div className="related-grid">
-                                    {itemInfo.relatedMovies?.map((relatedMovie) => (
-                                        <div key={relatedMovie.id} className="related-card">
-                                            <img
-                                                src={`https://image.tmdb.org/t/p/original${relatedMovie.poster_path}`}
-                                                alt={relatedMovie.title}/>
-                                            <p>{relatedMovie.title}</p>
-                                            <div>
-                                                <Button text="Info" category={itemInfo.type} id={relatedMovie.id} />
 
-                                            </div>
-
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            ) : (
                                 <div className="episodes-list">
                                     <div className="season-selector">
                                         {itemInfo.type === 'anime' ? (
@@ -419,14 +393,13 @@ const InfoPage = () => {
                                         ))}
                                     </div>
                                 </div>
-                            )}
 
                         </div>
-
+                        }
                     </div>
 
                 </div>
-                {itemInfo.recommendations && itemInfo.recommendations.length > 0 && itemInfo.type !== 'movies' &&(
+                {itemInfo.recommendations && itemInfo.recommendations.length > 0 && (
                     <VideoCardGrid
                         contentType={itemInfo.type}
                         isRelated={true}

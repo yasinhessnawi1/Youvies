@@ -80,61 +80,6 @@
     background-color: #ff4081;
     box-shadow: 0 6px 20px rgba(255, 64, 129, 1);
 }
-.related-videos{
-    width: 80%;
-}
-
-.related-videos h2 {
-    font-size: 18px;
-    font-weight: bolder;
-    color: #fff;
-    margin-bottom: 10px;
-    text-align: center;
-}
-
-.related-grid{
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.related-card {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    border-radius: 5px;
-    padding: 10px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-    transition: transform 0.3s;
-    background-image: linear-gradient(#161a25, #161a25),
-    linear-gradient(
-            137.48deg,
-            #f5434f 10%,
-            #631e29 45%,
-            #000000 67%,
-            #161a25 87%
-    );
-}
-
-.related-card:hover {
-    transform: scale(1.05);
-}
-
-.related-card img{
-    width: 100%;
-    height: auto;
-    border-radius: 5px;
-    margin-bottom: 5px;
-}
-
-.related-card p {
-    font-size: 14px;
-    font-weight: bolder;
-    padding: 5px;
-    color: #ccc;
-    margin: 0;
-}
 
 .side-content {
     flex: 1;
@@ -314,22 +259,11 @@
     .side-content {
         min-width: 70%;
         align-items: center;
-        margin: 20px auto;
+    }
 
-    }
-    .related-videos {
-        width: 80%;
-    }
-    .related-grid {
-        width: 80%;
-    }
 
     .info-card {
         width: 90%;
-
-    }
-    .related-card {
-        width: 100%;
     }
 
     .player-server-buttons {
@@ -346,9 +280,7 @@
 }
 
 @media (max-width: 500px) {
-    .related-card p {
-        font-size: 11px;
-    }
+
     .info-card {
         width: 90%;
         overflow-y: auto;

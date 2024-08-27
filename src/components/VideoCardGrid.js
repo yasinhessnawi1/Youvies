@@ -14,7 +14,6 @@ const VideoCardGrid = ({ contentType, genres, isHomePage, title = "", customItem
         // If customItems are provided, use them instead of fetching
         if (customItems) {
             setCurrentItems(customItems);
-            console.log(customItems);
             return;
         }
 
@@ -46,7 +45,7 @@ const VideoCardGrid = ({ contentType, genres, isHomePage, title = "", customItem
         await fetchMoreItems(contentType, genre);
     };
 
-    if (isLoading && currentItems.length === 0 && !customItems) return <LoadingIndicator />;
+    if (currentItems.length === 0 && !customItems) return <LoadingIndicator />;
 
     return (
         <div className="video-card-grid">

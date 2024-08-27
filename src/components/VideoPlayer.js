@@ -7,6 +7,8 @@ import { UserContext } from '../contexts/UserContext';
 import LoadingIndicator from './static/LoadingIndicator';
 import '../styles/components/VideoPlayer.css';
 import { FaArrowDown, FaEllipsisH, FaTimes } from 'react-icons/fa';
+import { getTitle } from '../utils/helper';
+import {useItemContext} from "../contexts/ItemContext";
 
 const VideoPlayer = () => {
     const {
@@ -19,42 +21,29 @@ const VideoPlayer = () => {
     } = useContext(VideoPlayerContext);
     const { isLoading, setIsLoading } = useLoading();
     const { user, addToWatchedList, getWatchedItem } = useContext(UserContext);
-
+    const { setWatchedItems } = useItemContext();
     const [showOverlay, setShowOverlay] = useState(false);
     const [error, setError] = useState('');
     const [selectedSeason, setSelectedSeason] = useState(videoPlayerState.season);
     const [selectedEpisode, setSelectedEpisode] = useState(videoPlayerState.episode);
     const [isSeasonDropdownOpen, setIsSeasonDropdownOpen] = useState(false);
     const [isEpisodeDropdownOpen, setIsEpisodeDropdownOpen] = useState(false);
-    const getTitle = (item) => {
-        let title = '';
-        switch (videoPlayerState.type) {
-            case 'movies':
-                title = item.title || '';
-                break;
-            case 'shows':
-                title =  item.name ||'';
-                break;
-            case 'anime':
-                title = item.title.userPreferred || item.title.romaji || item.title.english || item.title.native || '';
-                break;
-        }
-        return title;
-    }
+
     useEffect(() => {
         if (!item) return;
        const title = getTitle(item);
-        const watchedItem = getWatchedItem(videoPlayerState.type, title);
-        if (watchedItem) {
-            const [, , season, episode] = watchedItem.split(':');
+        const watchedItem = getWatchedItem(item.type,item.id,  title);
+        if (watchedItem !== null) {
+            const [, , , season, episode] = watchedItem.split(':');
             setSelectedSeason(parseInt(season, 10));
             setSelectedEpisode(parseInt(episode, 10));
         } else {
-            addToWatchedList(`${videoPlayerState.type}:${title}:1:1`);
+            addToWatchedList(`${item.type}:${item.id}:${title}:1:1`);
+            setWatchedItems(prevItems => [item, ...prevItems]);
             setSelectedSeason(1);
             setSelectedEpisode(1);
         }
-    }, [item, videoPlayerState.type]);
+    }, [item]);
     // Determine the content type (Show, Anime, or Movie)
     const determineContentType = () => {
         if (videoPlayerState.type === 'shows') {
@@ -123,7 +112,7 @@ const VideoPlayer = () => {
         changeEpisode(episode);
         switchProvider(videoPlayerState.provider, selectedSeason, episode);
         setIsLoading(true);
-        addToWatchedList(`${videoPlayerState.type}:${getTitle(item)}:${selectedSeason}:${episode}`);
+        addToWatchedList(`${videoPlayerState.type}:${item.id}:${getTitle(item)}:${selectedSeason}:${episode}`);
         setIsEpisodeDropdownOpen(false);
     };
 

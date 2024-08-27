@@ -4,7 +4,7 @@ import pako from 'pako';
 export const BASE_URL = 'https://api.youvies.online/youvies/v1';
 export const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 export const TMDB_API_KEY = 'af1b71222807c315af18609d22be4cb3';
-//export const BASE_URL = 'http://localhost:5000/youvies/v1';
+//export const BASE_URL = 'http://localhost:5001/youvies/v1';
 export const handleApiErrors = async (response) => {
     if (!response.ok) {
         console.warn('API returned an error:', response);

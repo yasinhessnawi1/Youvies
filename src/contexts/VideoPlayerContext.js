@@ -15,9 +15,9 @@ export const VideoPlayerProvider = ({ children }) => {
         episode: 1, // default episode
     });
 
-    const showVideoPlayer = async (tmdbId, type) => {
-        let season = 1;
-        let episode = 1;
+    const showVideoPlayer = async (tmdbId, type, season, episode) => {
+         season = season || 1;
+         episode = episode || 1;
 
         try {
             const fetchedItem = await fetchOneItem(type, tmdbId);

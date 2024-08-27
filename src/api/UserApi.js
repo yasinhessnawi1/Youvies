@@ -51,7 +51,7 @@ export const registerUser = async (user) => {
 
 export const editUser = async (user, token) => {
     try {
-        const response = await fetch(`${BASE_URL}/api/user`, {
+        const response = await fetch(`${BASE_URL}/api/user?id=${user.id}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',

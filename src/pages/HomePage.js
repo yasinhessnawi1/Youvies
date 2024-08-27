@@ -9,6 +9,7 @@ import LoadingIndicator from "../components/static/LoadingIndicator";
 import SearchBar from '../components/SearchBar';
 import { TabContext } from "../contexts/TabContext";
 import { useItemContext } from '../contexts/ItemContext';
+import {getTitle} from "../utils/helper";
 
 const HomePage = () => {
     const { activeTab } = React.useContext(TabContext);
@@ -22,12 +23,15 @@ const HomePage = () => {
         setSelectedGenre,
         setGenres,
         fetchAllItems,
+        watchedItems,
     } = useItemContext();
+    const [watched, setWatchedItems] = useState([]);
 
     const hasFetched = useRef(false);
     useEffect(() => {
         setIsSearchVisible(false);
     }, [activeTab]);
+
 
     useEffect(() => {
         if (!hasFetched.current && !items['movies-home'] && !items['shows-home'] && !items['anime-home']) {
@@ -124,10 +128,15 @@ const HomePage = () => {
             return <LoadingIndicator />;
         }
 
+
         if (activeTab === 'home') {
             return (
                 <>
                     <Banner contentType="movies" /> {/* Banner displaying movies on the homepage */}
+                    <VideoCardGrid
+                        title="Recently Watched"
+                        customItems={watchedItems}
+                    />
                     <VideoCardGrid contentType="movies" isHomePage title={"Latest Movies"}/>
                     <VideoCardGrid contentType="shows" isHomePage title={"Airing Now Shows"}/>
                     <VideoCardGrid contentType="anime" isHomePage title={"Trending Anime"} />

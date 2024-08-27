@@ -6,9 +6,10 @@ import { VideoPlayerContext } from "../contexts/VideoPlayerContext";
 import Button from "./Button";
 import LoadingIndicator from "./static/LoadingIndicator";
 import { debounce } from '../utils/debounce';
+import {playClick} from "../utils/helper";
 
 const SearchBar = ({ activeTab }) => {
-    const { user } = useContext(UserContext);
+    const { user , addToWatchList, getWatchedItem} = useContext(UserContext);
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
@@ -101,23 +102,9 @@ const SearchBar = ({ activeTab }) => {
         };
     }, [dropdownRef]);
 
-    const getTitle = (currentItem) => {
-        if (currentItem.type === 'anime') {
-            return "Anime: " + (currentItem.title.userPreferred || currentItem.title.romaji || currentItem.title.english || currentItem.title.native || 'Unknown Title');
-        }
-        else if (currentItem.type === 'shows') {
-            return "Show: " + currentItem.name;
-        }else {
-            return "Movie: " + currentItem.title;
-        }
-    };
 
-    const handlePlayClick = async (item, isContinue) => {
-        if (isContinue) {
+    const handlePlayClick = async (item) => {
             showVideoPlayer(item.id, item.type);
-        } else {
-            showVideoPlayer(item.id, item.type);
-        }
     };
 
     const imageUrl = (activeTab, currentItem) => {
@@ -213,7 +200,7 @@ const SearchBar = ({ activeTab }) => {
                                 <h4>{getTitle(item)}</h4>
                                 <div className="search-result-actions">
                                     <Button text="Info" category={item.type} id={item.id} />
-                                    <Button text="Watch" onClick={() => handlePlayClick(item, false)} />
+                                    <Button text="Watch" onClick={() => handlePlayClick(item)} />
                                 </div>
                             </div>
                         </div>
