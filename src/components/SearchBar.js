@@ -6,7 +6,7 @@ import { VideoPlayerContext } from "../contexts/VideoPlayerContext";
 import Button from "./Button";
 import LoadingIndicator from "./static/LoadingIndicator";
 import { debounce } from '../utils/debounce';
-import {playClick} from "../utils/helper";
+import {getTitle} from "../utils/helper";
 
 const SearchBar = ({ activeTab }) => {
     const { user , addToWatchList, getWatchedItem} = useContext(UserContext);
