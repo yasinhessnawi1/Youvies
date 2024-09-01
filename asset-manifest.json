@@ -1,19 +1,19 @@
 {
   "files": {
-    "main.css": "/static/css/main.dc97f1f9.css",
-    "main.js": "/static/js/main.1877339a.js",
+    "main.css": "/static/css/main.82a069bd.css",
+    "main.js": "/static/js/main.6ba8f19f.js",
     "static/js/312.9493baee.chunk.js": "/static/js/312.9493baee.chunk.js",
     "static/media/profile.png": "/static/media/profile.0c8639fb0bac1d9b98bf.png",
     "static/media/logo-nobg_resized.png": "/static/media/logo-nobg_resized.18e914499f9ef1b3e8c5.png",
     "static/media/menu.png": "/static/media/menu.a2b3753aef6c1c2cfa8e.png",
     "static/media/search.png": "/static/media/search.cd12eafcf45fb0246fbe.png",
     "index.html": "/index.html",
-    "main.dc97f1f9.css.map": "/static/css/main.dc97f1f9.css.map",
-    "main.1877339a.js.map": "/static/js/main.1877339a.js.map",
+    "main.82a069bd.css.map": "/static/css/main.82a069bd.css.map",
+    "main.6ba8f19f.js.map": "/static/js/main.6ba8f19f.js.map",
     "312.9493baee.chunk.js.map": "/static/js/312.9493baee.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.dc97f1f9.css",
-    "static/js/main.1877339a.js"
+    "static/css/main.82a069bd.css",
+    "static/js/main.6ba8f19f.js"
   ]
 }
