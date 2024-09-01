@@ -18,25 +18,34 @@
     font-size:  100%;
     text-align: center;
 }
-
+.login-container {
+    display: flex; /* Or block, grid, etc., depending on your layout */
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: absolute; /* Or absolute, depending on your layout */
+    width: 100%; /* Ensure the container is sized properly */
+    max-width: 400px; /* Set an appropriate max width for better responsiveness */
+    margin: 0 auto; /* Center it horizontally */
+    z-index: 30000;
+    top: 30%; /* Center it vertically */
+    /* Ensure it's above any background layers */
+}
 
 .login-page {
     display: flex;
     justify-content: space-around;
-    align-items: center;
     position: relative;
     margin: 0;
-    bottom: 10%;
 }
 .logo {
     display: flex;
     justify-content: center;
 }
-
 .logo img {
-    width: 300%;
-    height: auto;
+    width: 60%;
 }
+
 /* switch card */
 .switch {
     position: relative;
@@ -75,6 +84,7 @@
     opacity: 0;
     width: 0;
     height: 0;
+    position: absolute; /* Make sure it's out of view */
 }
 
 .slider {
@@ -136,12 +146,13 @@
     transform-style: preserve-3d;
 }
 
-.toggle:checked ~ .flip-card__inner {
-    transform: rotateY(180deg);
-}
+
 
 .toggle:checked ~ .flip-card__front {
     box-shadow: none;
+}
+.flipped {
+    transform: rotateY(180deg);
 }
 
 .flip-card__front, .flip-card__back {
@@ -219,4 +230,20 @@
     font-weight: 600;
     color: var(--font-color);
     cursor: pointer;
+}
+.password-input-wrapper {
+    position: relative;
+    z-index: 2000;
+}
+
+.toggle-password-visibility {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    color: #ecebeb;
+    border: none;
+    cursor: pointer;
+
 }
