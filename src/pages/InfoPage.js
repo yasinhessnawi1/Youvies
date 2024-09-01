@@ -12,9 +12,12 @@ import {UserContext} from "../contexts/UserContext";
 import VideoCardGrid from "../components/VideoCardGrid";
 import CountdownTimer from "../utils/CountdownTimer";
 import {getTitle} from "../utils/helper";
+import SearchBar from "../components/SearchBar";
+import {TabContext} from "../contexts/TabContext";
 
 const InfoPage = () => {
     const {user} = useContext(UserContext);
+    const { activeTab } = React.useContext(TabContext);
     const {setWatchedItems} = useItemContext();
     const {isLoading, setIsLoading} = useLoading();
     const {videoPlayerState, switchProvider} = useContext(VideoPlayerContext);
@@ -316,6 +319,7 @@ const InfoPage = () => {
             <StarryBackground/>
             <Header onSearchClick={() => setIsSearchVisible(!isSearchVisible)}/>
             <div className="info-page">
+                {isSearchVisible && <SearchBar activeTab={activeTab} />} {/* Toggle SearchBar */}
                 <div className="info-card" style={{backgroundImage: `url(${imageUrl})`}}>
                     <div className="overlay">
                         <h1 className="info-card-title">{title}</h1>

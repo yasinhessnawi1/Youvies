@@ -7,6 +7,7 @@ import Button from "./Button";
 import LoadingIndicator from "./static/LoadingIndicator";
 import { debounce } from '../utils/debounce';
 import {getTitle} from "../utils/helper";
+import {Link} from "react-router-dom";
 
 const SearchBar = ({ activeTab }) => {
     const { user , addToWatchList, getWatchedItem} = useContext(UserContext);
@@ -188,22 +189,26 @@ const SearchBar = ({ activeTab }) => {
                     </svg>
                 </div>
             </div>
-
-            {isSearching && <LoadingIndicator />} {/* Show Loading Indicator when loading */}
+            {isSearching && <LoadingIndicator/>} {/* Show Loading Indicator when loading */}
             {searchResults && searchResults.length > 0 && (
                 <div className="search-results-dropdown" ref={dropdownRef}>
                     {searchResults.map((item) => (
-                        <div key={item.id} className="search-result-item">
-                            <img src={imageUrl(activeTab, item)} alt={getTitle(item)}
-                                 className="search-result-image" />
-                            <div className="search-result-info">
-                                <h4>{getTitle(item)}</h4>
-                                <div className="search-result-actions">
-                                    <Button text="Info" category={item.type} id={item.id} />
-                                    <Button text="Watch" onClick={() => handlePlayClick(item)} />
+                        <Link to={`/info/${item.id}/${item.type}`} style={{ textDecoration: 'none' }} key={item.id}>
+                            <div className="search-result-item">
+                                <img
+                                    src={imageUrl(activeTab, item)}
+                                    alt={getTitle(item)}
+                                    className="search-result-image"
+                                />
+                                <div className="search-result-info">
+                                    <h4>{`${item.type}: ${getTitle(item)}`}</h4>
+                                    <div className="search-result-actions">
+                                        <Button text="Info" category={item.type} id={item.id} />
+                                        <Button text="Watch" onClick={() => handlePlayClick(item)} />
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        </Link>
                     ))}
                 </div>
             )}

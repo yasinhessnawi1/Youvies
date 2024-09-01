@@ -1,5 +1,5 @@
 // ItemCard.js
-
+"use strict";
 import React, { useContext, useMemo } from 'react';
 import { FaPlay, FaInfoCircle, FaCheckCircle, FaRegCircle, FaStar } from 'react-icons/fa';
 import { UserContext } from '../contexts/UserContext';
@@ -7,6 +7,7 @@ import { VideoPlayerContext } from '../contexts/VideoPlayerContext';
 import '../styles/components/ItemCard.css';
 import Button from "./Button";
 import {getTitle, playClick} from "../utils/helper";
+import {Link} from "react-router-dom";
 
 const ItemCard = ({ item , isRelated}) => {
     const { showVideoPlayer } = useContext(VideoPlayerContext);
@@ -46,12 +47,14 @@ const ItemCard = ({ item , isRelated}) => {
     }, [item.name, item.vote_average, item.poster_path, item.rating, item.image, item.cover, item.type, item.title]);
 
     return (
-        <div className="item-card">
-            <div className="item-image" style={{ backgroundImage: `url(${imageUrl})` }}>
-                <div className="watched-icon">
-                    {isWatched ? <FaCheckCircle color="green" /> : <FaRegCircle />}
+        <div className="item-card" >
+            <Link to={`/info/${item.id}/${item.type}`} className="item-card" style={{ textDecoration: 'none' }}>
+                <div className="item-image" style={{ backgroundImage: `url(${imageUrl})` }}>
+                    <div className="watched-icon">
+                        {isWatched ? <FaCheckCircle color="green" /> : <FaRegCircle />}
+                    </div>
                 </div>
-            </div>
+            </Link>
             <div className="item-content">
                 <div className="title">{title}</div>
                 <div className="rating">

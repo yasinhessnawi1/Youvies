@@ -1,13 +1,13 @@
 // Banner.js
 
 import React, { useEffect, useState, useContext, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import '../styles/components/Banner.css';
 import '../styles/components/VideoPlayer.css';
 import { UserContext } from '../contexts/UserContext';
 import { VideoPlayerContext } from '../contexts/VideoPlayerContext';
 import { useItemContext } from '../contexts/ItemContext';
 import Button from "./Button";
-import {getTitle, playClick} from "../utils/helper";
 
 const Banner = ({ contentType }) => {
     const { user, addToWatchedList , getWatchedItem} = useContext(UserContext);
@@ -73,10 +73,16 @@ const Banner = ({ contentType }) => {
 
     return (
         <div className="banner">
-            <div className="banner-background" style={{
-                backgroundImage: `url(${imageUrl})`,
-            }}></div>
+            <Link to={`/info/${currentItem.id}/${currentItem.type}`} style={{ textDecoration: 'none' }}>
+                <div
+                    className="banner-background"
+                    style={{
+                        backgroundImage: `url(${imageUrl})`,
+                    }}
+                ></div>
+
             <div className="banner-overlay"></div>
+            </Link>
             <div className="banner-content">
                 <h1 className="banner-title">{title || 'Title loading...'}</h1>
                 <p className="banner-description">
