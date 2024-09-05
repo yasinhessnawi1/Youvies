@@ -47,16 +47,15 @@ const ItemCard = ({ item , isRelated}) => {
     }, [item.name, item.vote_average, item.poster_path, item.rating, item.image, item.cover, item.type, item.title]);
 
     return (
+        <Link to={`/info/${item.id}/${item.type}`}  style={{ textDecoration: 'none' }}>
         <div className="item-card" >
-            <Link to={`/info/${item.id}/${item.type}`} className="item-card" style={{ textDecoration: 'none' }}>
                 <div className="item-image" style={{ backgroundImage: `url(${imageUrl})` }}>
                     <div className="watched-icon">
                         {isWatched ? <FaCheckCircle color="green" /> : <FaRegCircle />}
                     </div>
                 </div>
-            </Link>
             <div className="item-content">
-                <div className="title">{title}</div>
+                <div className="title" >{title}</div>
                 <div className="rating">
                     {[...Array(5)].map((_, index) => (
                         <FaStar key={index} color={index < rating / 2 ? 'gold' : 'grey'} />
@@ -68,6 +67,8 @@ const ItemCard = ({ item , isRelated}) => {
                 </div>
             </div>
         </div>
+        </Link>
+
     );
 };
 

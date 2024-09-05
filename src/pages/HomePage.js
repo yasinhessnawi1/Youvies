@@ -156,7 +156,7 @@ const HomePage = () => {
         <>
             <Header onSearchClick={() => setIsSearchVisible(!isSearchVisible)} />
             <StarryBackground />
-            <div className="home-page">
+            <div className="home-page" translate={"yes"}>
                 {isSearchVisible && <SearchBar activeTab={activeTab} />} {/* Toggle SearchBar */}
                 <div className="home_content">
                     {renderContent()}

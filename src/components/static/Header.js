@@ -60,7 +60,8 @@ const Header = ({ onSearchClick }) => {
         <header className="header">
             <div className="left-container">
                 {isLoading && <div className="loading-indicator" />}
-                <img src={logoImage} alt="Logo" className="logo-image" />
+
+                <img src={logoImage} alt="Logo" className="logo-image" onClick={()=>handleTabClick('home')}/>
                 <nav className="nav-links">
                     <div
                         className={`nav-link ${activeTab === 'home' ? 'active-tab' : ''}`}
