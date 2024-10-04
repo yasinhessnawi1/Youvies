@@ -51,7 +51,6 @@ export const UserProvider = ({ children }) => {
 
         // Find the existing watched item
         const existingItemIndex = user.user.watched.findIndex(item => item.startsWith(`${type}:${id}:${title}`));
-
         if (existingItemIndex !== -1) {
             // Replace with updated values
             user.user.watched[existingItemIndex] = `${type}:${id}:${title}:${newSeason}:${newEpisode}`;

@@ -1,121 +1,117 @@
 .banner {
-    position: relative;
-    width: 100%;
-    height: 100vh;
-    overflow: hidden;
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .banner-background {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-size: cover;
-    background-position: center;
-    z-index: 1; /* Background is behind everything */
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  z-index: 1; /* Background is behind everything */
 }
 
 .banner-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.4); /* Dark overlay to improve text readability */
-    z-index: 2; /* Overlay is on top of the background */
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.4); /* Dark overlay to improve text readability */
+  z-index: 2; /* Overlay is on top of the background */
 }
 
 .banner-content {
-    position: absolute;
-    bottom: 5rem; /* Position the content at the bottom */
-    left: 2rem; /* Position the content to the left */
-    z-index: 3; /* Content is on top of the overlay */
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end; /* Align content to the bottom */
-    align-items: flex-start;
-    padding: 1rem;
-    max-width: 60rem;
+  position: absolute;
+  bottom: 5rem; /* Position the content at the bottom */
+  left: 2rem; /* Position the content to the left */
+  z-index: 3; /* Content is on top of the overlay */
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end; /* Align content to the bottom */
+  align-items: flex-start;
+  padding: 1rem;
+  max-width: 60rem;
 }
 
-
 .banner-title {
-    font-size: 4rem;
-    font-weight: bold;
-    color: white;
+  font-size: 4rem;
+  font-weight: bold;
+  color: white;
 }
 
 .banner-description {
-    margin-top: 1rem;
-    max-width: 40rem;
-    font-size: 1.2rem;
-    color: rgba(255, 237, 237, 0.84);
+  margin-top: 1rem;
+  max-width: 40rem;
+  font-size: 1.2rem;
+  color: rgba(255, 237, 237, 0.84);
 }
 
 .read-more {
-    color: var(--color-primary-fire);
-    cursor: pointer;
+  color: var(--color-primary-fire);
+  cursor: pointer;
 }
 
 .banner-actions {
-    margin-top: 2rem;
-    display: flex;
-    gap: 1rem;
+  margin-top: 2rem;
+  display: flex;
+  gap: 1rem;
 }
-
-
-
 
 @media (min-width: 600px) and (max-width: 1024px) {
-    .banner-content {
-        bottom: 3rem;
-        left: 1rem;
-        padding: 1rem;
-        max-width: 50rem;
-    }
+  .banner-content {
+    bottom: 3rem;
+    left: 1rem;
+    padding: 1rem;
+    max-width: 50rem;
+  }
 
-    .banner-title {
-        font-size: 3rem;
-    }
+  .banner-title {
+    font-size: 3rem;
+  }
 
-    .banner-description {
-        font-size: 1rem;
-    }
+  .banner-description {
+    font-size: 1rem;
+  }
 
-    .banner-actions {
-        flex-direction: row;
-        justify-content: center;
-    }
+  .banner-actions {
+    flex-direction: row;
+    justify-content: center;
+  }
 
-    .play-button, .info-button, .pause-button {
-        padding: 0.4rem 0.8rem;
-    }
+  .play-button,
+  .info-button,
+  .pause-button {
+    padding: 0.4rem 0.8rem;
+  }
 }
 @media (max-width: 599px) {
-    .banner-content {
-        bottom: 2rem;
-        left: 0;
-        right: 0;
-        align-items: center;
-        text-align: center;
-        padding: 1rem;
-        margin: 0 auto;
-        max-width: 100%;
-    }
+  .banner-content {
+    bottom: 2rem;
+    left: 0;
+    right: 0;
+    align-items: center;
+    text-align: center;
+    padding: 1rem;
+    margin: 0 auto;
+    max-width: 100%;
+  }
 
-    .banner-title {
-        font-size: 2.5rem;
-    }
+  .banner-title {
+    font-size: 2.5rem;
+  }
 
-    .banner-description {
-        font-size: 1rem;
-    }
+  .banner-description {
+    font-size: 1rem;
+  }
 
-    .banner-actions {
-        gap: 0.5rem;
-        width: 100%;
-    }
-
-
+  .banner-actions {
+    gap: 0.5rem;
+    width: 100%;
+  }
 }

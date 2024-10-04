@@ -1,71 +1,70 @@
 .carousel {
-    display: flex;
-    align-items: center;
-    justify-content: space-around;
-    overflow: hidden;
-    position: relative;
-    width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  overflow: auto;
+  scrollbar-color: #1c1c1c transparent;
+  scrollbar-width: thin;
+  scroll-behavior: smooth;
+  position: relative;
+  width: 100%;
 }
 
 .carousel-button {
-    background: rgba(0, 0, 0, 0.5);
-    border: none;
-    color: white;
-    font-size: 2rem;
-    cursor: pointer;
-    z-index: 1;
-    margin:20px;
-    height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  border: none;
+  color: white;
+  font-size: 2rem;
+  cursor: pointer;
+  z-index: 1;
+  margin: 20px;
+  height: 100%;
 }
 .carousel-button:hover {
-    transform: scale(1.5);
-    color: beige;
+  transform: scale(1.5);
+  color: beige;
 }
 
 .carousel-items {
-    display: flex;
-    transition: transform 0.5s ease-in-out;
-    overflow-x: visible;
-    overflow-y: hidden;
-    scroll-snap-type: x mandatory;
-    scroll-behavior: smooth;
-    scrollbar-color: rgba(168, 55, 55, 0.5) transparent;
-    justify-content: flex-start;
-    gap: 3.75rex;
-
+  display: flex;
+  transition: transform 0.5s ease-in-out;
+  overflow-x: visible;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  scrollbar-color: rgba(168, 55, 55, 0.5) transparent;
+  justify-content: flex-start;
+  gap: 3.75rex;
 }
 .carousel-button:hover .prev:hover .next:hover {
-    scale: 300%;
+  scale: 300%;
 }
 
 .carousel-item {
-    max-width: calc(90% / 5)  ; /* Adjust this value based on itemsPerPage */
-    transition: transform 0.5s ease-in-out;
+  max-width: calc(90% / 5); /* Adjust this value based on itemsPerPage */
+  transition: transform 0.5s ease-in-out;
 }
 
 @media (max-width: 1400px) {
-    .carousel-item {
-        max-width: calc(90% / 4);
-    }
+  .carousel-item {
+    max-width: calc(90% / 4);
+  }
 }
 
 @media (max-width: 992px) {
-    .carousel-item {
-        max-width: calc(90% / 3);
-    }
+  .carousel-item {
+    max-width: calc(90% / 3);
+  }
 }
 
 @media (max-width: 768px) {
-    .carousel-item {
-        max-width: calc(90% /  2);
-    }
+  .carousel-item {
+    max-width: calc(90% / 2);
+  }
 }
 
 @media (max-width: 576px) {
-    .carousel-item {
-        max-width: calc(90% / 1);
-    }
-
-
-
+  .carousel-item {
+    max-width: calc(90% / 1);
+  }
 }

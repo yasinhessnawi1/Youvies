@@ -1,28 +1,50 @@
-import React, { Component } from 'react';
+import React, { useState, useEffect } from 'react';
+import '../../styles/components/ErrorBoundary.css';
 
-class ErrorBoundary extends Component {
-    err = null;
-    constructor(props) {
-        super(props);
-        this.state = { hasError: false };
-    }
+const ErrorBoundary = ({ children }) => {
+  const [hasError, setHasError] = useState(false);
+  const [error, setError] = useState(null);
+  const [errorInfo, setErrorInfo] = useState(null);
 
-    static getDerivedStateFromError(error) {
-        return { hasError: true };
-    }
+  useEffect(() => {
+    const errorHandler = (error, errorInfo) => {
+      setHasError(true);
+      setError(error);
+      setErrorInfo(errorInfo);
+      console.error('Uncaught error:', error, errorInfo);
+    };
 
-    componentDidCatch(error, errorInfo) {
-        this.err = error;
-        console.error("Uncaught error:", error, errorInfo);
-    }
+    window.addEventListener('error', errorHandler);
+    return () => window.removeEventListener('error', errorHandler);
+  }, []);
 
-    render() {
-        if (this.state.hasError) {
-            return <h1>Something went wrong. ${this.err}</h1>;
-        }
+  if (hasError) {
+    return (
+      <div className='error-boundary'>
+        <h1>Oops! Something went wrong.</h1>
+        <p>
+          We're sorry, but an unexpected error occurred. Our team has been
+          notified and is working on a fix.
+        </p>
+        <details className='error-details'>
+          <summary>Error Details</summary>
+          <pre>
+            {error && error.toString()}
+            <br />
+            {errorInfo && errorInfo.componentStack}
+          </pre>
+        </details>
+        <button
+          onClick={() => window.location.reload()}
+          className='refresh-button'
+        >
+          Refresh Page
+        </button>
+      </div>
+    );
+  }
 
-        return this.props.children;
-    }
-}
+  return children;
+};
 
 export default ErrorBoundary;

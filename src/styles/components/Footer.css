@@ -1,183 +1,184 @@
 .footer-container {
-    display: flex;
-    justify-content: space-evenly;
-    align-items: center;
-    background-color: #111;
-    padding: 20px;
-    color: #fff;
-    width: 100%;
-    position: relative;
-    border-radius: 10px;
+  display: flex;
+  justify-content: space-evenly;
+  align-items: center;
+  background-color: #111;
+  padding: 20px;
+  color: #fff;
+  width: 100%;
+  position: relative;
+  border-radius: 10px;
 }
 
 .footer-info {
-    display: flex;
-    flex-direction: column;
+  display: flex;
+  flex-direction: column;
 
-    justify-content: center;
-    align-items: center;
-    gap: 10px;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
 }
 .footer-links {
-    display: flex;
-    gap: 10px;
+  display: flex;
+  gap: 10px;
 }
 
 .footer-info h4 {
-    margin: 0;
-    font-size: 20px;
-    color: #b671d6;
+  margin: 0;
+  font-size: 20px;
+  color: #b671d6;
 }
 
 .footer-info p {
-    margin: 5px 0;
-    font-size: 14px;
-    color: #ccc;
+  margin: 5px 0;
+  font-size: 14px;
+  color: #ccc;
 }
 
 .footer-link {
-    color: #b671d6;
-    text-decoration: none;
-    font-size: 14px;
-    margin-top: 5px;
+  color: #b671d6;
+  text-decoration: none;
+  font-size: 14px;
+  margin-top: 5px;
 }
 
 .footer-link:hover {
-    text-decoration: underline;
+  text-decoration: underline;
 }
 
 .footer-carousel {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    overflow: hidden;
-    width: 50%;
-    height: 200px;
-    position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  width: 50%;
+  height: 200px;
+  position: relative;
 }
 
 .card {
-    position: absolute;
-    height: 180px;
-    max-width: 600px;
-    box-sizing: border-box;
-    background-color: #212121;
-    border: 5px solid #222;
-    border-radius: 8px;
-    display: flex;
-    overflow: auto;
-    flex-direction: column;
-    justify-content: center;
-    gap: 10px;
-    padding: 10px;
-    box-shadow: rgba(0, 0, 0, 0.19) 0px 10px 20px,
+  position: absolute;
+  height: 180px;
+  max-width: 600px;
+  box-sizing: border-box;
+  background-color: #212121;
+  border: 5px solid #222;
+  border-radius: 8px;
+  display: flex;
+  overflow: auto;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px;
+  box-shadow:
+    rgba(0, 0, 0, 0.19) 0px 10px 20px,
     rgba(0, 0, 0, 0.23) 0px 6px 6px,
     inset rgba(0, 0, 0, 0.19) 0px 10px 20px,
     inset rgba(0, 0, 0, 0.23) 0px 6px 6px;
-    transition: all ease-in-out 0.3s;
-    opacity: 0;
-    transform: scale(0.8);
+  transition: all ease-in-out 0.3s;
+  opacity: 0;
+  transform: scale(0.8);
 }
 
 .card.active {
-    opacity: 1;
-    transform: scale(1);
-    transition: opacity 1s ease-in-out, transform 1s ease-in-out;
+  opacity: 1;
+  transform: scale(1);
+  transition:
+    opacity 1s ease-in-out,
+    transform 1s ease-in-out;
 }
 
 .card-title {
-    margin: 0;
-    font-size: 18px;
-    font-family: "Lucida Sans", "Lucida Sans Regular", "Lucida Grande",
-    "Lucida Sans Unicode", Geneva, Verdana, sans-serif;
-    font-weight: 600;
-    color: #fff;
-    cursor: default;
+  margin: 0;
+  font-size: 18px;
+  font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande',
+    'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+  font-weight: 600;
+  color: #fff;
+  cursor: default;
 }
 
 .card-des {
-    margin: 0;
-    font-size: 15px;
-    font-family: "Lucida Sans", "Lucida Sans Regular", "Lucida Grande",
-    "Lucida Sans Unicode", Geneva, Verdana, sans-serif;
-    font-weight: 600;
-    color: #fff;
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    line-clamp: 3;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    word-wrap: break-word; /* Ensures long words or links break properly */
-    white-space: pre-wrap; /* Allows proper wrapping and retains spacing */
-    cursor: default;
+  margin: 0;
+  font-size: 15px;
+  font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande',
+    'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+  font-weight: 600;
+  color: #fff;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-wrap: break-word; /* Ensures long words or links break properly */
+  white-space: pre-wrap; /* Allows proper wrapping and retains spacing */
+  cursor: default;
 }
 
-
 .card-text {
-    position: absolute;
-    margin: 0;
-    font-size: 14px;
-    font-family: "Lucida Sans", "Lucida Sans Regular", "Lucida Grande",
-    "Lucida Sans Unicode", Geneva, Verdana, sans-serif;
-    font-weight: 400;
-    color: #fff;
-    right: 20px;
-    bottom: 5px;
-    display: flex;
-    align-items: center;
-    gap: 3px;
-    opacity: 0;
-    transition: all ease-in-out 0.3s;
-    animation: textanimate 0.8s alternate infinite;
-    cursor: pointer;
+  position: absolute;
+  margin: 0;
+  font-size: 14px;
+  font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande',
+    'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+  font-weight: 400;
+  color: #fff;
+  right: 20px;
+  bottom: 5px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  opacity: 0;
+  transition: all ease-in-out 0.3s;
+  animation: textanimate 0.8s alternate infinite;
+  cursor: pointer;
 }
 
 .card:hover > .card-text {
-    opacity: 1;
+  opacity: 1;
 }
 
 @keyframes textanimate {
-    0% {
-        right: 20px;
-    }
+  0% {
+    right: 20px;
+  }
 
-    100% {
-        right: 10px;
-    }
+  100% {
+    right: 10px;
+  }
 }
 
 @media (max-width: 1000px) {
-    .footer-container {
-        padding: 10px;
-        align-items: flex-start;
-        display: flex;
-        flex-direction: column;
-        width: 100%;
-    }
+  .footer-container {
+    padding: 10px;
+    align-items: flex-start;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+  }
 
-    .footer-info {
-        max-width: 100%;
-    }
+  .footer-info {
+    max-width: 100%;
+  }
 
-    .footer-carousel {
-        width: 100%;
-    }
+  .footer-carousel {
+    width: 100%;
+  }
 
-    .card.active {
-        width: 100%;
-    }
+  .card.active {
+    width: 100%;
+  }
 
-    .card-title {
-        font-size: 16px;
-        color: var(--color-primary-fire);
-    }
+  .card-title {
+    font-size: 16px;
+    color: var(--color-primary-fire);
+  }
 
-    .card-des {
-        font-size: 13px;
-    }
+  .card-des {
+    font-size: 13px;
+  }
 
-    .card-text {
-        font-size: 12px;
-    }
+  .card-text {
+    font-size: 12px;
+  }
 }
-
