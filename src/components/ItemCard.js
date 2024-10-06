@@ -1,5 +1,5 @@
 // ItemCard.js
-'use strict';
+
 import React, { useContext, useMemo } from 'react';
 import {
   FaPlay,

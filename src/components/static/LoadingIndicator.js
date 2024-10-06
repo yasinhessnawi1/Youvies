@@ -17,8 +17,8 @@ const LoadingIndicator = () => {
   }, []);
 
   const renderCarousel = (className) => (
-    <div className="container">
-      <div className="carousel-loading">
+    <div className='container'>
+      <div className='carousel-loading'>
         {[...Array(7)].map((_, index) => (
           <div key={index} className={className}></div>
         ))}

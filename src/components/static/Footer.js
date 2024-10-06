@@ -39,7 +39,7 @@ const Footer = () => {
     return () => clearInterval(interval);
   }, [items.length]);
 
-  const renderCarouselItems = () => (
+  const renderCarouselItems = () =>
     items.map((item, index) => (
       <div
         className={`card ${index === activeIndex ? 'active' : ''}`}
@@ -51,22 +51,25 @@ const Footer = () => {
           dangerouslySetInnerHTML={{ __html: item.description }}
         />
       </div>
-    ))
-  );
+    ));
 
   const renderFooterLinks = () => (
     <div className='footer-links'>
-      <a href='#' className='footer-link'>About Us</a>
-      <a href='#' className='footer-link'>Contact</a>
-      <a href='#' className='footer-link'>Privacy Policy</a>
+      <a href='#' className='footer-link'>
+        About Us
+      </a>
+      <a href='#' className='footer-link'>
+        Contact
+      </a>
+      <a href='#' className='footer-link'>
+        Privacy Policy
+      </a>
     </div>
   );
 
   return (
     <footer className='footer-container'>
-      <div className='footer-carousel'>
-        {renderCarouselItems()}
-      </div>
+      <div className='footer-carousel'>{renderCarouselItems()}</div>
       <div className='footer-info'>
         <h4>© Youvies.Online with ♥</h4>
         <p>

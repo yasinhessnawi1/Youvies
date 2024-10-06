@@ -172,7 +172,7 @@ const InfoPage = () => {
     intervalRef.current = null;
 
     const totalEpisodes =
-      selectedSeason?.episode_count || itemInfo.totalEpisodes || 0;
+      selectedSeason?.episode_count || itemInfo?.totalEpisodes || 0;
 
     if (selectedEpisode.episode_number < totalEpisodes) {
       const nextEpisodeNumber = selectedEpisode.episode_number + 1;
@@ -260,7 +260,7 @@ const InfoPage = () => {
     switch (itemInfo.type) {
       case 'anime':
         return (
-          <div className='sub-info-container'>
+          <div className='sub-info-container' style={{ backgroundImage: `url(${imageUrl})` }}>
             <div className='sub-info-item'>
               <strong>Type:</strong> {itemInfo.type}
             </div>
@@ -308,7 +308,7 @@ const InfoPage = () => {
         );
       case 'movies':
         return (
-          <div className='sub-info-container'>
+          <div className='sub-info-container' style={{ backgroundImage: `url(${imageUrl})` }}>
             <div className='sub-info-item'>
               <strong>Original Title:</strong> {itemInfo.original_title}
             </div>
@@ -359,7 +359,7 @@ const InfoPage = () => {
         );
       case 'shows':
         return (
-          <div className='sub-info-container'>
+          <div className='sub-info-container' style={{ backgroundImage: `url(${imageUrl})` }}>
             <div className='sub-info-item'>
               <strong>Original Name:</strong> {itemInfo.original_name}
             </div>
@@ -428,21 +428,13 @@ const InfoPage = () => {
           toggleSearchBar();
         }}
       />
-      <div className='info-page'>
+      <div className="info-page">
         {isSearchVisible && <SearchBar activeTab={activeTab} />}{' '}
         {/* Toggle SearchBar */}
-        <div
-          className='info-card'
-          style={{ backgroundImage: `url(${imageUrl})` }}
-        >
-          <div className='overlay'>
-            <h1 className='info-card-title'>{title}</h1>
-            <div className='sub-info'>{renderSubInfo()}</div>
-          </div>
-        </div>
-        <div className='content'>
-          <div className='main-content'>
-            <div className='video-player'>
+        {renderSubInfo()}
+        <div className="content">
+          <div className="main-content">
+            <div className="video-player">
               <div className={'player-buttons-left'}>
                 <button
                   onClick={() => setIsAutoPlay(!isAutoPlay)}

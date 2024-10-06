@@ -68,7 +68,10 @@ const Header = ({ onSearchClick }) => {
           />
           <nav className='nav-links'>
             {['home', 'movies', 'shows', 'anime'].map((tab) =>
-              renderNavLink(tab, `Go to ${tab} ${tab === 'home' ? 'page' : 'only section'}`)
+              renderNavLink(
+                tab,
+                `Go to ${tab} ${tab === 'home' ? 'page' : 'only section'}`,
+              ),
             )}
           </nav>
           <div className='mobile-nav'>
@@ -87,7 +90,11 @@ const Header = ({ onSearchClick }) => {
               onClick={onSearchClick}
               title='Show or hide the search bar'
             >
-              <img className='search-icon' src={searchImage} alt='search icon' />
+              <img
+                className='search-icon'
+                src={searchImage}
+                alt='search icon'
+              />
               <div className='username'>Search</div>
             </div>
           </div>

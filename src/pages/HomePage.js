@@ -9,7 +9,6 @@ import LoadingIndicator from '../components/static/LoadingIndicator';
 import SearchBar from '../components/SearchBar';
 import { TabContext } from '../contexts/TabContext';
 import { useItemContext } from '../contexts/ItemContext';
-import { getTitle } from '../utils/helper';
 
 const HomePage = () => {
   const { activeTab } = React.useContext(TabContext);

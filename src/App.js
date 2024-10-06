@@ -35,7 +35,6 @@ function App() {
                     <Route path='*' element={<LoginPage />} />
                   </Routes>
                   <VideoPlayer />
-                
                 </TabProvider>
               </LoadingProvider>
             </ItemProvider>
