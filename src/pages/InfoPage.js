@@ -16,7 +16,6 @@ import SearchBar from '../components/SearchBar';
 import { TabContext } from '../contexts/TabContext';
 
 const InfoPage = () => {
-  const { user } = useContext(UserContext);
   const { activeTab } = React.useContext(TabContext);
   const { setWatchedItems } = useItemContext();
   const { isLoading, setIsLoading } = useLoading();
@@ -29,34 +28,10 @@ const InfoPage = () => {
   const [error, setError] = useState('');
   const [isSearchVisible, setIsSearchVisible] = useState(false);
   const { addToWatchedList, getWatchedItem } = useContext(UserContext);
-  const [isAutoPlay, setIsAutoPlay] = useState(true); // New state for auto-play feature
   const previousMediaIdRef = useRef(null);
   const previousCategoryRef = useRef(null);
   const sideContentRef = useRef(null);
-  const [currentVideoTime, setCurrentVideoTime] = useState(0);
-  const [videoDuration, setVideoDuration] = useState(null); // You may need to set this manually
   const intervalRef = useRef(null);
-  useEffect(() => {
-    if (!intervalRef.current && isAutoPlay) {
-      intervalRef.current = setInterval(() => {
-        checkVideoStatus();
-      }, 1000); // Check every second
-    }
-
-    return () => clearInterval(intervalRef.current); // Clean up interval on unmount
-  }, [isAutoPlay, selectedEpisode]); // Restart interval if auto-play or episode changes
-
-  const checkVideoStatus = () => {
-    // Placeholder: Simulate checking video time
-    // Ideally, this would be replaced with an actual API or method to check the current time.
-    const simulatedCurrentTime = currentVideoTime + 1; // Increment time by 1 second for simulation
-    setCurrentVideoTime(simulatedCurrentTime);
-
-    if (simulatedCurrentTime >= videoDuration - 5) {
-      // 5 seconds before the end
-      handleNextEpisode();
-    }
-  };
 
   useEffect(() => {
     const loadMediaInfo = async () => {
@@ -204,6 +179,12 @@ const InfoPage = () => {
         return itemInfo.type === 'shows'
           ? `https://multiembed.mov/directstream.php?video_id=${id}&tmdb=1&s=${season}&e=${episode}`
           : `https://multiembed.mov/directstream.php?video_id=${id}&tmdb=1`;
+      case 'Vidsrc' :
+            if (itemInfo.type === 'shows') {
+              return `https://vidsrc.dev/embed/tv/${id}/${season}/${episode}`;
+            } else {
+              return `https://vidsrc.dev/embed/movie/${id}`;
+            }
       case '2embed':
         if (itemInfo.type === 'shows') {
           return `https://www.2embed.cc/embedtv/${id}&s=${season}&e=${episode}`;
@@ -262,7 +243,7 @@ const InfoPage = () => {
         return (
           <div className='sub-info-container' style={{ backgroundImage: `url(${imageUrl})` }}>
             <div className='sub-info-item'>
-              <strong>Type:</strong> {itemInfo.type}
+              <strong>Title:</strong> {' '}{title}
             </div>
             <div className='sub-info-item'>
               <strong>Genres:</strong> {itemInfo.genres.join(', ')}
@@ -308,100 +289,106 @@ const InfoPage = () => {
         );
       case 'movies':
         return (
-          <div className='sub-info-container' style={{ backgroundImage: `url(${imageUrl})` }}>
-            <div className='sub-info-item'>
+          <div className="sub-info-container" style={{ backgroundImage: `url(${imageUrl})` }}>
+            <div className="sub-info-item">
+              <strong>Title:</strong> {' '}{title}
+            </div>
+            <div className="sub-info-item">
               <strong>Original Title:</strong> {itemInfo.original_title}
             </div>
-            <div className='sub-info-item'>
+            <div className="sub-info-item">
               <strong>Genres:</strong>{' '}
               {itemInfo.genres.map((genre) => genre.name).join(', ')}
             </div>
-            <div className='sub-info-item'>
+            <div className="sub-info-item">
               <strong>Runtime:</strong> {itemInfo.runtime} min
             </div>
-            <div className='sub-info-item'>
+            <div className="sub-info-item">
               <strong>Release Date:</strong> {itemInfo.release_date}
             </div>
-            <div className='sub-info-item'>
+            <div className="sub-info-item">
               <strong>Country:</strong>{' '}
               {itemInfo.production_countries
                 .map((country) => country.name)
                 .join(', ')}
             </div>
-            <div className='sub-info-item'>
+            <div className="sub-info-item">
               <strong>Budget:</strong>{' '}
               {itemInfo.budget > 0
                 ? `$${itemInfo.budget.toLocaleString()}`
                 : 'N/A'}
             </div>
-            <div className='sub-info-item'>
+            <div className="sub-info-item">
               <strong>Revenue:</strong>{' '}
               {itemInfo.revenue > 0
                 ? `$${itemInfo.revenue.toLocaleString()}`
                 : 'N/A'}
             </div>
-            <div className='sub-info-item'>
+            <div className="sub-info-item">
               <strong>Production Companies:</strong>{' '}
               {itemInfo.production_companies
                 .map((company) => company.name)
                 .join(', ')}
             </div>
-            <div className='sub-info-item'>
+            <div className="sub-info-item">
               <strong>Status:</strong> {itemInfo.status}
             </div>
-            <div className='sub-info-item'>
+            <div className="sub-info-item">
               <strong>Tagline:</strong> {itemInfo.tagline}
             </div>
-            <div className='sub-info-item'>
+            <div className="sub-info-item">
               <strong>Overview:</strong> {itemInfo.overview}
             </div>
           </div>
         );
       case 'shows':
         return (
-          <div className='sub-info-container' style={{ backgroundImage: `url(${imageUrl})` }}>
-            <div className='sub-info-item'>
+          <div className="sub-info-container" style={{ backgroundImage: `url(${imageUrl})` }}>
+            <div className="sub-info-item">
+              <strong>Title:</strong> {' '}{title}
+            </div>
+            <div className="sub-info-item">
               <strong>Original Name:</strong> {itemInfo.original_name}
             </div>
-            <div className='sub-info-item'>
+            <div className="sub-info-item">
               <strong>Genres:</strong>{' '}
               {itemInfo.genres.map((genre) => genre.name).join(', ')}
             </div>
-            <div className='sub-info-item'>
+            <div className="sub-info-item">
               <strong>First Air Date:</strong> {itemInfo.first_air_date}
             </div>
-            <div className='sub-info-item'>
+            <div className="sub-info-item">
               <strong>Number of Seasons:</strong> {itemInfo.number_of_seasons}
             </div>
-            <div className='sub-info-item'>
+            <div className="sub-info-item">
               <strong>Number of Episodes:</strong> {itemInfo.number_of_episodes}
             </div>
-            <div className='sub-info-item'>
+            <div className="sub-info-item">
               <strong>Runtime per Episode:</strong>{' '}
               {itemInfo.episode_run_time[0]} min
             </div>
-            <div className='sub-info-item'>
+            <div className="sub-info-item">
               <strong>Networks:</strong>{' '}
               {itemInfo.networks.map((network) => network.name).join(', ')}
             </div>
-            <div className='sub-info-item'>
+            <div className="sub-info-item">
               <strong>Languages:</strong> {itemInfo.languages.join(', ')}
             </div>
-            <div className='sub-info-item'>
+            <div className="sub-info-item">
               <strong>Status:</strong> {itemInfo.status}
             </div>
-            <div className='sub-info-item'>
+            <div className="sub-info-item">
               <strong>Tagline:</strong> {itemInfo.tagline}
             </div>
             {itemInfo.last_episode_to_air && (
-              <div className='sub-info-item'>
+              <div className="sub-info-item">
                 <strong>Last Episode Aired:</strong>{' '}
                 {itemInfo.last_episode_to_air.name} (Episode{' '}
                 {itemInfo.last_episode_to_air.episode_number})
               </div>
             )}
             {itemInfo.next_episode_to_air && (
-              <div className='sub-info-item'>
+              <div className="sub-info-item">
                 <strong>Next Episode:</strong>{' '}
                 {itemInfo.next_episode_to_air.air_date}
                 <CountdownTimer
@@ -409,7 +396,7 @@ const InfoPage = () => {
                 />
               </div>
             )}
-            <div className='sub-info-item'>
+            <div className="sub-info-item">
               <strong>Overview:</strong> {itemInfo.overview}
             </div>
           </div>
@@ -421,7 +408,7 @@ const InfoPage = () => {
 
   return (
     <div id={'infoPage'}>
-      <StarryBackground />
+    <StarryBackground />
       <Header
         onSearchClick={() => {
           setIsSearchVisible(!isSearchVisible);
@@ -436,12 +423,6 @@ const InfoPage = () => {
           <div className="main-content">
             <div className="video-player">
               <div className={'player-buttons-left'}>
-                <button
-                  onClick={() => setIsAutoPlay(!isAutoPlay)}
-                  className={`player-button ${isAutoPlay ? 'active' : ''}`}
-                >
-                  {isAutoPlay ? 'Disable Auto-Play' : 'Enable Auto-Play'}
-                </button>
               </div>
               <iframe
                 className={'video'}
@@ -455,8 +436,8 @@ const InfoPage = () => {
               {itemInfo.type !== 'anime' && (
                 <div className='player-buttons'>
                   <button
-                    className={`player-button ${videoPlayerState.provider === 'SuperEmbed' ? 'active' : ''}`}
-                    onClick={() => switchProvider('SuperEmbed')}
+                    className={`player-button ${videoPlayerState.provider === 'Vidsrc' ? 'active' : ''}`}
+                    onClick={() => switchProvider('Vidsrc')}
                   >
                     No CC
                   </button>

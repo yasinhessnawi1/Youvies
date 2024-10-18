@@ -62,6 +62,12 @@ const VideoPlayer = () => {
     const id = item.id;
 
     switch (provider) {
+      case 'Vidsrc' :
+        if (item.type === 'shows') {
+          return `https://vidsrc.dev/embed/tv/${id}/${season}/${episode}`;
+        } else {
+          return `https://vidsrc.dev/embed/movie/${id}`;
+        }
       case 'NontonGo':
         if (item.type === 'shows') {
           return `https://NontonGo.win/embed/tv/${id}/${season}/${episode}`;
@@ -292,8 +298,8 @@ const VideoPlayer = () => {
             </span>
             <div className='player-server-buttons'>
               <button
-                className={`player-control-button ${videoPlayerState.provider === 'SuperEmbed' ? 'active' : ''}`}
-                onClick={() => switchProvider('SuperEmbed')}
+                className={`player-control-button ${videoPlayerState.provider === 'Vidsrc' ? 'active' : ''}`}
+                onClick={() => switchProvider('Vidsrc')}
               >
                 No CC
               </button>

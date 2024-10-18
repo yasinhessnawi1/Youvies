@@ -30,36 +30,3 @@ export const handleAnimeApiErrors = async (response) => {
   }
   return data;
 };
-
-export const fetchTMDBExport = async (fileType, date) => {
-  try {
-    const url = `http://files.tmdb.org/p/exports/${fileType}_ids_${date}.json.gz`;
-    const response = await axios.get(url, { responseType: 'arraybuffer' });
-    // Decompress the gzipped data
-    const decompressedData = pako.ungzip(new Uint8Array(response.data), {
-      to: 'string',
-    });
-
-    // Split the decompressed data into lines (each line is a JSON object)
-    const lines = decompressedData.split('\n');
-
-    // Process each line and extract the movie IDs
-    const ids = lines
-      .map((line) => {
-        if (line.trim() === '') return null; // Skip empty lines
-        try {
-          const movie = JSON.parse(line);
-          return movie.id;
-        } catch (error) {
-          console.error('Error parsing JSON:', error);
-          return null;
-        }
-      })
-      .filter(Boolean); // Remove null entries
-
-    return ids;
-  } catch (error) {
-    console.error('Error fetching TMDB export:', error);
-    return [];
-  }
-};

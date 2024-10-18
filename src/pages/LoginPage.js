@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import StarryBackground from '../components/static/StarryBackground';
 import '../styles/page/LoginPage.css';
@@ -10,7 +10,7 @@ import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import ItemsGrid from '../components/LoginBg';
 
 const LoginPage = () => {
-  const { login } = useContext(UserContext);
+  const { login, user } = useContext(UserContext);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [email, setEmail] = useState('');
@@ -21,18 +21,32 @@ const LoginPage = () => {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [isFlipped, setIsFlipped] = useState(false);
 
+  // Check if user is already logged in
+  useEffect(() => {
+    if (user) {
+      navigate('/home');
+    } else {
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        const parsedUser = JSON.parse(storedUser);
+        // Assuming login function sets the user context
+        login(parsedUser.username, parsedUser.password); // Adjust as necessary
+      }
+    }
+  }, [user, navigate, login]);
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setErrorMessage('');
     try {
       await login(username, password);
+      if (localStorage.getItem('user')) navigate('/home');
+      setIsLoading(false);
     } catch (error) {
       setErrorMessage('Login failed: ' + error.message);
       setIsLoading(false);
     }
-    setIsLoading(false);
-    if (localStorage.getItem('user')) navigate('/home');
   };
 
   const handleSignUp = async (e) => {
@@ -76,7 +90,6 @@ const LoginPage = () => {
   return (
     <>
       {isLoading && <LoadingIndicator />}
-
       <div className='login-page'>
         <ItemsGrid />
         <StarryBackground />

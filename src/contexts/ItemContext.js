@@ -167,7 +167,7 @@ export const ItemProvider = ({ children }) => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [items]);
 
   const fetchGenreItems = useCallback(
     async (contentType, genre) => {

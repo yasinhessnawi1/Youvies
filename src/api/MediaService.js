@@ -39,7 +39,10 @@ export const fetchMoviesByGenre = async (genreId, page = 1) => {
 // Functions for TV Shows
 
 export const fetchShowDetails = async (seriesId) => {
-  return await fetchFromTmdb(`/tv/${seriesId}`, {}, true);
+  let data = await fetchFromTmdb(`/tv/${seriesId}`, {}, true);
+  // Remove the specials or season 0.
+  data.seasons = data.seasons.filter(season => season.season_number !== 0 && season.name !== 'Specials');
+  return data;
 };
 
 export const fetchAiringTodayShows = async (page) => {

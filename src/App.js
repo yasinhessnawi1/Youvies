@@ -8,7 +8,6 @@ import { ItemProvider } from './contexts/ItemContext';
 import { LoadingProvider } from './contexts/LoadingContext';
 import { TabProvider } from './contexts/TabContext';
 import VideoPlayer from './components/VideoPlayer';
-import './styles/Global.css';
 import ErrorBoundary from './components/static/ErrorBoundary';
 import InfoPage from './pages/InfoPage';
 
