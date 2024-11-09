@@ -14,7 +14,6 @@ const LoginPage = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [email, setEmail] = useState('');
-  const [invitationCode, setInvitationCode] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const navigate = useNavigate();
   const { isLoading, setIsLoading } = useLoading();
@@ -54,14 +53,6 @@ const LoginPage = () => {
     setIsLoading(true);
     setErrorMessage('');
     try {
-      if (
-        invitationCode !== 'once-in-a-lifetime-experience-i-love-youvies-2024'
-      ) {
-        setErrorMessage('Invalid invitation code.');
-        setIsLoading(false);
-        return;
-      }
-
       let newUser = {
         username: username,
         password: password,
@@ -155,7 +146,7 @@ const LoginPage = () => {
                     <div className='logo'>
                       <img src='/logo-nobg_resized.png' alt='logo' />
                     </div>
-                    <div className='title'>Sign up</div>
+                    <div className='title' onClick={handleToggleChange}>Sign up</div>
                     <form onSubmit={handleSignUp} className='flip-card__form'>
                       <input
                         type='text'
@@ -167,31 +158,23 @@ const LoginPage = () => {
                         onChange={(e) => setUsername(e.target.value)}
                         required
                       />
+                        <input
+                          type={isPasswordVisible ? 'text' : 'password'}
+                          value={password}
+                          autoComplete={'current-password'}
+                          onChange={(e) => setPassword(e.target.value)}
+                          placeholder='Password'
+                          name='password'
+                          className='flip-card__input'
+                          required
+                        />
+
                       <input
-                        type='email'
+                        type='input'
                         placeholder='Email'
                         name='email'
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className='flip-card__input'
-                        required
-                      />
-                      <input
-                        type='password'
-                        placeholder='Password'
-                        name='password'
-                        autoComplete={'new-password'}
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className='flip-card__input'
-                        required
-                      />
-                      <input
-                        type='text'
-                        placeholder='Invitation Code'
-                        name='invitationCode'
-                        value={invitationCode}
-                        onChange={(e) => setInvitationCode(e.target.value)}
                         className='flip-card__input'
                         required
                       />

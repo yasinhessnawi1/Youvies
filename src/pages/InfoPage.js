@@ -131,12 +131,6 @@ const InfoPage = () => {
     }
   }, [selectedEpisode]);
 
-  useEffect(() => {
-    if (itemInfo && selectedEpisode) {
-      // Assume each episode is 20 minutes (1200 seconds)
-      setVideoDuration(1200); // Replace with actual duration if available
-    }
-  }, [selectedEpisode]);
 
   const handleSeasonChange = async (season) => {
     setSelectedSeason(season);
@@ -175,16 +169,20 @@ const InfoPage = () => {
         return itemInfo.type === 'shows'
           ? `https://NontonGo.win/embed/tv/${id}/${season}/${episode}`
           : `https://NontonGo.win/embed/movie/${id}`;
+      case 'smashy':
+        return itemInfo.type === 'shows'
+          ? `https://player.smashy.stream/tv/${id}/${season}/${episode}?subLang=English`
+          : `https://player.smashy.stream/movie/${id}?subLang=English`;
       case 'SuperEmbed':
         return itemInfo.type === 'shows'
           ? `https://multiembed.mov/directstream.php?video_id=${id}&tmdb=1&s=${season}&e=${episode}`
           : `https://multiembed.mov/directstream.php?video_id=${id}&tmdb=1`;
       case 'Vidsrc' :
-            if (itemInfo.type === 'shows') {
-              return `https://vidsrc.dev/embed/tv/${id}/${season}/${episode}`;
-            } else {
-              return `https://vidsrc.dev/embed/movie/${id}`;
-            }
+        if (itemInfo.type === 'shows') {
+          return `https://embed.su/embed/tv/${id}/${season}/${episode}`;
+        } else {
+          return `https://embed.su/embed/movie/${id}`;
+        }
       case '2embed':
         if (itemInfo.type === 'shows') {
           return `https://www.2embed.cc/embedtv/${id}&s=${season}&e=${episode}`;
@@ -439,19 +437,25 @@ const InfoPage = () => {
                     className={`player-button ${videoPlayerState.provider === 'Vidsrc' ? 'active' : ''}`}
                     onClick={() => switchProvider('Vidsrc')}
                   >
-                    No CC
+                    Good
                   </button>
                   <button
                     className={`player-button ${videoPlayerState.provider === '2embed' ? 'active' : ''}`}
                     onClick={() => switchProvider('2embed')}
                   >
-                    English CC
+                    Medium
                   </button>
                   <button
                     className={`player-button ${videoPlayerState.provider === 'NontonGo' ? 'active' : ''}`}
                     onClick={() => switchProvider('NontonGo')}
                   >
-                    Multi CC
+                    Low
+                  </button>
+                  <button
+                    className={`player-button ${videoPlayerState.provider === 'smashy' ? 'active' : ''}`}
+                    onClick={() => switchProvider('smashy')}
+                  >
+                    Best
                   </button>
                 </div>
               )}

@@ -9,6 +9,7 @@ export const UserProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const navigate = useNavigate();
 
+
   useEffect(() => {
     const loggedUser = localStorage.getItem('user');
     if (loggedUser) {
@@ -36,7 +37,8 @@ export const UserProvider = ({ children }) => {
       localStorage.removeItem('user');
       navigate('/login');
     } catch (error) {
-      console.error('Logout failed:', error);
+      alert('An error occurred while logging out. Please try again.'); // Display a user-friendly alert
+      console.error('Logout error:', error); // Log the error for debugging
     }
   };
 

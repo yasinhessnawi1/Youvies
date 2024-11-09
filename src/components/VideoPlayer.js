@@ -64,9 +64,9 @@ const VideoPlayer = () => {
     switch (provider) {
       case 'Vidsrc' :
         if (item.type === 'shows') {
-          return `https://vidsrc.dev/embed/tv/${id}/${season}/${episode}`;
+          return `https://embed.su/embed/tv/${id}/${season}/${episode}`;
         } else {
-          return `https://vidsrc.dev/embed/movie/${id}`;
+          return `https://embed.su/embed/movie/${id}`;
         }
       case 'NontonGo':
         if (item.type === 'shows') {
@@ -80,6 +80,10 @@ const VideoPlayer = () => {
         } else {
           return `https://multiembed.mov/directstream.php?video_id=${id}&tmdb=1`;
         }
+      case 'smashy':
+        return itemInfo.type === 'shows'
+          ? `https://player.smashy.stream/tv/${id}/${season}/${episode}?subLang=English`
+          : `https://player.smashy.stream/movie/${id}?subLang=English`;
       case '2embed':
         if (item.type === 'shows') {
           return `https://www.2embed.cc/embedtv/${id}&s=${season}&e=${episode}`;
@@ -301,19 +305,25 @@ const VideoPlayer = () => {
                 className={`player-control-button ${videoPlayerState.provider === 'Vidsrc' ? 'active' : ''}`}
                 onClick={() => switchProvider('Vidsrc')}
               >
-                No CC
+                Low
               </button>
               <button
                 className={`player-control-button ${videoPlayerState.provider === '2embed' ? 'active' : ''}`}
                 onClick={() => switchProvider('2embed')}
               >
-                English CC
+                Good
               </button>
               <button
                 className={`player-control-button ${videoPlayerState.provider === 'NontonGo' ? 'active' : ''}`}
                 onClick={() => switchProvider('NontonGo')}
               >
-                Multi CC
+                Medium
+              </button>
+              <button
+                className={`player-control-button ${videoPlayerState.provider === 'smashy' ? 'active' : ''}`}
+                onClick={() => switchProvider('smashy')}
+              >
+                Best
               </button>
             </div>
           </div>
