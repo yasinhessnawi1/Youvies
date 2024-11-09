@@ -154,8 +154,8 @@ const InfoPage = () => {
           : `https://NontonGo.win/embed/movie/${id}`;
       case 'smashy':
         return itemInfo.type === 'shows'
-          ? `https://player.smashy.stream/tv/${id}?s=${season}&e=${episode}`
-          : `https://player.smashy.stream/movie/${id}`;
+          ? `https://player.smashy.stream/tv/${id}?s=${season}&e=${episode}&remove=watchWithFriends|addSubtitles|search|episodes&playerList=F|SU|J|NM|SY|FV|O|I|ST|U|E|SO|D|DM|RD|H|CA|M|K|G&subLang=English`
+          : `https://player.smashy.stream/movie/${id}?remove=watchWithFriends|addSubtitles|search|episodes&playerList=F|SU|J|NM|SY|FV|O|I|ST|U|E|SO|D|DM|RD|H|CA|M|K|G&subLang=English`;
       case 'SuperEmbed':
         return itemInfo.type === 'shows'
           ? `https://moviesapi.club/tv/${id}-${season}-${episode}`
@@ -408,9 +408,9 @@ const InfoPage = () => {
               <iframe
                 className={'video'}
                 src={videoSrc}
-                title='Video player'
                 width='100%'
                 height='100%'
+                frameBorder='0'
                 allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
                 allowFullScreen
               ></iframe>

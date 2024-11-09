@@ -80,7 +80,7 @@ const VideoPlayer = () => {
           : `https://moviesapi.club/movie/${id}`;
       case 'smashy':
         return item.type === 'shows'
-          ? `https://player.smashy.stream/tv/${id}/${season}/${episode}`
+          ? `https://player.smashy.stream/tv/${id}?s=${season}&e=${episode}`
           : `https://player.smashy.stream/movie/${id}`;
       case '2embed':
         if (item.type === 'shows') {
@@ -186,7 +186,6 @@ const VideoPlayer = () => {
       {isLoading && <LoadingIndicator />}
       <iframe
         src={videoSrc}
-        title='Video player'
         width='100%'
         height='100%'
         allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
