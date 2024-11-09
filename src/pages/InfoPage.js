@@ -31,7 +31,6 @@ const InfoPage = () => {
   const previousMediaIdRef = useRef(null);
   const previousCategoryRef = useRef(null);
   const sideContentRef = useRef(null);
-  const intervalRef = useRef(null);
 
   useEffect(() => {
     const loadMediaInfo = async () => {
@@ -136,23 +135,7 @@ const InfoPage = () => {
     setSelectedSeason(season);
     setSelectedEpisode({ episode_number: 1 });
   };
-  const handleNextEpisode = () => {
-    clearInterval(intervalRef.current); // Clear the interval when moving to the next episode
-    intervalRef.current = null;
 
-    const totalEpisodes =
-      selectedSeason?.episode_count || itemInfo?.totalEpisodes || 0;
-
-    if (selectedEpisode.episode_number < totalEpisodes) {
-      const nextEpisodeNumber = selectedEpisode.episode_number + 1;
-      setSelectedEpisode({ episode_number: nextEpisodeNumber });
-      addToWatchedList(
-        `${itemInfo.type}:${itemInfo.id}:${getTitle(itemInfo)}:${selectedSeason.season_number}:${nextEpisodeNumber}`,
-      );
-    } else {
-      console.log('You have reached the last episode of the current season.');
-    }
-  };
   const handleEpisodeChange = (episode) => {
     setSelectedEpisode(episode);
     addToWatchedList(
@@ -171,12 +154,12 @@ const InfoPage = () => {
           : `https://NontonGo.win/embed/movie/${id}`;
       case 'smashy':
         return itemInfo.type === 'shows'
-          ? `https://player.smashy.stream/tv/${id}/${season}/${episode}?subLang=English`
-          : `https://player.smashy.stream/movie/${id}?subLang=English`;
+          ? `https://player.smashy.stream/tv/${id}?s=${season}&e=${episode}`
+          : `https://player.smashy.stream/movie/${id}`;
       case 'SuperEmbed':
         return itemInfo.type === 'shows'
-          ? `https://multiembed.mov/directstream.php?video_id=${id}&tmdb=1&s=${season}&e=${episode}`
-          : `https://multiembed.mov/directstream.php?video_id=${id}&tmdb=1`;
+          ? `https://moviesapi.club/tv/${id}-${season}-${episode}`
+          : `https://moviesapi.club/movie/${id}`;
       case 'Vidsrc' :
         if (itemInfo.type === 'shows') {
           return `https://embed.su/embed/tv/${id}/${season}/${episode}`;
@@ -456,6 +439,12 @@ const InfoPage = () => {
                     onClick={() => switchProvider('smashy')}
                   >
                     Best
+                  </button>
+                  <button
+                    className={`player-button ${videoPlayerState.provider === 'SuperEmbed' ? 'active' : ''}`}
+                    onClick={() => switchProvider('SuperEmbed')}
+                  >
+                    Good +
                   </button>
                 </div>
               )}

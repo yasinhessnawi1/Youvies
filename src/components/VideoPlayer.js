@@ -20,7 +20,7 @@ const VideoPlayer = () => {
     item,
   } = useContext(VideoPlayerContext);
   const { isLoading, setIsLoading } = useLoading();
-  const { user, addToWatchedList, getWatchedItem } = useContext(UserContext);
+  const { addToWatchedList, getWatchedItem } = useContext(UserContext);
   const { setWatchedItems } = useItemContext();
   const [showOverlay, setShowOverlay] = useState(false);
   const [error, setError] = useState('');
@@ -75,15 +75,13 @@ const VideoPlayer = () => {
           return `https://NontonGo.win/embed/movie/${id}`;
         }
       case 'SuperEmbed':
-        if (item.type === 'shows') {
-          return `https://multiembed.mov/directstream.php?video_id=${id}&tmdb=1&s=${season}&e=${episode}`;
-        } else {
-          return `https://multiembed.mov/directstream.php?video_id=${id}&tmdb=1`;
-        }
+        return item.type === 'shows'
+          ? `https://moviesapi.club/tv/${id}-${season}-${episode}`
+          : `https://moviesapi.club/movie/${id}`;
       case 'smashy':
-        return itemInfo.type === 'shows'
-          ? `https://player.smashy.stream/tv/${id}/${season}/${episode}?subLang=English`
-          : `https://player.smashy.stream/movie/${id}?subLang=English`;
+        return item.type === 'shows'
+          ? `https://player.smashy.stream/tv/${id}/${season}/${episode}`
+          : `https://player.smashy.stream/movie/${id}`;
       case '2embed':
         if (item.type === 'shows') {
           return `https://www.2embed.cc/embedtv/${id}&s=${season}&e=${episode}`;
@@ -324,6 +322,12 @@ const VideoPlayer = () => {
                 onClick={() => switchProvider('smashy')}
               >
                 Best
+              </button>
+              <button
+                className={`player-control-button ${videoPlayerState.provider === 'SuperEmbed' ? 'active' : ''}`}
+                onClick={() => switchProvider('SuperEmbed')}
+              >
+                Good +
               </button>
             </div>
           </div>

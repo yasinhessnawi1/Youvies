@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState} from 'react';
 import { fetchOneItem } from '../api/ItemsApi';
 
 export const VideoPlayerContext = createContext();
