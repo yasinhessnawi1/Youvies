@@ -11,6 +11,7 @@
   max-height: 60px;
   z-index: 1000;
   position: absolute;
+  padding: 30px;
   top: 0;
   left: 0;
 }

@@ -7,7 +7,6 @@ import { VideoPlayerProvider } from './contexts/VideoPlayerContext';
 import { ItemProvider } from './contexts/ItemContext';
 import { LoadingProvider } from './contexts/LoadingContext';
 import { TabProvider } from './contexts/TabContext';
-import VideoPlayer from './components/VideoPlayer';
 import ErrorBoundary from './components/static/ErrorBoundary';
 import InfoPage from './pages/InfoPage';
 
@@ -33,7 +32,6 @@ function App() {
                     <Route path='/' element={<LoginPage />} />
                     <Route path='*' element={<LoginPage />} />
                   </Routes>
-                  <VideoPlayer />
                 </TabProvider>
               </LoadingProvider>
             </ItemProvider>

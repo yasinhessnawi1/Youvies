@@ -1,17 +1,9 @@
-// Banner.js
-
 import React, { useEffect, useState, useContext, useRef } from 'react';
-import { Link } from 'react-router-dom';
 import '../styles/components/Banner.css';
-import '../styles/components/VideoPlayer.css';
-import { UserContext } from '../contexts/UserContext';
-import { VideoPlayerContext } from '../contexts/VideoPlayerContext';
 import { useItemContext } from '../contexts/ItemContext';
 import Button from './Button';
 
 const Banner = ({ contentType }) => {
-  const { user, addToWatchedList, getWatchedItem } = useContext(UserContext);
-  const { showVideoPlayer } = useContext(VideoPlayerContext);
   const { items, isLoading, fetchAllItems } = useItemContext();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showFullDescription, setShowFullDescription] = useState(false);
@@ -51,10 +43,6 @@ const Banner = ({ contentType }) => {
     setIsPaused(!isPaused);
   };
 
-  const handlePlayClick = async (item) => {
-    if (!user) return;
-    showVideoPlayer(item.id, item.type);
-  };
 
   let imageUrl = '';
   let title = '';
@@ -81,10 +69,6 @@ const Banner = ({ contentType }) => {
 
   return (
     <div className='banner'>
-      <Link
-        to={`/info/${currentItem.id}/${currentItem.type}`}
-        style={{ textDecoration: 'none' }}
-      >
         <div
           className='banner-background'
           style={{
@@ -93,7 +77,6 @@ const Banner = ({ contentType }) => {
         ></div>
 
         <div className='banner-overlay'></div>
-      </Link>
       <div className='banner-content'>
         <h1 className='banner-title'>{title || 'Title loading...'}</h1>
         <p className='banner-description'>
@@ -114,11 +97,6 @@ const Banner = ({ contentType }) => {
         </p>
         <div className='banner-actions'>
           <Button text='Info' category={currentItem.type} id={currentItem.id} />
-          <Button
-            text='Watch'
-            onClick={() => handlePlayClick(currentItem)}
-            title={'Watch this video'}
-          />
           <Button
             text={isPaused ? 'Resume' : 'Pause'}
             onClick={handlePause}

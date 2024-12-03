@@ -12,7 +12,7 @@ import { useLoading } from '../../contexts/LoadingContext';
 const Header = ({ onSearchClick }) => {
   const { user, logout } = useContext(UserContext);
   const { activeTab, setActiveTab } = useContext(TabContext);
-  const { isLoading } = useLoading();
+  const { isLoading, setIsLoading } = useLoading();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const navigate = useNavigate();
@@ -29,7 +29,12 @@ const Header = ({ onSearchClick }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleLogout = () => logout();
+  const handleLogout = () => {
+    setIsLoading(true);
+    logout();
+    setDropdownOpen(false);
+    setIsLoading(false);
+  }
 
   const toggleMobileNav = () => setMobileNavOpen(!mobileNavOpen);
 

@@ -1,31 +1,21 @@
-// ItemCard.js
-
 import React, { useContext, useMemo } from 'react';
 import {
-  FaPlay,
-  FaInfoCircle,
   FaCheckCircle,
   FaRegCircle,
   FaStar,
 } from 'react-icons/fa';
 import { UserContext } from '../contexts/UserContext';
-import { VideoPlayerContext } from '../contexts/VideoPlayerContext';
 import '../styles/components/ItemCard.css';
-import Button from './Button';
-import { getTitle, playClick } from '../utils/helper';
+import { getTitle } from '../utils/helper';
 import { Link } from 'react-router-dom';
 
-const ItemCard = ({ item, isRelated }) => {
-  const { showVideoPlayer } = useContext(VideoPlayerContext);
-  const { user, getWatchedItem, addToWatchedList } = useContext(UserContext);
+const ItemCard = ({ item }) => {
+  const { getWatchedItem } = useContext(UserContext);
 
   const isWatched = useMemo(() => {
     return getWatchedItem(item.type, item.id, getTitle(item)) !== null;
   }, [getWatchedItem, item.id, item]);
 
-  const handlePlayClick = async () => {
-    showVideoPlayer(item.id, item.type);
-  };
 
   const { title, rating, imageUrl } = useMemo(() => {
     let ratingValue = 0;
@@ -91,12 +81,6 @@ const ItemCard = ({ item, isRelated }) => {
                 color={index < rating / 2 ? 'gold' : 'grey'}
               />
             ))}
-          </div>
-          <div className='actions'>
-            <Button text='Info' category={item.type} id={item.id} />
-            {!isRelated && (
-              <Button text='Watch' onClick={() => handlePlayClick()} />
-            )}
           </div>
         </div>
       </div>

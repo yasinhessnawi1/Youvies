@@ -8,8 +8,6 @@ import React, {
 import { searchItems } from '../api/ItemsApi';
 import { UserContext } from '../contexts/UserContext';
 import '../styles/components/SearchBar.css';
-import { VideoPlayerContext } from '../contexts/VideoPlayerContext';
-import Button from './Button';
 import LoadingIndicator from './static/LoadingIndicator';
 import { debounce } from '../utils/debounce';
 import { getTitle } from '../utils/helper';
@@ -21,33 +19,8 @@ const SearchBar = ({ activeTab }) => {
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const dropdownRef = useRef(null);
-  const [wordCompletions, setWordCompletions] = useState([]);
 
-  const { showVideoPlayer } = useContext(VideoPlayerContext);
-  /*
-  useEffect(() => {
-      const fetchWordCompletions = async () => {
-          const day = new Date().getDay().toFixed().padStart(2, '0');
-          const month = new Date().getMonth().toFixed().padStart(2, '0');
-          const year = new Date().getFullYear();
-          const today = `${month}_${day}_${year}`;
-          //const completions = await fetchTMDBExport('movie', today); // Adjust for movies or TV
-          setWordCompletions(completions);
-      };
-
-      fetchWordCompletions();
-  }, []);
-
-  html :  {wordCompletions.length > 0 && (
-                  <div className="word-completion-dropdown" ref={dropdownRef}>
-                      {wordCompletions.map((completion, index) => (
-                          <div key={index} className="completion-item" onClick={() => handleCompletionClick(completion)}>
-                              {completion}
-                          </div>
-                      ))}
-                  </div>
-              )}
-   */
+  
   const handleInputChange = (e) => {
     const query = e.target.value;
     //handleWordCompletion(query);
@@ -55,25 +28,8 @@ const SearchBar = ({ activeTab }) => {
     debouncedFetchSuggestions(query);
   };
 
-  const handleWordCompletion = (query) => {
-    if (query.length === 0) {
-      setWordCompletions([]);
-      return;
-    }
 
-    const lastWord = query.split(' ').pop().toLowerCase();
-    const completions = wordCompletions.filter((word) =>
-      word.toLowerCase().startsWith(lastWord),
-    );
-    setWordCompletions(completions.slice(0, 5)); // Limit to 5 suggestions
-  };
 
-  const handleCompletionClick = (completion) => {
-    const words = searchQuery.split(' ');
-    words.pop(); // Remove the last word that is being completed
-    setSearchQuery([...words, completion].join(' '));
-    setWordCompletions([]);
-  };
   const fetchSuggestions = async (query) => {
     if (!user || !query) return;
 
@@ -111,9 +67,6 @@ const SearchBar = ({ activeTab }) => {
     };
   }, [dropdownRef]);
 
-  const handlePlayClick = async (item) => {
-    showVideoPlayer(item.id, item.type);
-  };
 
   const imageUrl = (activeTab, currentItem) => {
     switch (activeTab) {
@@ -237,13 +190,6 @@ const SearchBar = ({ activeTab }) => {
                 />
                 <div className='search-result-info'>
                   <h4>{`${getTitle(item)}`}</h4>
-                  <div className='search-result-actions'>
-                    <Button text='Info' category={item.type} id={item.id} />
-                    <Button
-                      text='Watch'
-                      onClick={() => handlePlayClick(item)}
-                    />
-                  </div>
                 </div>
               </div>
             </Link>

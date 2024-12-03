@@ -10,7 +10,7 @@
   transition: transform 0.3s ease;
   display: flex;
   flex-direction: column;
-  background-color: #1c1c1c;
+  background-color: transparent;
   color: #ffffff;
 }
 
@@ -51,22 +51,4 @@
   display: flex;
   justify-content: center;
   margin-bottom: 10px;
-}
-
-.item-card .actions {
-  display: flex;
-  justify-content: center;
-  margin-top: 10px;
-  gap: 5%;
-}
-
-.item-card .button {
-  border: none;
-  padding: 8px 12px;
-  cursor: pointer;
-  border-radius: 5px;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  gap: 5px;
 }
