@@ -1,110 +1,179 @@
-import React, { useEffect, useState, useContext, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import '../styles/components/Banner.css';
 import { useItemContext } from '../contexts/ItemContext';
 import Button from './Button';
+import { FaChevronLeft, FaChevronRight } from 'react-icons/fa'; // For navigation icons
 
 const Banner = ({ contentType }) => {
   const { items, isLoading, fetchAllItems } = useItemContext();
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [prevIndex, setPrevIndex] = useState(null);
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const hasFetched = useRef(false);
+  const intervalRef = useRef(null);
 
   useEffect(() => {
     if (!contentType || hasFetched.current || isLoading) return;
     const itemKey = `home-${contentType}`;
-    if ((!items[itemKey] || items[itemKey].length === 0) && !hasFetched) {
+    if ((!items[itemKey] || items[itemKey].length === 0) && !hasFetched.current) {
       fetchAllItems();
     }
     hasFetched.current = true;
-  }, [contentType, items, fetchAllItems]);
+  }, [contentType, items, fetchAllItems, isLoading]);
 
   useEffect(() => {
     if (isPaused || isLoading) return;
-    const interval = setInterval(() => {
-      const itemKey = `home-${contentType}`;
-      setCurrentIndex(
-        (prevIndex) => (prevIndex + 1) % (items[itemKey]?.length || 20),
-      ); // 20 is the default number of items to show
+
+    intervalRef.current = setInterval(() => {
+      goToNext();
     }, 10000);
 
-    return () => clearInterval(interval);
-  }, [items, contentType, isPaused, isLoading]);
+    return () => clearInterval(intervalRef.current);
+  }, [currentIndex, isPaused, isLoading, items, contentType]);
 
   const itemKey = `${contentType}-home`;
   if (isLoading || !items[itemKey] || items[itemKey].length === 0) return null;
 
+  const totalItems = items[itemKey].length;
   const currentItem = items[itemKey][currentIndex] || {};
+
+  // Generate an array of next three indices
+  const getNextIndices = () => {
+    const indices = [];
+    for (let i = 1; i <= 3; i++) {
+      indices.push((currentIndex + i) % totalItems);
+    }
+    return indices;
+  };
+
+  const nextIndices = getNextIndices();
+  const nextItems = nextIndices.map(index => items[itemKey][index] || {});
+
   const handleReadMore = () => {
     setShowFullDescription(!showFullDescription);
   };
 
   const handlePause = () => {
     setIsPaused(!isPaused);
+    if (!isPaused) {
+      clearInterval(intervalRef.current);
+    } else {
+      intervalRef.current = setInterval(() => {
+        goToNext();
+      }, 10000);
+    }
   };
 
+  const goToPrevious = () => {
+    setPrevIndex(currentIndex);
+    setCurrentIndex((prevIndex) => (prevIndex - 1 + totalItems) % totalItems);
+  };
 
-  let imageUrl = '';
-  let title = '';
-  switch (currentItem.type) {
-    case 'movies':
-    case 'shows':
-      imageUrl = currentItem.backdrop_path
-        ? `https://image.tmdb.org/t/p/original${currentItem.backdrop_path}`
-        : currentItem.poster_path
-          ? `https://image.tmdb.org/t/p/original${currentItem.poster_path}`
-          : `https://via.placeholder.com/300x450?text=Loading...`;
-      title = currentItem.title || currentItem.name || 'Title loading...';
-      break;
-    case 'anime':
-      imageUrl =
-        currentItem.cover ||
-        currentItem.image ||
-        'https://via.placeholder.com/300x450?text=Image+Not+Found.';
-      title = currentItem.title?.userPreferred || 'Title loading...';
-      break;
-    default:
-      break;
-  }
+  const goToNext = () => {
+    setPrevIndex(currentIndex);
+    setCurrentIndex((prevIndex) => (prevIndex + 1) % totalItems);
+  };
+
+  const getImageUrl = (item) => {
+    if (!item) return 'https://via.placeholder.com/300x450?text=Loading...';
+    switch (item.type) {
+      case 'movies':
+      case 'shows':
+        return item.backdrop_path
+            ? `https://image.tmdb.org/t/p/original${item.backdrop_path}`
+            : item.poster_path
+                ? `https://image.tmdb.org/t/p/original${item.poster_path}`
+                : `https://via.placeholder.com/300x450?text=Loading...`;
+      case 'anime':
+        return item.cover ||
+            item.image ||
+            'https://via.placeholder.com/300x450?text=Image+Not+Found.';
+      default:
+        return 'https://via.placeholder.com/300x450?text=Image+Not+Found.';
+    }
+  };
+
+  const imageUrl = getImageUrl(currentItem);
+  const title = currentItem.title || currentItem.name || 'Title loading...';
 
   return (
-    <div className='banner'>
+      <div
+          className='banner'
+          onMouseEnter={() => setIsPaused(true)}
+          onMouseLeave={() => setIsPaused(false)}
+      >
+        {/* Current Background */}
         <div
-          className='banner-background'
-          style={{
-            backgroundImage: `url(${imageUrl})`,
-          }}
+            className='banner-background fade-in'
+            style={{
+              backgroundImage: `url(${imageUrl})`,
+              zIndex: 1,
+            }}
         ></div>
 
+        {/* Previous Background for Fade Transition */}
+        {prevIndex !== null && (
+            <div
+                className='banner-background fade-out'
+                style={{
+                  backgroundImage: `url(${getImageUrl(items[itemKey][prevIndex])})`,
+                  zIndex: 0,
+                }}
+                onAnimationEnd={() => setPrevIndex(null)}
+            ></div>
+        )}
+
+        {/* Overlay */}
         <div className='banner-overlay'></div>
-      <div className='banner-content'>
-        <h1 className='banner-title'>{title || 'Title loading...'}</h1>
-        <p className='banner-description'>
-          {showFullDescription
-            ? currentItem.overview ||
-              currentItem.description ||
-              'Description loading...'
-            : (
-                currentItem.overview ||
+
+        {/* Content */}
+        <div className='banner-content'>
+          <h1 className='banner-title'>{title}</h1>
+          <p className='banner-description'>
+            {showFullDescription
+                ? currentItem.overview ||
                 currentItem.description ||
-                'Description loading ...'
-              ).slice(0, 120)}
-          {currentItem.overview && currentItem.overview.length > 120 && (
-            <span onClick={handleReadMore} className='read-more'>
+                'Description loading...'
+                : (
+                    currentItem.overview ||
+                    currentItem.description ||
+                    'Description loading ...'
+                ).slice(0, 120)}
+            {currentItem.overview && currentItem.overview.length > 120 && (
+                <span onClick={handleReadMore} className='read-more'>
               {showFullDescription ? ' Show Less' : '... Read More'}
             </span>
-          )}
-        </p>
-        <div className='banner-actions'>
-          <Button text='Info' category={currentItem.type} id={currentItem.id} />
-          <Button
-            text={isPaused ? 'Resume' : 'Pause'}
-            onClick={handlePause}
-            title={'Pause the suggestions shuffling.'}
-          />
+            )}
+          </p>
+          <div className='banner-actions'>
+            <Button text='Info' category={currentItem.type} id={currentItem.id} />
+            <Button
+                text={isPaused ? 'Resume' : 'Pause'}
+                onClick={handlePause}
+                title={'Pause the suggestions shuffling.'}
+            />
+          </div>
         </div>
+
+        {/* Preview of Next Three Items */}
+        <div className='banner-preview'>
+          {nextItems.map((item, index) => (
+              <div key={index} className='preview-item'>
+                <img  src={getImageUrl(item)} alt={item.title || item.name || 'Next Item'} />
+                <span className='preview-title'>{item.title || item.name || 'Title'}</span>
+              </div>
+          ))}
+        </div>
+
+        {/* Navigation Buttons */}
+        <button className='banner-nav left' onClick={goToPrevious} aria-label="Previous">
+          <FaChevronLeft />
+        </button>
+        <button className='banner-nav right' onClick={goToNext} aria-label="Next">
+          <FaChevronRight />
+        </button>
       </div>
-    </div>
   );
 };
 

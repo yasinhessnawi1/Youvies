@@ -12,10 +12,12 @@
     "axios": "^1.7.4",
     "eslint-config-react-app": "^7.0.1",
     "gsap": "^3.12.5",
+    "lodash.debounce": "^4.0.8",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-icons": "^5.2.1",
     "react-router-dom": "^6.28.0",
+    "react-swipeable": "^7.0.2",
     "vite": "^4.4.0"
   },
   "scripts": {

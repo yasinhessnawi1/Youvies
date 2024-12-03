@@ -9,7 +9,7 @@ import '../styles/components/ItemCard.css';
 import { getTitle } from '../utils/helper';
 import { Link } from 'react-router-dom';
 
-const ItemCard = ({ item }) => {
+const ItemCard = React.memo(({ item }) => {
   const { getWatchedItem } = useContext(UserContext);
 
   const isWatched = useMemo(() => {
@@ -86,6 +86,6 @@ const ItemCard = ({ item }) => {
       </div>
     </Link>
   );
-};
+});
 
 export default ItemCard;

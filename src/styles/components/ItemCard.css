@@ -15,12 +15,13 @@
 }
 
 .item-card:hover {
-  transform: scale(1.05);
+  transform: scale(1.01);
 }
 
 .item-card .item-image {
   background-size: cover;
   background-position: center;
+  background-color: transparent;
   height: 300px;
   width: 100%;
   position: relative;
@@ -34,7 +35,6 @@
 
 .item-card .item-content {
   padding: 10px;
-  flex-grow: 1;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -51,4 +51,5 @@
   display: flex;
   justify-content: center;
   margin-bottom: 10px;
+  margin-top: 10px;
 }

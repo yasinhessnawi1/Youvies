@@ -9,7 +9,7 @@ import LoadingIndicator from '../components/static/LoadingIndicator';
 import { VideoPlayerContext } from '../contexts/VideoPlayerContext';
 import { useLoading } from '../contexts/LoadingContext';
 import { UserContext } from '../contexts/UserContext';
-import VideoCardGrid from '../components/VideoCardGrid';
+import VideoCardGrid from '../components/Carousel';
 import CountdownTimer from '../utils/CountdownTimer';
 import { getTitle } from '../utils/helper';
 import SearchBar from '../components/SearchBar';
@@ -508,7 +508,6 @@ const InfoPage = () => {
         {itemInfo.recommendations && itemInfo.recommendations.length > 0 && (
           <VideoCardGrid
             contentType={itemInfo.type}
-            isRelated={true}
             title='Recommended For You'
             customItems={itemInfo.recommendations}
           />

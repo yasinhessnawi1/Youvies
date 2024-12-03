@@ -20,7 +20,7 @@ const SearchBar = ({ activeTab }) => {
   const [isSearching, setIsSearching] = useState(false);
   const dropdownRef = useRef(null);
 
-  
+
   const handleInputChange = (e) => {
     const query = e.target.value;
     //handleWordCompletion(query);

@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import '../styles/page/HomePage.css';
 import Header from '../components/static/Header';
 import Banner from '../components/Banner';
-import VideoCardGrid from '../components/VideoCardGrid';
+import VideoCardGrid from '../components/Carousel';
 import Footer from '../components/static/Footer';
 import StarryBackground from '../components/static/StarryBackground';
 import LoadingIndicator from '../components/static/LoadingIndicator';
@@ -161,7 +161,6 @@ const HomePage = () => {
           <Banner contentType={activeTab} />
           <VideoCardGrid
             contentType={activeTab}
-            genre={selectedGenre || ''}
             genres={genres}
           />
           <VideoCardGrid
