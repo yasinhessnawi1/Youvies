@@ -1,4 +1,4 @@
-// src/api/UserApi.js
+// src/api/UserApi.jsx
 
 import { BASE_URL } from './apiHelpers';
 

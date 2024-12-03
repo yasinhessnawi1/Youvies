@@ -1,4 +1,4 @@
-// debounce.js
+// debounce.jsx
 export const debounce = (func, delay) => {
   let timeout;
   return function (...args) {

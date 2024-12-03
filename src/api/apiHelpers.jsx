@@ -1,5 +1,4 @@
-import axios from 'axios';
-import pako from 'pako';
+
 
 export const BASE_URL = 'https://api.youvies.online/youvies/v1';
 export const TMDB_BASE_URL = 'https://api.themoviedb.org/3';

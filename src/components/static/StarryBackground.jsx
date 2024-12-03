@@ -1,4 +1,4 @@
-// StarryBackground.js
+// StarryBackground.jsx
 import React, { useEffect, useRef } from 'react';
 
 const StarryBackground = () => {

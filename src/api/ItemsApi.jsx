@@ -1,4 +1,3 @@
-// ItemsApi.js
 
 import {
   fetchMovieDetails,
