@@ -24,4 +24,9 @@ export default defineConfig({
     'process.env': {    NODE_ENV: JSON.stringify(process.env.NODE_ENV),
     },
   },
+  build: {
+    rollupOptions: {
+      external: ['react-dom/client'],
+    },
+  },
 });
