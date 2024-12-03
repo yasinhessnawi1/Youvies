@@ -3,6 +3,9 @@
   "jest": {
     "verbose": true
   },
+  "engines": {
+    "node": "20.14.0"
+  },
   "version": "1.0.0",
   "private": true,
   "homepage": "https://youvies.online",
@@ -71,7 +74,6 @@
     "os-browserify": "^0.3.0",
     "path-browserify": "^1.0.1",
     "prettier": "^3.2.5",
-    "react-app-rewired": "^2.2.1",
     "webpack": "^5.93.0"
   }
 }
