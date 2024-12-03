@@ -21,7 +21,7 @@ export default defineConfig({
   },
   define: {
     global: 'window',
-    'process.env': {
+    'process.env': {    NODE_ENV: JSON.stringify(process.env.NODE_ENV),
     },
   },
 });
