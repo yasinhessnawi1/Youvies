@@ -121,33 +121,36 @@ const Carousel = ({
         {/* Header Section */}
         <div className="gridHeader">
           <div className="grid-title">
+            <div className="grid-title-icon">
+            <img src={`./video.png`} alt={'Video icon'} className={'carousel_name_icon'} />
             <h4 className="content-title">
               {title || (isHomePage ? `${contentType} Home` : `${genres.find((genre) => genre.id === selectedGenre)?.name.toUpperCase()}`)}
             </h4>
+            </div>
             {!isHomePage && genres && genres.length > 1 && !customItems && (
-                <div className="dropdown">
-                  <button
-                      type="button" // Prevent default form submission
-                      className="dropdown-button"
-                      title="Select a genre to change the list"
-                  >
-                    Genre <span className="arrow-down">▼</span>
-                  </button>
-                  <div className="dropdown-content">
-                    {genres.map((genre) => (
-                        <span
-                            key={genre.id}
-                            onClick={() => {
-                              setSelectedGenre(genre.id); // Update selectedGenre
-                              fetchGenreItems(contentType, genre.id);
-                            }}
-                            title={`Select ${genre.name}`}
-                        >
+              <div className="dropdown">
+                <button
+                  type="button" // Prevent default form submission
+                  className="dropdown-button"
+                  title="Select a genre to change the list"
+                >
+                  Genre <span className="arrow-down">▼</span>
+                </button>
+                <div className="dropdown-content">
+                  {genres.map((genre) => (
+                    <span
+                      key={genre.id}
+                      onClick={() => {
+                        setSelectedGenre(genre.id); // Update selectedGenre
+                        fetchGenreItems(contentType, genre.id);
+                      }}
+                      title={`Select ${genre.name}`}
+                    >
                     {genre.name}
                   </span>
-                    ))}
-                  </div>
+                  ))}
                 </div>
+              </div>
             )}
           </div>
           <div className="item-counter-container">
