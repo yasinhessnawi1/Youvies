@@ -30,6 +30,11 @@ export const UserProvider = ({ children }) => {
   const logout = async () => {
     try {
       if (user && user.token) {
+       let watched = user.user.watched;
+        if(watched.length > 30){
+            watched = watched.slice(watched.length - 30, watched.length);
+            user.user.watched = watched
+        }
         await editUser(user.user, user.token);
         await logoutUser(user.token);
       }
@@ -42,6 +47,18 @@ export const UserProvider = ({ children }) => {
     }
   };
 
+  const updateUser = async (watchedList) => {
+    if(watchedList){
+        user.user.watched = watchedList;
+    }
+    try {
+      localStorage.setItem('user', JSON.stringify(user));
+        await editUser(user.user, user.token);
+    } catch (error) {
+      console.error('Failed to update user:', error);
+    }
+  }
+
   const addToWatchedList = async (watchedItem) => {
     if (!user) return;
 
@@ -49,23 +66,19 @@ export const UserProvider = ({ children }) => {
     if (!user.user.watched) user.user.watched = [];
 
     // Parse the watched item details
-    const [type, id, title, newSeason, newEpisode] = watchedItem.split(':');
+    const [type, id, title] = watchedItem.split(':');
 
     // Find the existing watched item
     const existingItemIndex = user.user.watched.findIndex((item) =>
       item.startsWith(`${type}:${id}:${title}`),
     );
     if (existingItemIndex !== -1) {
-      // Replace with updated values
-      user.user.watched[existingItemIndex] =
-        `${type}:${id}:${title}:${newSeason}:${newEpisode}`;
-    } else {
-      // New item, add it to the watched list
-      user.user.watched.push(watchedItem);
+        // Update the existing item
+        user.user.watched.remove(existingItemIndex);
     }
+     // New item, add it to the watched list
+     user.user.watched.push(watchedItem);
 
-    // Update the user state and persist to localStorage
-    setUser(user);
     localStorage.setItem('user', JSON.stringify(user));
     try {
       await editUser(user.user, user.token);
@@ -86,7 +99,7 @@ export const UserProvider = ({ children }) => {
 
   return (
     <UserContext.Provider
-      value={{ user, login, logout, addToWatchedList, getWatchedItem }}
+      value={{ user, login, logout, addToWatchedList, getWatchedItem , updateUser}}
     >
       {children}
     </UserContext.Provider>

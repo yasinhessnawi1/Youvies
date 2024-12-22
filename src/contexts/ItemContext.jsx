@@ -25,7 +25,7 @@ export const ItemProvider = ({ children }) => {
   const [cacheTime, setCacheTime] = useState(Date.now());
   const [itemsCache, setItemsCache] = useState({});
   const [watchedItems, setWatchedItems] = useState([]);
-  const {addToWatchedList} = useContext(UserContext);
+  const {user , addToWatchedList, updateUser} = useContext(UserContext);
 
   const previousUserWatchedRef = useRef(user?.user?.watched);
   const hasFetched = useRef({});
@@ -36,22 +36,28 @@ export const ItemProvider = ({ children }) => {
 
       const newFetchedItems = [];
       for (let i = userWatchedList.length - 1; i >= 0; i--) {
-        let [type, id, title, season, episode, poster, rating] = userWatchedList[i].split(':');
+        if (!userWatchedList[i]) continue;
+        let [type, id, title, season, episode, poster, rating, extra] = userWatchedList[i].split(':');
 
         // Validate the item before fetching
         if (!type || !id || !title || isNaN(id)) {
           console.warn(`Invalid watched item: ${userWatchedList[i]}`);
-          userWatchedList.filter((item) => item !== userWatchedList[i]);
+          userWatchedList.remove(i);
           continue;
-        }else if (!poster || !rating) {
+        } else if (extra) {
+          poster = poster + ':'+rating;
+          rating = extra;
+        }
+        else if (!poster || !rating || isNaN(rating)) {
+          console.warn(`Invalid watched item: ${userWatchedList[i]}`);
           const item = await fetchOneItem(type, id);
           if (!item) {
             console.warn(`Invalid watched item: ${userWatchedList[i]}`);
             continue;
           }
           poster = item.poster_path || item.image;
-          rating = item.vote_average || item.rating;
-          addToWatchedList(`${type}:${id}:${title}:${season}:${episode}:${poster}:${rating}`);
+          rating = item.vote_average || item.rating || 0.0;
+          userWatchedList[i] = `${type}:${id}:${title}:${season}:${episode}:${poster}:${rating}`;
         }
         let finalItem;
         switch (type) {
@@ -89,12 +95,9 @@ export const ItemProvider = ({ children }) => {
       }
 
       setWatchedItems(newFetchedItems);
-      const user =localStorage.getItem('user');
-      if(user){
-        user.user.watched = newFetchedItems
-      }
+      updateUser(userWatchedList);
     },
-    [addToWatchedList],
+    [updateUser],
   );
 
   useEffect(() => {
@@ -115,7 +118,6 @@ export const ItemProvider = ({ children }) => {
       }
 
       if (user && user.user.watched !== previousUserWatchedRef.current) {
-        previousUserWatchedRef.current = user.user.watched;
         await fetchWatchedItems(user.user.watched);
       }
     };

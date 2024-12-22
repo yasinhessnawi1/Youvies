@@ -48,6 +48,11 @@ export const registerUser = async (user) => {
 
 export const editUser = async (user, token) => {
   try {
+    let watched = user.watched;
+    if(watched.length > 30){
+      watched = watched.slice(watched.length - 30, watched.length);
+      user.watched = watched
+    }
     const response = await fetch(`${BASE_URL}/api/user?id=${user.id}`, {
       method: 'PUT',
       headers: {
