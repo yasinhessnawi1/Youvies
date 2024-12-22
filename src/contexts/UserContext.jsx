@@ -83,6 +83,7 @@ export const UserProvider = ({ children }) => {
     );
   };
 
+
   return (
     <UserContext.Provider
       value={{ user, login, logout, addToWatchedList, getWatchedItem }}

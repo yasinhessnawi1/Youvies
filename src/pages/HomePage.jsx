@@ -162,6 +162,8 @@ const HomePage = () => {
           <VideoCardGrid
             contentType={activeTab}
             genres={genres}
+            selectedGenre={selectedGenre}
+            setSelectedGenre={setSelectedGenre}
           />
           <VideoCardGrid
             contentType={activeTab}

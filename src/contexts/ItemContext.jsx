@@ -12,7 +12,6 @@ import {
   fetchTvSeasonDetails,
 } from '../api/MediaService';
 import { UserContext } from './UserContext';
-import { getTitle } from '../utils/helper';
 
 const ItemContext = createContext();
 const CACHE_DURATION = 1000 * 60 * 10; // 10 min
@@ -26,7 +25,7 @@ export const ItemProvider = ({ children }) => {
   const [cacheTime, setCacheTime] = useState(Date.now());
   const [itemsCache, setItemsCache] = useState({});
   const [watchedItems, setWatchedItems] = useState([]);
-  const { user } = useContext(UserContext);
+  const {addToWatchedList} = useContext(UserContext);
 
   const previousUserWatchedRef = useRef(user?.user?.watched);
   const hasFetched = useRef({});
@@ -37,37 +36,65 @@ export const ItemProvider = ({ children }) => {
 
       const newFetchedItems = [];
       for (let i = userWatchedList.length - 1; i >= 0; i--) {
-        const [type, id, title] = userWatchedList[i].split(':');
+        let [type, id, title, season, episode, poster, rating] = userWatchedList[i].split(':');
 
         // Validate the item before fetching
         if (!type || !id || !title || isNaN(id)) {
           console.warn(`Invalid watched item: ${userWatchedList[i]}`);
+          userWatchedList.filter((item) => item !== userWatchedList[i]);
           continue;
-        }
-
-        const existingItem = watchedItems.find(
-          (item) =>
-            item.id === id && item.type === type && getTitle(item) === title,
-        );
-
-        if (!existingItem) {
-          try {
-            const watchedItem = await fetchOneItem(type, id);
-            if (watchedItem) {
-              newFetchedItems.push(watchedItem);
-            }
-          } catch (error) {
-            console.error(
-              `Error fetching watched item: ${type}:${id}:${title}`,
-              error,
-            );
+        }else if (!poster || !rating) {
+          const item = await fetchOneItem(type, id);
+          if (!item) {
+            console.warn(`Invalid watched item: ${userWatchedList[i]}`);
+            continue;
           }
+          poster = item.poster_path || item.image;
+          rating = item.vote_average || item.rating;
+          addToWatchedList(`${type}:${id}:${title}:${season}:${episode}:${poster}:${rating}`);
         }
+        let finalItem;
+        switch (type) {
+          case 'movies': finalItem = {
+            id,
+            title,
+            type,
+            poster_path: poster,
+            vote_average: rating,
+          };
+            break;
+          case 'shows': finalItem = {
+            id,
+            title,
+            type,
+            season,
+            episode,
+            poster_path: poster,
+            vote_average: rating,
+          };
+            break;
+          case 'anime': finalItem = {
+            id,
+            title: {english: title},
+            type,
+            season,
+            episode,
+            image: poster,
+            rating,
+          };
+            break;
+
+        }
+        newFetchedItems.push(finalItem);
       }
 
-      setWatchedItems((prevItems) => [...prevItems, ...newFetchedItems]);
+      setWatchedItems(newFetchedItems);
+      const user =localStorage.getItem('user');
+      if(user){
+        user.user.watched = newFetchedItems
+      }
     },
-    [watchedItems],
+    [addToWatchedList],
   );
 
   useEffect(() => {
