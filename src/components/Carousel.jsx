@@ -1,202 +1,271 @@
-// Carousel.jsx
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, {
+  useEffect,
+  useState,
+  forwardRef,
+  useImperativeHandle,
+  useCallback,
+} from 'react';
 import { useItemContext } from '../contexts/ItemContext';
 import ItemCard from './ItemCard';
 import LoadingIndicator from './static/LoadingIndicator';
 import '../styles/components/Carousel.css';
-import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
-import debounce from 'lodash.debounce';
-import { useSwipeable } from 'react-swipeable'; // For touch support
+import ResultPage from './ResultPage';
+import leftArrow from '../utils/left-arrow.png';
+import rightArrow from '../utils/right-arrow.png';
+import Button from "./Button";
 
-const Carousel = ({
-                    contentType,
-                    genres,
-                    isHomePage,
-                    title = '',
-                    isRelated,
-                    customItems = null, // New Prop for Custom Items
-                  }) => {
-  const {
-    items,
-    selectedGenre,
-    setSelectedGenre, // Destructure setSelectedGenre
-    fetchGenreItems,
-    fetchMoreItems,
-    isLoading,
-  } = useItemContext();
+const Carousel = forwardRef(
+    (
+        {
+          contentType,
+          genres,
+          isHomePage,
+          title = '',
+          isRelated,
+          customItems = null,
+        },
+        ref
+    ) => {
+      const {
+        items,
+        selectedGenre,
+        setSelectedGenre,
+        fetchGenreItems,
+        isLoading,
+      } = useItemContext();
 
-  const carouselRef = useRef(null);
-  const [isFetching, setIsFetching] = useState(false);
-  const [error, setError] = useState(null);
+      const [error, setError] = useState(null);
 
-  // Determine the key based on contentType and selectedGenre
-  const itemKey = isHomePage ? `${contentType}-home` : `${contentType}-${selectedGenre}`;
+      // Show/Hide "Show All" overlay
+      const [showAllOpen, setShowAllOpen] = useState(false);
 
-  // Fetch initial items from context if customItems are not provided
-  useEffect(() => {
-    const loadInitialItems = async () => {
-      if (!customItems && !items[itemKey]) {
-        try {
-          await fetchGenreItems(contentType, selectedGenre);
-        } catch (err) {
-          setError('Failed to load items.');
+      // For our "carousel pagination"
+      const [currentIndex, setCurrentIndex] = useState(0);
+      const [itemsPerPage, setItemsPerPage] = useState(1);
+
+      // Create a method that parent components could call if needed
+      useImperativeHandle(ref, () => ({
+        resetCarousel: () => setCurrentIndex(0),
+      }));
+
+      // Update itemsPerPage based on window size
+      const updateItemsPerPage = useCallback(() => {
+        if (window.innerWidth > 1629) {
+          setItemsPerPage(6);
+        }else if (window.innerWidth > 1400) {
+            setItemsPerPage(5);
+        } else if (window.innerWidth > 1200) {
+          setItemsPerPage(4);
+        } else if (window.innerWidth > 938) {
+          setItemsPerPage(3);
+        } else if (window.innerWidth > 674) {
+          setItemsPerPage(2);
+        } else {
+          setItemsPerPage(1);
         }
-      }
-    };
-    loadInitialItems();
-  }, [contentType, selectedGenre, fetchGenreItems, itemKey, isHomePage, items, customItems]);
+      }, []);
 
-  // Handle fetching more items
-  const handleFetchMore = useCallback(async () => {
-    if (isFetching || isLoading) return;
+      useEffect(() => {
+        updateItemsPerPage();
+        window.addEventListener('resize', updateItemsPerPage);
+        return () => {
+          window.removeEventListener('resize', updateItemsPerPage);
+        };
+      }, [updateItemsPerPage]);
 
-    // If customItems are provided, do not fetch more
-    if (customItems) return;
+      // Reset to the first page if 'items' changes significantly
+      useEffect(() => {
+        setCurrentIndex(0);
+      }, [customItems]);
 
-    setIsFetching(true);
-    try {
-      await fetchMoreItems(contentType, selectedGenre); // Fetch more items from context
-    } catch (err) {
-      setError('Failed to load more items.');
-    }
-    setIsFetching(false);
-  }, [isFetching, isLoading, fetchMoreItems, contentType, selectedGenre, customItems]);
+      // Determine the key for context items
+      const itemKey = isHomePage
+          ? `${contentType}-home`
+          : `${contentType}-${selectedGenre}`;
 
-  // Debounced scroll handler
-  const handleScroll = useCallback(
-      debounce(() => {
-        const carousel = carouselRef.current;
-        if (!carousel) return;
+      // Fetch initial items if no customItems
+      useEffect(() => {
+        const loadInitialItems = async () => {
+          if (!customItems && !items[itemKey]) {
+            try {
+              await fetchGenreItems(contentType, selectedGenre);
+            } catch (err) {
+              setError('Failed to load items.');
+            }
+          }
+        };
+        loadInitialItems();
+      }, [
+        contentType,
+        selectedGenre,
+        fetchGenreItems,
+        itemKey,
+        isHomePage,
+        items,
+        customItems,
+      ]);
 
-        const { scrollLeft, scrollWidth, clientWidth } = carousel;
-        // Trigger fetch when scrolled to within 100px of the end
-        if (scrollLeft + clientWidth >= scrollWidth - 100) {
-          handleFetchMore();
-        }
-      }, 200), // Debounce delay of 200ms
-      [handleFetchMore]
-  );
+      // Final array of items to show in the carousel
+      const allItems = customItems || items[itemKey] || [];
 
-  useEffect(() => {
-    const carousel = carouselRef.current;
-    if (carousel) {
-      carousel.addEventListener('scroll', handleScroll);
-      return () => {
-        carousel.removeEventListener('scroll', handleScroll);
-        handleScroll.cancel(); // Cancel any pending debounced calls
+      // The function that decides which items are visible
+      const getVisibleItems = () => {
+        return allItems.slice(currentIndex, currentIndex + itemsPerPage);
       };
-    }
-  }, [handleScroll]);
 
-  // Scroll the carousel by container's width
-  const scrollCarousel = (direction) => {
-    const carousel = carouselRef.current;
-    if (!carousel) return;
+      // Next/prev “page” logic
+      const nextPage = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        // If there's more items ahead
+        if (currentIndex + itemsPerPage < allItems.length) {
+          setCurrentIndex(currentIndex + itemsPerPage);
+        }
+      };
+      const prevPage = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (currentIndex - itemsPerPage >= 0) {
+          setCurrentIndex(currentIndex - itemsPerPage);
+        }
+      };
 
-    const scrollAmount = carousel.clientWidth;
-    carousel.scrollBy({
-      left: direction === 'next' ? scrollAmount : -scrollAmount,
-      behavior: 'smooth',
-    });
-  };
-
-  // Get visible items: prioritize customItems over context items
-  const visibleItems = customItems || items[itemKey] || [];
-
-  // Swipe handlers for touch support
-  const handlers = useSwipeable({
-    onSwipedLeft: () => scrollCarousel('next'),
-    onSwipedRight: () => scrollCarousel('prev'),
-    preventDefaultTouchmoveEvent: true,
-    trackMouse: true,
-  });
-
-  return (
-      <div
-          className="carousel-wrapper"
-          {...handlers}
-          aria-label={`${title || (isHomePage ? `${contentType} Carousel` : `${genres.find((genre) => genre.id === selectedGenre)?.name} Carousel`)}`}
-          role="region"
-      >
-        {/* Header Section */}
-        <div className="gridHeader">
-          <div className="grid-title">
-            <div className="grid-title-icon">
-            <img src={`./video.png`} alt={'Video icon'} className={'carousel_name_icon'} />
-            <h4 className="content-title">
-              {title || (isHomePage ? `${contentType} Home` : `${genres.find((genre) => genre.id === selectedGenre)?.name.toUpperCase()}`)}
-            </h4>
-            </div>
-            {!isHomePage && genres && genres.length > 1 && !customItems && (
-              <div className="dropdown">
-                <button
-                  type="button" // Prevent default form submission
-                  className="dropdown-button"
-                  title="Select a genre to change the list"
-                >
-                  Genre <span className="arrow-down">▼</span>
-                </button>
-                <div className="dropdown-content">
-                  {genres.map((genre) => (
-                    <span
-                      key={genre.id}
-                      onClick={() => {
-                        setSelectedGenre(genre.id); // Update selectedGenre
-                        fetchGenreItems(contentType, genre.id);
-                      }}
-                      title={`Select ${genre.name}`}
-                    >
-                    {genre.name}
-                  </span>
-                  ))}
-                </div>
-              </div>
+      return (
+          <>
+            {/* Show the ResultPage (overlay) if showAllOpen */}
+            {showAllOpen && (
+                <ResultPage
+                    items={allItems}
+                    contentType={contentType}
+                    selectedGenre={selectedGenre}
+                    title={
+                        title ||
+                        (isHomePage
+                            ? `${contentType} Home`
+                            : genres
+                                .find((g) => g.id === selectedGenre)
+                                ?.name.toUpperCase())
+                    }
+                    onClose={() => setShowAllOpen(false)}
+                />
             )}
-          </div>
-          <div className="item-counter-container">
-          <span className="item-counter" title={`There are ${visibleItems.length} items currently in this list.`}>
-            {visibleItems.length} Items
-          </span>
-          </div>
-        </div>
 
-        {/* Carousel Section */}
-        <div className="carousel-container">
-          {visibleItems.length > 0 && (
-              <>
-                <button
-                    type="button" // Prevent default form submission
-                    className="carousel-button left"
-                    onClick={() => scrollCarousel('prev')}
-                    aria-label="Scroll Left"
-                >
-                  <FaChevronLeft />
-                </button>
-                <div className="carousel" ref={carouselRef}>
-                  {visibleItems.map((item) => (
-                      <ItemCard key={item.id || item.title} item={item} isRelated={isRelated} />
-                  ))}
-                  {isLoading && <LoadingIndicator />}
+            {/* Main carousel wrapper */}
+            <div
+                className="carousel-wrapper"
+                aria-label={
+                    title ||
+                    (isHomePage
+                        ? `${contentType} Carousel`
+                        : `${genres.find((g) => g.id === selectedGenre)?.name} Carousel`)
+                }
+                role="region"
+            >
+              {/* Header Section */}
+              <div className="gridHeader">
+                <div className="grid-title">
+                  <div className="grid-title-icon">
+                    <img
+                        src="./video.png"
+                        alt="Video icon"
+                        className="carousel_name_icon"
+                    />
+                    <h4 className="content-title">
+                      {title ||
+                          (isHomePage
+                              ? `${contentType} Home`
+                              : genres
+                                  .find((g) => g.id === selectedGenre)
+                                  ?.name.toUpperCase())}
+                    </h4>
+                  </div>
+                  {/* Genre dropdown (optional) */}
+                  {!isHomePage && genres && genres.length > 1 && !customItems && (
+                      <div className="dropdown">
+                        <button
+                            type="button"
+                            className="dropdown-button"
+                            title="Select a genre to change the list"
+                        >
+                          Genre <span className="arrow-down">▼</span>
+                        </button>
+                        <div className="dropdown-content">
+                          {genres.map((genre) => (
+                              <span
+                                  key={genre.id}
+                                  onClick={() => {
+                                    setSelectedGenre(genre.id);
+                                    fetchGenreItems(contentType, genre.id);
+                                  }}
+                                  title={`Select ${genre.name}`}
+                              >
+                        {genre.name}
+                      </span>
+                          ))}
+                        </div>
+                      </div>
+                  )}
                 </div>
-                <button
-                    type="button" // Prevent default form submission
-                    className="carousel-button right"
-                    onClick={() => scrollCarousel('next')}
-                    aria-label="Scroll Right"
-                >
-                  <FaChevronRight />
-                </button>
-              </>
-          )}
-        </div>
 
-        {/* Loading More Indicator */}
-        {isFetching && <div className="loading-more">Loading more items...</div>}
+                {/* "Show All" button if there are more items than we can show in one page */}
+                {allItems.length > itemsPerPage && (
+                    <div className="show-all-button">
+                    <Button
+                        text={"Show All"}
+                        onClick={() => setShowAllOpen(true)}
+                    >
+                    </Button>
+                    </div>
+                )}
+              </div>
 
-        {/* Error Message */}
-        {error && <div className="error-message">{error}</div>}
-      </div>
-  );
-};
+              {/* Carousel Section */}
+              <div className="carousel-container">
+                {getVisibleItems().length > 0 && (
+                    <div className="carousel-inner-container">
+                      {/* Prev button if not on first page */}
+
+                          <button
+                              className="carousel-button left"
+                              onClick={prevPage}
+                              aria-label="Scroll Left"
+                          >
+                            <img src={leftArrow} alt="Right Arrow" className="arrow"/>
+                          </button>
+
+
+                      {/* Visible Items */}
+                      <div className="carousel-items">
+                        {getVisibleItems().map((item, idx) => (
+                            <div key={`${item.id}-${idx}`} className="carousel-item">
+                              <ItemCard item={item} isRelated={isRelated} />
+                            </div>
+                        ))}
+                        {/* Possibly show a loading spinner if needed */}
+                        {isLoading && <LoadingIndicator />}
+                      </div>
+
+                      {/* Next button if there’s still more items */}
+                      {currentIndex + itemsPerPage < allItems.length && (
+                          <button
+
+                              className="carousel-button right"
+                              onClick={nextPage}
+                              aria-label="Scroll Right"
+                          >
+                            <img src={rightArrow} alt="Right Arrow" className="arrow"/>
+                          </button>
+                      )}
+                    </div>
+                )}
+              </div>
+
+              {/* Error Message */}
+              {error && <div className="error-message">{error}</div>}
+            </div>
+          </>
+      );
+    }
+);
 
 export default Carousel;

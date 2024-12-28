@@ -1,0 +1,46 @@
+/* ResultPage.css */
+.result-page-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 9999; /* on top of everything */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.result-page-container {
+    position: relative;
+    width: 80%;
+    max-width: 1200px;
+    background: #1c1b1b;
+    padding: 2rem;
+    border-radius: 8px;
+    overflow-y: auto;
+    max-height: 80vh; /* so the container scrolls if content is big */
+}
+
+.close-button {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 1.5rem;
+    cursor: pointer;
+}
+
+.result-page-title {
+    color: #fff;
+    margin-bottom: 1.5rem;
+}
+
+.result-page-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 1rem;
+}

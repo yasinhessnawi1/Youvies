@@ -7,7 +7,7 @@
   align-items: center;
   width: 13rem;
   overflow: hidden;
-  height: 3rem;
+  height: 2.5rem;
   background-size: 300% 300%;
   backdrop-filter: blur(1rem);
   border-radius: 5rem;
@@ -17,8 +17,8 @@
   background-image: linear-gradient(#161a25, #161a25),
     linear-gradient(
       137.48deg,
-      #f5434f 10%,
-      #631e29 45%,
+      #ff414e 10%,
+      #6b000e 45%,
       #000000 67%,
       #161a25 87%
     );
@@ -70,12 +70,12 @@ strong {
 }
 
 .circle:nth-of-type(1) {
-  background: rgba(245, 67, 79, 0.636);
+  background: rgba(250, 0, 18, 0.64);
   animation: orbit 8s linear infinite;
 }
 
 .circle:nth-of-type(2) {
-  background: rgba(99, 30, 41, 0.704);
+  background: rgba(211, 0, 29, 0.7);
   animation: orbit 10s linear infinite;
 }
 
@@ -89,14 +89,14 @@ strong {
 }
 
 .btn:active {
-  border: double 4px #631e29;
+  border: double 4px #d01633;
   background-origin: border-box;
   background-clip: content-box, border-box;
   animation: none;
 }
 
 .btn:active .circle {
-  background: #631e29;
+  background: #dc1536;
 }
 
 @keyframes orbit {

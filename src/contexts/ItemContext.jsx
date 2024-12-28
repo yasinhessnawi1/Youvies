@@ -42,7 +42,7 @@ export const ItemProvider = ({ children }) => {
         // Validate the item before fetching
         if (!type || !id || !title || isNaN(id)) {
           console.warn(`Invalid watched item: ${userWatchedList[i]}`);
-          userWatchedList.remove(i);
+          userWatchedList.splice(i, 1);
           continue;
         } else if (extra) {
           poster = poster + ':'+rating;

@@ -7,8 +7,10 @@
     "node": "20.14.0"
   },
   "dependencies": {
+    "@consumet/extensions": "^1.8.1",
     "@react-buddy/ide-toolbox": "^2.4.0",
     "@vitejs/plugin-react": "^4.3.4",
+    "anilist-node": "^1.14.1",
     "axios": "^1.7.4",
     "eslint-config-react-app": "^7.0.1",
     "gsap": "^3.12.5",

@@ -2,8 +2,7 @@
   border-radius: 10px;
   overflow: hidden;
   width: 250px;
-  height: 100%;
-  max-height: 400px;
+  height: 400px;
   transition: transform 0.3s ease;
   display: flex;
   flex-direction: column;
@@ -19,8 +18,8 @@
   background-size: cover;
   background-position: center;
   background-color: transparent;
+  width: 90%;
   height: 300px;
-  width: 100%;
   position: relative;
 }
 

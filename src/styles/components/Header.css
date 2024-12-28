@@ -17,8 +17,8 @@
   left: 0;
 }
 .nav-link.active-tab {
-  color: #cf30aa;
-  border-bottom: 2px solid #cf30aa;
+  color: #ef3d3d;
+  border-bottom: 2px solid #cf3030;
   font-weight: bold;
 }
 

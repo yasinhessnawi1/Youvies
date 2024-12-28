@@ -2,7 +2,8 @@ import React, { useEffect, useState, useRef } from 'react';
 import '../styles/components/Banner.css';
 import { useItemContext } from '../contexts/ItemContext';
 import Button from './Button';
-import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import leftArrow from '../utils/left-arrow.png';
+import rightArrow from '../utils/right-arrow.png';
 import {getTitle} from "../utils/helper"; // For navigation icons
 
 const Banner = ({ contentType }) => {
@@ -168,10 +169,11 @@ const Banner = ({ contentType }) => {
 
         {/* Navigation Buttons */}
         <button className='banner-nav left' onClick={goToPrevious} aria-label="Previous">
-          <FaChevronLeft />
+          <img src={leftArrow} alt="Right Arrow" className="arrow"/>
+
         </button>
         <button className='banner-nav right' onClick={goToNext} aria-label="Next">
-          <FaChevronRight />
+          <img src={rightArrow} alt="Right Arrow" className="arrow"/>
         </button>
       </div>
   );

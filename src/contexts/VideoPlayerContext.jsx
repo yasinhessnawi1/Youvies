@@ -9,7 +9,7 @@ export const VideoPlayerProvider = ({ children }) => {
     isVisible: false,
     tmdbId: null,
     type: null,
-    provider: 'smashy', // default provider
+    provider: 'SuperEmbed', // default provider
     season: 1, // default season
     episode: 1, // default episode
   });
@@ -28,7 +28,7 @@ export const VideoPlayerProvider = ({ children }) => {
       isVisible: true,
       tmdbId,
       type,
-      provider: 'smashy', // default provider when showing player
+      provider:  'SuperEmbed' , // default provider when showing player
       season,
       episode,
     });
@@ -39,7 +39,7 @@ export const VideoPlayerProvider = ({ children }) => {
       isVisible: false,
       type: null,
       tmdbId: null,
-      provider: 'smashy',
+      provider: 'SuperEmbed',
       season: 1,
       episode: 1,
     });

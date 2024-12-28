@@ -178,8 +178,8 @@ const InfoPage = () => {
                 } else if (itemInfo.type === 'anime') {
                     let title =
                         itemInfo.title.userPreferred ||
-                        itemInfo.title.romaji ||
                         itemInfo.title.english ||
+                        itemInfo.title.romaji ||
                         itemInfo.title.native ||
                         'Unknown Title';
                     title = title.replace(/ /g, '-').toLowerCase();
@@ -219,10 +219,7 @@ const InfoPage = () => {
             : itemInfo.poster_path
                 ? `https://image.tmdb.org/t/p/original${itemInfo.poster_path}`
                 : 'https://via.placeholder.com/300x450?text=Loading...';
-    const title =
-        itemInfo.type === 'anime'
-            ? itemInfo.title.userPreferred
-            : itemInfo.title || itemInfo.name || 'Title loading...';
+    const title = getTitle(itemInfo);
 
     const renderSubInfo = () => {
         switch (itemInfo.type) {
