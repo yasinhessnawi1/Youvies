@@ -429,25 +429,25 @@ const InfoPage = () => {
                                         className={`player-button ${videoPlayerState.provider === '2embed' ? 'active' : ''}`}
                                         onClick={() => switchProvider('2embed')}
                                     >
-                                        Medium
+                                        Best
                                     </button>
                                     <button
                                         className={`player-button ${videoPlayerState.provider === 'NontonGo' ? 'active' : ''}`}
                                         onClick={() => switchProvider('NontonGo')}
                                     >
-                                        Low
+                                        Medium
                                     </button>
                                     <button
                                         className={`player-button ${videoPlayerState.provider === 'smashy' ? 'active' : ''}`}
                                         onClick={() => switchProvider('smashy')}
                                     >
-                                        Good+
+                                        Good
                                     </button>
                                     <button
                                         className={`player-button ${videoPlayerState.provider === 'SuperEmbed' ? 'active' : ''}`}
                                         onClick={() => switchProvider('SuperEmbed')}
                                     >
-                                        Best
+                                        Good+
                                     </button>
                                 </div>
                             )}

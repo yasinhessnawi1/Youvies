@@ -12,6 +12,7 @@ import '../styles/components/Carousel.css';
 import ResultPage from './ResultPage';
 import leftArrow from '../utils/left-arrow.png';
 import rightArrow from '../utils/right-arrow.png';
+import videoIcon from '../utils/video.png';
 import Button from "./Button";
 
 const Carousel = forwardRef(
@@ -166,7 +167,7 @@ const Carousel = forwardRef(
                 <div className="grid-title">
                   <div className="grid-title-icon">
                     <img
-                        src="./video.png"
+                        src={videoIcon}
                         alt="Video icon"
                         className="carousel_name_icon"
                     />

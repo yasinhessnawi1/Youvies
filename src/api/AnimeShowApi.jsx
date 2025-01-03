@@ -3,12 +3,6 @@ import { handleAnimeApiErrors } from "./apiHelpers";
 
 const BASE_URL = "https://api.anime.youvies.online/meta/anilist";
 
-import { META } from "@consumet/extensions"
-
-const anilist = new  META.Anilist();
-
-console.log(await anilist.fetchAnilistInfoById ('21'));
-
 // Fetch trending anime shows
 export const fetchAnime = async (page = 1, perPage = 20) => {
   try {
