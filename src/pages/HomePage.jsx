@@ -5,7 +5,6 @@ import Banner from '../components/Banner';
 import VideoCardGrid from '../components/Carousel';
 import Footer from '../components/static/Footer';
 import StarryBackground from '../components/static/StarryBackground';
-import LoadingIndicator from '../components/static/LoadingIndicator';
 import SearchBar from '../components/SearchBar';
 import { TabContext } from '../contexts/TabContext';
 import { useItemContext } from '../contexts/ItemContext';
@@ -128,10 +127,6 @@ const HomePage = () => {
   };
 
   const renderContent = () => {
-    if (isLoading) {
-      return <LoadingIndicator />;
-    }
-
     if (activeTab === 'home') {
       return (
         <>
@@ -162,6 +157,8 @@ const HomePage = () => {
           <VideoCardGrid
             contentType={activeTab}
             genres={genres}
+            selectedGenre={selectedGenre}
+            setSelectedGenre={setSelectedGenre}
           />
           <VideoCardGrid
             contentType={activeTab}

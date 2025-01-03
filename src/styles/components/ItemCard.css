@@ -1,12 +1,8 @@
 .item-card {
   border-radius: 10px;
   overflow: hidden;
-  margin: 10px;
-  width: 100%;
-  max-width: 250px;
-  min-width: 200px;
-  height: 100%;
-  max-height: 400px;
+  width: 250px;
+  height: 400px;
   transition: transform 0.3s ease;
   display: flex;
   flex-direction: column;
@@ -15,15 +11,15 @@
 }
 
 .item-card:hover {
-  transform: scale(1.01);
+  transform: scale(1.05);
 }
 
 .item-card .item-image {
   background-size: cover;
   background-position: center;
   background-color: transparent;
+  width: 90%;
   height: 300px;
-  width: 100%;
   position: relative;
 }
 

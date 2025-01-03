@@ -80,7 +80,7 @@
   filter: blur(3px);
 }
 .input {
-  background-color: rgba(51, 27, 51, 0.89);
+  background: linear-gradient(90deg, #7a2a2a  , #4b1b1b,transparent);
 
   border: none;
   /* padding:7px; */
@@ -181,10 +181,10 @@
   filter: brightness(1.35);
   background-image: conic-gradient(
     rgba(0, 0, 0, 0),
-    #3d3a4f,
+    #4f3a3a,
     rgba(0, 0, 0, 0) 50%,
     rgba(0, 0, 0, 0) 50%,
-    #3d3a4f,
+    #4f3a3a,
     rgba(0, 0, 0, 0) 100%
   );
   animation: rotate 4s linear infinite;

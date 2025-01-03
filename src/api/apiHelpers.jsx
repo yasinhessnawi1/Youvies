@@ -23,6 +23,7 @@ export const handleApiErrors = async (response) => {
 };
 export const handleAnimeApiErrors = async (response) => {
   const data = await response;
+  console.log(data);
   if (!data) {
     console.warn('API returned null or missing items');
     return [];

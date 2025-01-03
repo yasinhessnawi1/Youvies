@@ -12,9 +12,7 @@ import { Link } from 'react-router-dom';
 const ItemCard = React.memo(({ item }) => {
   const { getWatchedItem } = useContext(UserContext);
 
-  const isWatched = useMemo(() => {
-    return getWatchedItem(item.type, item.id, getTitle(item)) !== null;
-  }, [getWatchedItem, item.id, item]);
+  const isWatched = item && getWatchedItem(item.type,item.id, getTitle(item));
 
 
   const { title, rating, imageUrl } = useMemo(() => {

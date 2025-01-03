@@ -2,7 +2,9 @@ import React, { useEffect, useState, useRef } from 'react';
 import '../styles/components/Banner.css';
 import { useItemContext } from '../contexts/ItemContext';
 import Button from './Button';
-import { FaChevronLeft, FaChevronRight } from 'react-icons/fa'; // For navigation icons
+import leftArrow from '../utils/left-arrow.png';
+import rightArrow from '../utils/right-arrow.png';
+import {getTitle} from "../utils/helper"; // For navigation icons
 
 const Banner = ({ contentType }) => {
   const { items, isLoading, fetchAllItems } = useItemContext();
@@ -95,7 +97,6 @@ const Banner = ({ contentType }) => {
   };
 
   const imageUrl = getImageUrl(currentItem);
-  const title = currentItem.title || currentItem.name || 'Title loading...';
 
   return (
       <div
@@ -129,7 +130,7 @@ const Banner = ({ contentType }) => {
 
         {/* Content */}
         <div className='banner-content'>
-          <h1 className='banner-title'>{title}</h1>
+          <h1 className='banner-title'>{getTitle(currentItem)}</h1>
           <p className='banner-description'>
             {showFullDescription
                 ? currentItem.overview ||
@@ -161,17 +162,18 @@ const Banner = ({ contentType }) => {
           {nextItems.map((item, index) => (
               <div key={index} className='preview-item'>
                 <img  src={getImageUrl(item)} alt={item.title || item.name || 'Next Item'} />
-                <span className='preview-title'>{item.title || item.name || 'Title'}</span>
+                <span className='preview-title'>{getTitle(item) ||'Title'}</span>
               </div>
           ))}
         </div>
 
         {/* Navigation Buttons */}
         <button className='banner-nav left' onClick={goToPrevious} aria-label="Previous">
-          <FaChevronLeft />
+          <img src={leftArrow} alt="Right Arrow" className="arrow"/>
+
         </button>
         <button className='banner-nav right' onClick={goToNext} aria-label="Next">
-          <FaChevronRight />
+          <img src={rightArrow} alt="Right Arrow" className="arrow"/>
         </button>
       </div>
   );

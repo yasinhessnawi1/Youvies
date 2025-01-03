@@ -49,6 +49,7 @@ const Header = ({ onSearchClick }) => {
       className={`nav-link ${activeTab === tab ? 'active-tab' : ''}`}
       onClick={() => handleTabClick(tab)}
       title={title}
+      key={tab}
     >
       {tab.charAt(0).toUpperCase() + tab.slice(1)}
     </div>
@@ -71,7 +72,7 @@ const Header = ({ onSearchClick }) => {
             className='logo-image'
             onClick={() => document.scrollingElement.scrollTop}
           />
-          <nav className='nav-links'>
+          <nav  className='nav-links'>
             {['home', 'movies', 'shows', 'anime'].map((tab) =>
               renderNavLink(
                 tab,
