@@ -139,7 +139,7 @@ const InfoPage = () => {
 
     const handleSeasonChange = async (season) => {
         setSelectedSeason(season);
-        setSelectedEpisode({episode_number: 1});
+        handleEpisodeChange({episode_number: 1});
     };
 
     const handleEpisodeChange = (episode) => {
