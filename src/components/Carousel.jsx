@@ -249,7 +249,6 @@ const Carousel = forwardRef(
                       {/* Next button if there’s still more items */}
                       {currentIndex + itemsPerPage < allItems.length && (
                           <button
-
                               className="carousel-button right"
                               onClick={nextPage}
                               aria-label="Scroll Right"

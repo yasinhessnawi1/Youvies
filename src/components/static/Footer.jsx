@@ -71,7 +71,7 @@ const Footer = () => {
     <footer className='footer-container'>
       <div className='footer-carousel'>{renderCarouselItems()}</div>
       <div className='footer-info'>
-        <h4>© Youvies.Online with ♥</h4>
+        <h4>© 2025 Youvies.Online with ♥</h4>
         <p>
           This site does not store any files on its server. All contents are
           provided by non-affiliated third parties.

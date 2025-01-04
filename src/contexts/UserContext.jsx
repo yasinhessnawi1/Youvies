@@ -61,7 +61,7 @@ export const UserProvider = ({ children }) => {
 
   const addToWatchedList = async (watchedItem) => {
     if (!user) return;
-
+  console.log(watchedItem);
     // Initialize watched list if it doesn't exist
     if (!user.user.watched) user.user.watched = [];
 
@@ -74,7 +74,7 @@ export const UserProvider = ({ children }) => {
     );
     if (existingItemIndex !== -1) {
         // Update the existing item
-        user.user.watched.remove(existingItemIndex);
+        user.user.watched.splice(existingItemIndex, 1);
     }
      // New item, add it to the watched list
      user.user.watched.push(watchedItem);
