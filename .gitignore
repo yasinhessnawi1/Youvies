@@ -20,3 +20,4 @@ dist/
 scripts/
 .env*
 *.env
+.DS_Store

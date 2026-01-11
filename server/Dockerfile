@@ -1,15 +1,4 @@
-# Build stage
-FROM node:20-alpine AS builder
-
-WORKDIR /app
-
-# Copy package files
-COPY package*.json ./
-
-# Install dependencies
-RUN npm ci --only=production
-
-# Production stage
+# Production image
 FROM node:20-alpine
 
 WORKDIR /app
@@ -21,8 +10,9 @@ RUN apk add --no-cache dumb-init
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
 
-# Copy node_modules from builder
-COPY --from=builder /app/node_modules ./node_modules
+# Copy package files and install dependencies
+COPY package*.json ./
+RUN npm install --omit=dev
 
 # Copy application files
 COPY --chown=nodejs:nodejs . .

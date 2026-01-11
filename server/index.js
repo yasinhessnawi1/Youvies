@@ -274,15 +274,32 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Serve frontend static files in production
-if (isProduction) {
-  const clientPath = path.join(__dirname, '../dist');
+// Serve frontend static files in production (only if dist exists - for monolithic deploy)
+const fs = require('fs');
+const clientPath = path.join(__dirname, '../dist');
+const hasClientBuild = fs.existsSync(path.join(clientPath, 'index.html'));
+
+if (isProduction && hasClientBuild) {
+  console.log('📦 Serving frontend static files from dist/');
   app.use(express.static(clientPath));
 
   // SPA fallback - serve index.html for all non-API routes
   app.get('*', (req, res) => {
     if (!req.path.startsWith('/api/')) {
       res.sendFile(path.join(clientPath, 'index.html'));
+    } else {
+      res.status(404).json({ error: 'API endpoint not found' });
+    }
+  });
+} else if (isProduction) {
+  console.log('🔗 Running API-only mode (frontend served separately)');
+  // API-only mode - return 404 for non-API routes
+  app.get('*', (req, res) => {
+    if (!req.path.startsWith('/api/')) {
+      res.status(404).json({
+        error: 'Not found',
+        message: 'This is the API server. Frontend is served from a different URL.'
+      });
     } else {
       res.status(404).json({ error: 'API endpoint not found' });
     }
