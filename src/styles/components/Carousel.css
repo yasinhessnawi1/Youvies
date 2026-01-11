@@ -198,6 +198,15 @@
   font-size: 1rem;
 }
 
+.carousel-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  min-height: 200px;
+  padding: 20px;
+}
+
 .error-message {
   color: red;
 }

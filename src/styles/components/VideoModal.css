@@ -1,0 +1,586 @@
+.video-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 0;
+  animation: modalFadeIn 0.3s ease-out;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+  }
+  to {
+    opacity: 1;
+    backdrop-filter: blur(12px);
+  }
+}
+
+.video-modal {
+  width: 100vw;
+  height: 100vh;
+  background: #000;
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: modalSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes modalSlideIn {
+  from {
+    transform: translateY(50px) scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.video-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 25px;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  gap: 20px;
+}
+
+.modal-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.modal-title h3 {
+  color: #e0e0e0;
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin: 0;
+  max-width: 600px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.modal-header-middle {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* Player Type Toggle in Modal Header */
+.modal-player-type-toggle {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.modal-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.8);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.modal-toggle-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: translateY(-1px);
+}
+
+.modal-toggle-btn.active {
+  background: rgba(76, 175, 80, 0.3);
+  border-color: rgba(76, 175, 80, 0.6);
+  color: #4CAF50;
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.2);
+}
+
+.modal-toggle-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.modal-toggle-icon {
+  font-size: 16px;
+}
+
+.modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.modal-action-button,
+.modal-close-button {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #e0e0e0;
+  border-radius: 10px;
+  padding: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-action-button:hover {
+  background: rgba(33, 150, 243, 0.2);
+  border-color: rgba(33, 150, 243, 0.4);
+  transform: translateY(-1px);
+}
+
+.modal-close-button:hover {
+  background: rgba(244, 67, 54, 0.2);
+  border-color: rgba(244, 67, 54, 0.4);
+  transform: translateY(-1px);
+}
+
+.video-modal-content {
+  flex: 1;
+  display: flex;
+  background: #000;
+  min-height: 0; /* Important for flex child */
+  overflow: hidden;
+}
+
+/* Modal Layout - Main container for player + sidebar */
+.modal-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+
+.modal-player-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+}
+
+.modal-player {
+  flex: 1;
+  display: flex;
+  position: relative;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  background: #000;
+}
+
+/* Video player container inside modal */
+.modal-player .video-player-container {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+  max-width: 100%;
+}
+
+/* Ensure video controls don't expand the player */
+.modal-player .video-controls {
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.modal-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+/* ============================================
+   COMPACT VIDEO CONTROLS FOR MODAL
+   ============================================ */
+
+/* Hide title in modal - redundant since it's in the header */
+.modal-player .video-title {
+  display: none !important;
+}
+
+/* Hide controls center section */
+.modal-player .controls-center {
+  display: none !important;
+}
+
+/* Make controls more compact */
+.modal-player .controls-main {
+  padding: 8px 12px;
+  gap: 8px;
+}
+
+.modal-player .controls-left,
+.modal-player .controls-right {
+  gap: 6px;
+}
+
+/* Smaller buttons */
+.modal-player .control-button {
+  padding: 5px;
+}
+
+.modal-player .control-button svg {
+  width: 18px;
+  height: 18px;
+}
+
+.modal-player .play-button svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Hide volume slider - just keep mute button */
+.modal-player .volume-slider {
+  display: none !important;
+}
+
+/* Smaller time display */
+.modal-player .time-display {
+  font-size: 0.75rem;
+  min-width: auto;
+}
+
+/* Compact progress bar */
+.modal-player .progress-container {
+  padding: 6px 12px;
+}
+
+/* ============================================
+   MODAL EPISODE SIDEBAR - Compact list view
+   ============================================ */
+#modal-episode-list {
+  width: 320px;
+  min-width: 320px;
+  max-width: 320px;
+  background: rgba(15, 15, 15, 0.98);
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+  flex-grow: 0;
+}
+
+.modal-episode-header {
+  padding: 15px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.modal-season-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  padding: 10px 15px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  text-align: center;
+}
+
+.modal-season-select {
+  width: 100%;
+  padding: 10px 15px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.modal-season-select:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.modal-episode-cards {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+.modal-episode-cards::-webkit-scrollbar {
+  width: 5px;
+}
+
+.modal-episode-cards::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modal-episode-cards::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+}
+
+.modal-ep-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.modal-ep-card:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateX(3px);
+}
+
+.modal-ep-card.active {
+  background: rgba(229, 9, 20, 0.2);
+  border-color: rgba(229, 9, 20, 0.5);
+}
+
+.modal-ep-thumbnail {
+  width: 90px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: 4px;
+  flex-shrink: 0;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.modal-ep-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+
+.modal-ep-number {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #e50914;
+}
+
+.modal-ep-name {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.modal-ep-runtime {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* Responsive Design */
+@media (max-width: 968px) {
+  #modal-episode-list {
+    width: 260px;
+    max-width: 260px;
+  }
+  
+  .modal-ep-thumbnail {
+    width: 75px;
+    height: 42px;
+  }
+}
+
+@media (max-width: 850px) {
+  .modal-player-wrapper {
+    flex-direction: column;
+  }
+  
+  .modal-player {
+    width: 100%;
+    flex: 1 1 auto;
+  }
+  
+  #modal-episode-list {
+    width: 100%;
+    max-width: 100%;
+    max-height: 220px;
+    border-left: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    flex-shrink: 0;
+  }
+  
+  .modal-episode-header {
+    padding: 10px 15px;
+  }
+  
+  .modal-episode-cards {
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 10px;
+    gap: 10px;
+  }
+  
+  .modal-ep-card {
+    flex-direction: column;
+    min-width: 140px;
+    flex-shrink: 0;
+    padding: 8px;
+  }
+  
+  .modal-ep-thumbnail {
+    width: 100%;
+    height: 75px;
+  }
+  
+  .modal-ep-info {
+    align-items: center;
+    text-align: center;
+  }
+  
+  .modal-player {
+    min-height: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .video-modal-overlay {
+    padding: 10px;
+  }
+  
+  .video-modal {
+    max-width: 100vw;
+    max-height: 100vh;
+    border-radius: 12px;
+  }
+  
+  .video-modal-header {
+    padding: 15px 20px;
+  }
+  
+  .modal-title h3 {
+    font-size: 1.1rem;
+    max-width: 200px;
+  }
+
+  .modal-header-middle {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+    margin-top: 10px;
+  }
+
+  .modal-player-type-toggle {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .modal-toggle-btn {
+    flex: 1;
+    justify-content: center;
+    max-width: 150px;
+    font-size: 0.85rem;
+    padding: 8px 12px;
+  }
+  
+  .modal-actions {
+    order: 2;
+  }
+  
+  .modal-action-button,
+  .modal-close-button {
+    padding: 8px;
+  }
+  
+  #modal-episode-list {
+    width: 280px;
+  }
+  
+  .modal-ep-thumbnail {
+    width: 80px;
+    height: 45px;
+  }
+  
+  .modal-ep-name {
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .video-modal-overlay {
+    padding: 5px;
+  }
+  
+  .video-modal {
+    border-radius: 8px;
+  }
+  
+  .video-modal-header {
+    padding: 12px 15px;
+  }
+  
+  .modal-title h3 {
+    font-size: 1rem;
+    max-width: 150px;
+  }
+
+  .video-modal-header {
+    flex-wrap: wrap;
+    padding: 12px 15px;
+  }
+
+  .modal-header-middle {
+    order: 3;
+    width: 100%;
+    margin-top: 8px;
+  }
+
+  .modal-toggle-btn {
+    font-size: 0.8rem;
+    padding: 6px 10px;
+  }
+
+  .modal-toggle-icon {
+    font-size: 14px;
+  }
+}
+
+/* Large screen optimizations */
+@media (min-width: 1200px) {
+  .video-modal {
+    max-width: 1200px;
+    max-height: 90vh;
+  }
+}
+
+/* Ultra-wide screen optimizations */
+@media (min-width: 1600px) {
+  .video-modal {
+    max-width: 1400px;
+  }
+}

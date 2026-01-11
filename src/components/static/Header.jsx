@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FaChevronDown, FaUserCircle } from 'react-icons/fa';
-import { UserContext } from '../../contexts/UserContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { TabContext } from '../../contexts/TabContext';
 import '../../styles/components/Header.css';
 import logoImage from '../../utils/logo-nobg_resized.png';
@@ -10,7 +10,7 @@ import userIcon from '../../utils/profile.png';
 import { useLoading } from '../../contexts/LoadingContext';
 
 const Header = ({ onSearchClick }) => {
-  const { user, logout } = useContext(UserContext);
+  const { user, signOut } = useAuth();
   const { activeTab, setActiveTab } = useContext(TabContext);
   const { isLoading, setIsLoading } = useLoading();
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -29,11 +29,17 @@ const Header = ({ onSearchClick }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setIsLoading(true);
-    logout();
-    setDropdownOpen(false);
-    setIsLoading(false);
+    try {
+      await signOut();
+      setDropdownOpen(false);
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   const toggleMobileNav = () => setMobileNavOpen(!mobileNavOpen);
@@ -73,10 +79,10 @@ const Header = ({ onSearchClick }) => {
             onClick={() => document.scrollingElement.scrollTop}
           />
           <nav  className='nav-links'>
-            {['home', 'movies', 'shows', 'anime'].map((tab) =>
+            {['home', 'movies', 'shows', 'anime', 'random'].map((tab) =>
               renderNavLink(
                 tab,
-                `Go to ${tab} ${tab === 'home' ? 'page' : 'only section'}`,
+                tab === 'random' ? 'Random background picker' : `Go to ${tab} ${tab === 'home' ? 'page' : 'only section'}`,
               ),
             )}
           </nav>
@@ -84,7 +90,7 @@ const Header = ({ onSearchClick }) => {
             <FaChevronDown size={24} onClick={toggleMobileNav} />
             {mobileNavOpen && (
               <div className='mobile-nav-menu' ref={dropdownRef}>
-                {['home', 'movies', 'shows', 'anime'].map(renderMobileNavItem)}
+                {['home', 'movies', 'shows', 'anime', 'random'].map(renderMobileNavItem)}
               </div>
             )}
           </div>
@@ -112,7 +118,7 @@ const Header = ({ onSearchClick }) => {
                 title='User settings'
               >
                 <img className='search-icon' src={userIcon} alt='user icon' />
-                <div className='username'>{user.user.username}</div>
+                <div className='username'>{user?.user_metadata?.username || user?.email?.split('@')[0] || 'User'}</div>
                 {dropdownOpen && (
                   <div className='dropdown-menu'>
                     <div className='dropdown-item' onClick={handleLogout}>

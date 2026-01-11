@@ -1,523 +1,1677 @@
-import React, {useContext, useEffect, useRef, useState} from 'react';
+import React, { useContext, useEffect, useRef, useState } from 'react';
 import '../styles/page/InfoPage.css';
+import '../styles/page/MediaPage.css';
 import Header from '../components/static/Header';
 import Footer from '../components/static/Footer';
-import {useItemContext} from '../contexts/ItemContext';
-import {useParams} from 'react-router-dom';
+import { useItemContext } from '../contexts/ItemContext';
+import { useParams, useSearchParams } from 'react-router-dom';
 import StarryBackground from '../components/static/StarryBackground';
 import LoadingIndicator from '../components/static/LoadingIndicator';
-import {VideoPlayerContext} from '../contexts/VideoPlayerContext';
-import {useLoading} from '../contexts/LoadingContext';
-import {UserContext} from '../contexts/UserContext';
+import { VideoPlayerContext } from '../contexts/VideoPlayerContext';
+import { useLoading } from '../contexts/LoadingContext';
+import { useAuth } from '../contexts/AuthContext';
+import { useTorrent } from '../contexts/TorrentContext';
 import VideoCardGrid from '../components/Carousel';
 import CountdownTimer from '../utils/CountdownTimer';
-import {getTitle} from '../utils/helper';
+import { getTitle, cleanHtmlTags } from '../utils/helper';
 import SearchBar from '../components/SearchBar';
-import {TabContext} from '../contexts/TabContext';
+import { TabContext } from '../contexts/TabContext';
+import VideoPlayer from '../components/VideoPlayer';
+import VideoModal from '../components/VideoModal';
+import progressService from '../services/progressService';
+import { Star, Calendar, Clock, Play, Film, Tv, Globe, Users, Award, TrendingUp, DollarSign, Building2, MapPin, Languages, CalendarDays, Clock3, BarChart3, Heart, ExternalLink, Link2, Eye, Tag, Link as LinkIcon, Home, CheckCircle, XCircle, Info } from 'lucide-react';
+import { fetchTvSeasonDetails } from '../api/MediaService';
+import { fetchAnimeEpisodes } from '../api/AnimeShowApi';
 
 const InfoPage = () => {
-    const {activeTab} = React.useContext(TabContext);
-    const {setWatchedItems} = useItemContext();
-    const {isLoading, setIsLoading} = useLoading();
-    const {videoPlayerState, switchProvider} = useContext(VideoPlayerContext);
-    const {mediaId, category} = useParams();
-    const {fetchMediaInfo, itemsCache} = useItemContext();
-    const [selectedSeason, setSelectedSeason] = useState(null);
-    const [selectedEpisode, setSelectedEpisode] = useState(null);
-    const [itemInfo, setItemInfo] = useState(null);
-    const [error, setError] = useState('');
-    const [isSearchVisible, setIsSearchVisible] = useState(false);
-    const {addToWatchedList, getWatchedItem} = useContext(UserContext);
-    const previousMediaIdRef = useRef(null);
-    const previousCategoryRef = useRef(null);
-    const sideContentRef = useRef(null);
+  const { activeTab: contextActiveTab } = React.useContext(TabContext);
+  const { isLoading, setIsLoading } = useLoading();
+  const { videoPlayerState, switchProvider } = useContext(VideoPlayerContext);
+  const { category, mediaId } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { fetchMediaInfo, itemsCache } = useItemContext();
+  const [selectedSeason, setSelectedSeason] = useState(null);
+  const [selectedEpisode, setSelectedEpisode] = useState(null);
+  const [itemInfo, setItemInfo] = useState(null);
+  const [error, setError] = useState('');
+  const [isSearchVisible, setIsSearchVisible] = useState(false);
+  const { addWatchedItem, watchedItems, user, loading } = useAuth();
+  const { 
+    autoSearchAndSelect, 
+    prepareTorrent, 
+    activeHash, 
+    activeFileIndex, 
+    isDebridStream, 
+    torrentSubtitles,
+    // NEW: Alternative source selection
+    alternativeTorrents,
+    currentSourceName,
+    switchToAlternativeSource
+  } = useTorrent();
+  const [torrentStreamUrl, setTorrentStreamUrl] = useState(null);
+  const [usingTorrent, setUsingTorrent] = useState(false);
+  const [showVideoModal, setShowVideoModal] = useState(false);
+  const [videoPlayerProgress, setVideoPlayerProgress] = useState(0);
+  const previousMediaIdRef = useRef(null);
+  const previousCategoryRef = useRef(null);
+  const sideContentRef = useRef(null);
+  const [infoPageTab, setInfoPageTab] = useState('details');
+  const [episodesWithThumbnails, setEpisodesWithThumbnails] = useState([]);
+  const [useAdFreePlayer, setUseAdFreePlayer] = useState(true);
+  const heroEpisodePanelRef = useRef(null);
+  const initializedFromWatchedRef = useRef(false);
+  const lastWatchedItemRef = useRef(null);
+  const autoplayTriggeredRef = useRef(false);
 
-    useEffect(() => {
-        const loadMediaInfo = async () => {
-            if (isLoading || !mediaId || !category) return;
+  useEffect(() => {
+    const loadMediaInfo = async () => {
+      if (isLoading || !mediaId || !category) return;
 
-            // Prevent unnecessary fetch if mediaId and category haven't changed
-            if (
-                previousMediaIdRef.current === mediaId &&
-                previousCategoryRef.current === category
-            ) {
-                return;
-            }
+      // Prevent unnecessary fetch if mediaId and category haven't changed
+      if (
+        previousMediaIdRef.current === mediaId &&
+        previousCategoryRef.current === category
+      ) {
+        return;
+      }
 
-            // Update refs to current mediaId and category
-            previousMediaIdRef.current = mediaId;
-            previousCategoryRef.current = category;
+      // Update refs to current mediaId and category
+      previousMediaIdRef.current = mediaId;
+      previousCategoryRef.current = category;
+      initializedFromWatchedRef.current = false; // Reset initialization flag for new media
+      lastWatchedItemRef.current = null; // Reset watched item ref for new media
 
-            // Check cache before fetching
-            const cacheKey = `${category}-${mediaId}`;
-            if (itemsCache[cacheKey]) {
-                setItemInfo(itemsCache[cacheKey]);
-                await initializeSelectedSeasonAndEpisode(itemsCache[cacheKey]);
-                return;
-            }
+      // Check cache before fetching
+      const cacheKey = `${category}-${mediaId}`;
+      if (itemsCache[cacheKey]) {
+        setItemInfo(itemsCache[cacheKey]);
+        // Wait for watchedItems to load before initializing season/episode
+        await initializeSelectedSeasonAndEpisode(itemsCache[cacheKey]);
+        return;
+      }
 
-            setIsLoading(true);
-            try {
-                const fetchedItem = await fetchMediaInfo(mediaId, category);
-                setItemInfo(fetchedItem);
-                await initializeSelectedSeasonAndEpisode(fetchedItem);
-            } catch (err) {
-                setError('Failed to load media information.');
-            } finally {
-                setIsLoading(false);
-            }
-        };
+      setIsLoading(true);
+      try {
+        const fetchedItem = await fetchMediaInfo(mediaId, category);
 
-        const initializeSelectedSeasonAndEpisode = async (item) => {
-            if (!item || isLoading) return;
-            const title = getTitle(item) || '';
-            const watchedItem = getWatchedItem(item.type, item.id, title);
-            let initialSeason = {season_number: 1, episode_count: 1};
-            let initialEpisode = {episode_number: 1};
-
-            if (item.type === 'anime') {
-                initialSeason = {
-                    season_number: item.season || 1,
-                    episode_count: item.totalEpisodes,
-                };
-                if (watchedItem !== null) {
-                    const [, , , season, episode] = watchedItem.split(':');
-                    initialSeason = {
-                        season_number: parseInt(season, 10) || 1,
-                        episode_count: item.totalEpisodes,
-                    };
-                    initialEpisode = {episode_number: parseInt(episode, 10)};
-                }
-            } else if (item.seasons && item.seasons.length > 0) {
-                initialSeason = item.seasons[0];
-                if (watchedItem) {
-                    const [, , , season, episode] = watchedItem.split(':');
-                    initialSeason =
-                        item.seasons.find(
-                            (s) => s.season_number === parseInt(season, 10),
-                        ) || initialSeason;
-                    initialEpisode = {episode_number: parseInt(episode, 10)};
-                }
-            }
-            if (item.type === 'anime') {
-                 addToWatchedList(
-                    `${item.type}:${item.id}:${title}:${initialSeason.season_number}:${initialEpisode.episode_number}:${item.image}:${item.rating}`,
-                );
-            } else {
-                addToWatchedList(
-                    `${item.type}:${item.id}:${title}:${initialSeason.season_number}:${initialEpisode.episode_number}:${item.poster_path}:${item.vote_average}`,
-                );
-
-            }
-            setWatchedItems((prevItems) => [item, ...prevItems]);
-            setSelectedSeason(initialSeason);
-            setSelectedEpisode(initialEpisode);
-        };
-
-        loadMediaInfo();
-    }, [mediaId, category]); // Only watching mediaId and category
-
-    useEffect(() => {
-        if (selectedEpisode && sideContentRef.current) {
-            const episodeIndex = selectedEpisode.episode_number - 1;
-            const episodeElement = sideContentRef.current.querySelector(
-                `.episode-bubble:nth-child(${episodeIndex + 1})`,
-            );
-
-            if (episodeElement) {
-                const container = sideContentRef.current;
-                const containerHeight = container.clientHeight;
-                const elementOffsetTop = episodeElement.offsetTop;
-                const elementHeight = episodeElement.clientHeight;
-
-                container.scrollTop =
-                    elementOffsetTop - containerHeight / 2 + elementHeight / 2;
-            }
+        if (!fetchedItem) {
+          setError(`Sorry, this ${category.slice(0, -1)} is not available. It may have been removed from our database.`);
+          return;
         }
-    }, [selectedEpisode]);
 
-
-    const handleSeasonChange = async (season) => {
-        setSelectedSeason(season);
-        handleEpisodeChange({episode_number: 1});
+        setItemInfo(fetchedItem);
+        // Wait for watchedItems to load before initializing season/episode
+        await initializeSelectedSeasonAndEpisode(fetchedItem);
+      } catch (err) {
+        console.error('Error loading media info:', err);
+        setError('Failed to load media information. Please try again later.');
+      } finally {
+        setIsLoading(false);
+      }
     };
 
-    const handleEpisodeChange = (episode) => {
-        setSelectedEpisode(episode);
-        addToWatchedList(
-            `${itemInfo.type}:${itemInfo.id}:${getTitle(itemInfo)}:${selectedSeason.season_number}:${episode.episode_number}:${itemInfo.poster_path || itemInfo.image}:${itemInfo.vote_average || itemInfo.rating}`,
+    const initializeSelectedSeasonAndEpisode = async (item) => {
+      if (!item || isLoading) return;
+      
+      // Wait briefly for watchedItems to load if still loading
+      // This prevents defaulting to S1E1 when watchedItems is about to load
+      if (loading) {
+        console.log('⏳ Waiting for watchedItems to load...');
+        // Wait up to 1.5 seconds, checking every 100ms
+        for (let i = 0; i < 15; i++) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          // Check if we have watchedItems now (they might have loaded)
+          // We'll check watchedItems in the next part of the function
+        }
+      }
+      
+      const title = getTitle(item) || '';
+
+      // Check if item is already watched
+      // watchedItems is always an array (empty if not loaded yet)
+      const watchedItem = watchedItems?.find(w =>
+        w.tmdb_id === parseInt(item.id) && w.content_type === item.type
+      );
+
+      let initialSeason = { season_number: 1, episode_count: 1 };
+      let initialEpisode = { episode_number: 1 };
+
+      if (item.type === 'anime') {
+        // Anime typically don't have traditional seasons like TV shows
+        // Use season 1 for all episodes, but preserve season info if available
+        let seasonNum = 1;
+        if (item.season) {
+          if (typeof item.season === 'string') {
+            // For seasonal anime, still map to numbers for UI purposes
+            const seasonMap = {
+              'WINTER': 1, 'winter': 1,
+              'SPRING': 2, 'spring': 2,
+              'SUMMER': 3, 'summer': 3,
+              'FALL': 4, 'fall': 4, 'AUTUMN': 4, 'autumn': 4
+            };
+            seasonNum = seasonMap[item.season.toLowerCase()] || 1;
+          } else {
+            seasonNum = parseInt(item.season) || 1;
+          }
+        }
+
+        initialSeason = {
+          season_number: seasonNum,
+          episode_count: item.totalEpisodes,
+        };
+        if (watchedItem) {
+          console.log('✅ Found watched anime item:', watchedItem);
+          initialSeason = {
+            season_number: watchedItem.season || seasonNum,
+            episode_count: item.totalEpisodes,
+          };
+          initialEpisode = { episode_number: watchedItem.episode || 1 };
+        }
+      } else if (item.seasons && item.seasons.length > 0) {
+        initialSeason = item.seasons[0];
+        if (watchedItem) {
+          console.log('✅ Found watched show item:', watchedItem);
+          initialSeason =
+            item.seasons.find(
+              (s) => s.season_number === watchedItem.season,
+            ) || initialSeason;
+          initialEpisode = { episode_number: watchedItem.episode || 1 };
+        }
+      }
+
+      // Add to watched list (only if user is authenticated)
+      if (user && !loading) {
+        try {
+          await addWatchedItem({
+            tmdbId: item.id,
+            mediaType: item.type,
+            title: title,
+            season: initialSeason.season_number,
+            episode: initialEpisode.episode_number,
+            posterPath: item.type === 'anime' ? item.image : item.poster_path,
+            rating: item.type === 'anime' ? item.rating : item.vote_average
+          });
+        } catch (error) {
+          console.error('Error adding to watched list:', error);
+        }
+      }
+
+      setSelectedSeason(initialSeason);
+      setSelectedEpisode(initialEpisode);
+
+      // 🚀 PROACTIVE OPTIMIZATION: Start preparing torrent in background immediately
+      // This happens while user is reading info/trailer - by the time they click play, torrent is ready
+      if (item) {
+        if (item.type === 'movies') {
+          console.log('🔮 Proactively preparing movie torrent...');
+          prepareTorrent(item);
+        } else if (item.type === 'shows' || item.type === 'anime') {
+          console.log('🔮 Proactively preparing episode torrent...');
+          prepareTorrent(item, initialSeason.season_number, initialEpisode.episode_number);
+        }
+      }
+    };
+
+    loadMediaInfo();
+  }, [mediaId, category, watchedItems, loading]); // Added watchedItems and loading as dependencies
+
+  // Re-initialize season/episode when watchedItems finishes loading
+  // This handles the case where media info loads before watchedItems
+  useEffect(() => {
+    if (!itemInfo || loading) return;
+    
+    const watchedItem = watchedItems.find(w =>
+      w.tmdb_id === parseInt(itemInfo.id) && w.content_type === itemInfo.type
+    );
+
+    if (!watchedItem) {
+      return; // No watched item found
+    }
+
+    // Use functional update to check current state and update if needed
+    // This ensures we're always working with the latest state
+    setSelectedEpisode(currentEpisode => {
+      // Check if current episode already matches watchedItem
+      if (currentEpisode?.episode_number === watchedItem.episode) {
+        console.log('✅ Episode already matches watchedItem, no update needed');
+        lastWatchedItemRef.current = watchedItem;
+        return currentEpisode; // No change needed
+      }
+
+      // Check if current selection is default (episode 1) or not yet set
+      const isDefaultEpisode = 
+        currentEpisode?.episode_number === 1 || !currentEpisode;
+
+      // Check if we've already processed this exact watchedItem
+      const watchedItemKey = `${watchedItem.season}-${watchedItem.episode}`;
+      const lastWatchedKey = lastWatchedItemRef.current 
+        ? `${lastWatchedItemRef.current.season}-${lastWatchedItemRef.current.episode}`
+        : null;
+      
+      const alreadyProcessed = watchedItemKey === lastWatchedKey;
+
+      console.log('🔍 Episode update check:', {
+        isDefaultEpisode,
+        currentEpisode: currentEpisode?.episode_number,
+        watchedEpisode: watchedItem.episode,
+        alreadyProcessed
+      });
+
+      // Update if:
+      // 1. Current is default (ep 1) - meaning initialization happened before watchedItems loaded
+      // 2. OR we haven't processed this watchedItem yet
+      if (isDefaultEpisode || !alreadyProcessed) {
+        console.log('🔄 Updating episode from watchedItems:', watchedItem.episode);
+        lastWatchedItemRef.current = watchedItem;
+        return { episode_number: watchedItem.episode || 1 };
+      }
+
+      // User has manually selected something different, don't override
+      console.log('⏭️ User has selected non-default episode, not overriding');
+      return currentEpisode;
+    });
+
+    // Also update season
+    setSelectedSeason(currentSeason => {
+      let newSeason = currentSeason || { season_number: 1, episode_count: 1 };
+
+      if (itemInfo.type === 'anime') {
+        let seasonNum = watchedItem.season || 1;
+        if (itemInfo.season) {
+          if (typeof itemInfo.season === 'string') {
+            const seasonMap = {
+              'WINTER': 1, 'winter': 1,
+              'SPRING': 2, 'spring': 2,
+              'SUMMER': 3, 'summer': 3,
+              'FALL': 4, 'fall': 4, 'AUTUMN': 4, 'autumn': 4
+            };
+            seasonNum = seasonMap[itemInfo.season.toLowerCase()] || seasonNum;
+          } else {
+            seasonNum = parseInt(itemInfo.season) || seasonNum;
+          }
+        }
+        
+        // Only update if current is default or not matching
+        if (currentSeason?.season_number === 1 || !currentSeason || currentSeason?.season_number !== watchedItem.season) {
+          return {
+            season_number: watchedItem.season || seasonNum,
+            episode_count: itemInfo.totalEpisodes,
+          };
+        }
+      } else if (itemInfo.seasons && itemInfo.seasons.length > 0) {
+        const foundSeason = itemInfo.seasons.find(
+          (s) => s.season_number === watchedItem.season
         );
-    };
-
-    const constructVideoUrl = (provider, season = 1, episode = 1) => {
-        const id = itemInfo?.id;
-        if (!id) return '';
-
-        switch (provider) {
-            case 'NontonGo':
-                return itemInfo.type === 'shows'
-                    ? `https://NontonGo.win/embed/tv/${id}/${season}/${episode}`
-                    : `https://NontonGo.win/embed/movie/${id}`;
-            case 'smashy':
-                return itemInfo.type === 'shows'
-                    ? `https://player.smashy.stream/tv/${id}?s=${season}&e=${episode}&remove=watchWithFriends|addSubtitles|search|episodes&playerList=F|SU|J|NM|SY|FV|O|I|ST|U|E|SO|D|DM|RD|H|CA|M|K|G&subLang=English`
-                    : `https://player.smashy.stream/movie/${id}?remove=watchWithFriends|addSubtitles|search|episodes&playerList=F|SU|J|NM|SY|FV|O|I|ST|U|E|SO|D|DM|RD|H|CA|M|K|G&subLang=English`;
-            case 'SuperEmbed':
-                return itemInfo.type === 'shows'
-                    ? `https://moviesapi.club/tv/${id}-${season}-${episode}`
-                    : `https://moviesapi.club/movie/${id}`;
-            case 'Vidsrc' :
-                if (itemInfo.type === 'shows') {
-                    return `https://embed.su/embed/tv/${id}/${season}/${episode}`;
-                } else {
-                    return `https://embed.su/embed/movie/${id}`;
-                }
-            case '2embed':
-                if (itemInfo.type === 'shows') {
-                    return `https://www.2embed.cc/embedtv/${id}&s=${season}&e=${episode}`;
-                } else if (itemInfo.type === 'anime') {
-                    let title =
-                        itemInfo.title.userPreferred ||
-                        itemInfo.title.english ||
-                        itemInfo.title.romaji ||
-                        itemInfo.title.native ||
-                        'Unknown Title';
-                    title = title.replace(/ /g, '-').toLowerCase();
-                    return `https://2anime.xyz/embed/${title}-episode-${episode}`;
-                } else {
-                    return `https://www.2embed.cc/embed/${id}`;
-                }
-            default:
-                return '';
+        if (foundSeason && (currentSeason?.season_number === 1 || !currentSeason || currentSeason?.season_number !== watchedItem.season)) {
+          return foundSeason;
         }
+      }
+
+      return currentSeason;
+    });
+  }, [watchedItems, loading, itemInfo?.id, itemInfo?.type, itemInfo?.totalEpisodes, itemInfo?.seasons]); // Run when watchedItems finishes loading
+
+  useEffect(() => {
+    if (selectedEpisode && sideContentRef.current) {
+      const episodeIndex = selectedEpisode.episode_number - 1;
+      // Look for tab-episode-card in the tab view
+      const scrollContainer = sideContentRef.current.querySelector('.tab-episode-cards');
+      const episodeElement = scrollContainer?.querySelector(
+        `.tab-episode-card:nth-child(${episodeIndex + 1})`,
+      );
+
+      if (episodeElement && scrollContainer) {
+        episodeElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  }, [selectedEpisode]);
+
+  // Fetch episode thumbnails for hero episode cards
+  useEffect(() => {
+    const fetchEpisodeThumbnails = async () => {
+      if (!itemInfo || itemInfo.type === 'movies') {
+        setEpisodesWithThumbnails([]);
+        return;
+      }
+
+      if (itemInfo.type === 'shows' && selectedSeason) {
+        try {
+          const seasonData = await fetchTvSeasonDetails(itemInfo.id, selectedSeason.season_number);
+          if (seasonData && seasonData.episodes) {
+            const episodes = seasonData.episodes.map(ep => ({
+              ...ep,
+              thumbnail_url: ep.still_path 
+                ? `https://image.tmdb.org/t/p/w300${ep.still_path}`
+                : null
+            }));
+            setEpisodesWithThumbnails(episodes);
+          }
+        } catch (error) {
+          console.error('Error fetching episode thumbnails:', error);
+          setEpisodesWithThumbnails([]);
+        }
+      } else if (itemInfo.type === 'anime' && selectedSeason) {
+        try {
+          console.log('Fetching anime episodes for ID:', itemInfo.id);
+          console.log('itemInfo structure:', { 
+            hasEpisodes: !!itemInfo.episodes, 
+            totalEpisodes: itemInfo.totalEpisodes,
+            episodesType: Array.isArray(itemInfo.episodes) ? 'array' : typeof itemInfo.episodes
+          });
+          console.log('Full itemInfo keys:', Object.keys(itemInfo));
+          console.log('itemInfo.episodes:', itemInfo.episodes);
+          console.log('itemInfo sample:', JSON.stringify(itemInfo, null, 2).substring(0, 1000));
+          
+          // Try to fetch episodes from the API
+          const episodesData = await fetchAnimeEpisodes(itemInfo.id);
+          console.log('Episodes API response:', episodesData);
+          
+          // If API returned null or empty, we'll generate episodes from totalEpisodes
+          if (episodesData === null || (Array.isArray(episodesData) && episodesData.length === 0)) {
+            console.log('Generating episodes from totalEpisodes:', itemInfo.totalEpisodes);
+            // Generate episodes with potential image URLs
+            const totalEps = itemInfo.totalEpisodes || 1;
+            const episodes = Array.from({ length: totalEps }, (_, i) => {
+              const episodeNum = i + 1;
+              // Try to construct episode image URL (common patterns)
+              // Some APIs use patterns like: cover image, or episode-specific images
+              let thumbnailUrl = null;
+              
+              // Try common episode image patterns
+              if (itemInfo.cover) {
+                // Use cover as fallback for episode images
+                thumbnailUrl = itemInfo.cover;
+              } else if (itemInfo.image) {
+                thumbnailUrl = itemInfo.image;
+              }
+              
+              return {
+                episode_number: episodeNum,
+                name: `Episode ${episodeNum}`,
+                thumbnail_url: thumbnailUrl,
+                runtime: itemInfo.duration || 24
+              };
+            });
+            setEpisodesWithThumbnails(episodes);
+            return;
+          }
+          
+          if (episodesData && Array.isArray(episodesData) && episodesData.length > 0) {
+            // If API returns episodes array
+            console.log('Using episodes from API array, count:', episodesData.length);
+            const episodes = episodesData.map((ep, index) => {
+              const episodeNumber = ep.number || ep.episodeNumber || ep.episode || index + 1;
+              const episodeTitle = ep.title || ep.name || `Episode ${episodeNumber}`;
+              // API returns 'image' field with full URL
+              const thumbnail = ep.image || ep.thumbnail || ep.img || ep.thumbnailUrl || null;
+              
+              return {
+                episode_number: episodeNumber,
+                name: episodeTitle,
+                thumbnail_url: thumbnail,
+                runtime: ep.duration || ep.runtime || itemInfo.duration || 24
+              };
+            });
+            console.log('Processed episodes:', episodes);
+            setEpisodesWithThumbnails(episodes);
+          } else if (episodesData && episodesData.episodes && Array.isArray(episodesData.episodes)) {
+            // If API returns object with episodes array
+            console.log('Using episodes from API object.episodes, count:', episodesData.episodes.length);
+            const episodes = episodesData.episodes.map((ep, index) => {
+              const episodeNumber = ep.number || ep.episodeNumber || ep.episode || index + 1;
+              const episodeTitle = ep.title || ep.name || `Episode ${episodeNumber}`;
+              const thumbnail = ep.image || ep.thumbnail || ep.img || ep.thumbnailUrl || null;
+              
+              return {
+                episode_number: episodeNumber,
+                name: episodeTitle,
+                thumbnail_url: thumbnail,
+                runtime: ep.duration || ep.runtime || itemInfo.duration || 24
+              };
+            });
+            setEpisodesWithThumbnails(episodes);
+          } else if (itemInfo.episodes && Array.isArray(itemInfo.episodes)) {
+            // Fallback: check if episodes are in itemInfo
+            console.log('Using episodes from itemInfo, count:', itemInfo.episodes.length);
+            const episodes = itemInfo.episodes.map((ep, index) => {
+              const episodeNumber = ep.number || ep.episodeNumber || ep.episode || index + 1;
+              const episodeTitle = ep.title || ep.name || `Episode ${episodeNumber}`;
+              const thumbnail = ep.image || ep.thumbnail || ep.img || ep.thumbnailUrl || null;
+              
+              return {
+                episode_number: episodeNumber,
+                name: episodeTitle,
+                thumbnail_url: thumbnail,
+                runtime: ep.duration || ep.runtime || itemInfo.duration || 24
+              };
+            });
+            setEpisodesWithThumbnails(episodes);
+          } else {
+            // Final fallback: create episodes from totalEpisodes
+            console.log('Creating fallback episodes from totalEpisodes:', itemInfo.totalEpisodes);
+            const episodes = Array.from({ length: itemInfo.totalEpisodes || 0 }, (_, i) => ({
+              episode_number: i + 1,
+              name: `Episode ${i + 1}`,
+              thumbnail_url: null,
+              runtime: itemInfo.duration || 24
+            }));
+            setEpisodesWithThumbnails(episodes);
+          }
+        } catch (error) {
+          console.error('Error fetching anime episodes:', error);
+          // Fallback: create episodes from totalEpisodes
+          const episodes = Array.from({ length: itemInfo.totalEpisodes || 0 }, (_, i) => ({
+            episode_number: i + 1,
+            name: `Episode ${i + 1}`,
+            thumbnail_url: null,
+            runtime: itemInfo.duration || 24
+          }));
+          setEpisodesWithThumbnails(episodes);
+        }
+      }
     };
 
-    if (isLoading) {
-        return <LoadingIndicator/>;
-    }
+    fetchEpisodeThumbnails();
+  }, [itemInfo, selectedSeason]);
 
-    if (error) {
-        return <div className='error-message'>{error}</div>;
-    }
+  // Use proactively prepared torrent for preview
+  useEffect(() => {
+    const usePreparedTorrent = async () => {
+      // Early return if essential data is missing
+      if (!itemInfo?.id) {
+        return;
+      }
 
-    if (!itemInfo) {
-        return null; // or a loading state
-    }
-    const toggleSearchBar = () => {
-        document.getElementById('infoPage').scrollIntoView({behavior: 'smooth'});
+      // For shows/anime, wait for season/episode to be selected
+      if ((itemInfo.type === 'shows' || itemInfo.type === 'anime') && (!selectedSeason || !selectedEpisode)) {
+        return;
+      }
+
+      // Reset torrent state
+      setTorrentStreamUrl(null);
+      setUsingTorrent(false);
+
+      console.log('🎬 Getting prepared torrent for preview...');
+
+      // Get or wait for the prepared torrent (reuses in-progress preparation)
+      // For movies, don't pass season/episode to match the cache key from proactive prep
+      const streamUrl = itemInfo.type === 'movies'
+        ? await prepareTorrent(itemInfo)
+        : await prepareTorrent(itemInfo, selectedSeason?.season_number, selectedEpisode?.episode_number);
+
+      if (streamUrl) {
+        console.log('✅ Torrent stream ready, using torrent player');
+        console.log('📍 Stream URL:', streamUrl);
+        console.log('📍 Torrent hash:', activeHash);
+        console.log('📍 File index:', activeFileIndex);
+        setTorrentStreamUrl(streamUrl);
+        setUsingTorrent(true);
+
+        // Debug: Log state after setting
+        setTimeout(() => {
+          console.log('🔍 State after torrent ready:');
+          console.log('   - torrentStreamUrl is set:', !!streamUrl);
+          console.log('   - usingTorrent:', true);
+          console.log('   - showVideoModal:', false);
+          console.log('💡 Preview video should now be visible. Click it to open full player.');
+        }, 100);
+      } else {
+        console.log('ℹ️ Torrent preparation failed, using default iframe player');
+        setUsingTorrent(false);
+      }
     };
 
-    const videoSrc = constructVideoUrl(
-        videoPlayerState.provider,
-        selectedSeason?.season_number,
-        selectedEpisode?.episode_number,
+    usePreparedTorrent();
+  }, [itemInfo?.id, selectedSeason?.season_number, selectedEpisode?.episode_number]);
+
+  // Autoplay support - triggered when navigating from Random page with ?autoplay=true
+  useEffect(() => {
+    const shouldAutoplay = searchParams.get('autoplay') === 'true';
+    
+    if (shouldAutoplay && !autoplayTriggeredRef.current && itemInfo && !isLoading) {
+      // Wait for torrent to be ready (or timeout after 5 seconds)
+      const autoplayTimeout = setTimeout(() => {
+        if (!autoplayTriggeredRef.current) {
+          console.log('🎬 Autoplay: Starting playback...');
+          autoplayTriggeredRef.current = true;
+          
+          // Clear the autoplay param from URL
+          searchParams.delete('autoplay');
+          setSearchParams(searchParams, { replace: true });
+          
+          // Load saved progress if available
+          if (activeHash && activeFileIndex !== null) {
+            const progress = progressService.getProgress(activeHash, activeFileIndex);
+            setVideoPlayerProgress(progress?.currentTime || 0);
+          }
+          
+          // Open the video player
+          setUseAdFreePlayer(true);
+          setShowVideoModal(true);
+        }
+      }, usingTorrent && torrentStreamUrl ? 0 : 3000); // Immediate if torrent ready, else wait a bit
+      
+      return () => clearTimeout(autoplayTimeout);
+    }
+  }, [searchParams, itemInfo, isLoading, usingTorrent, torrentStreamUrl, activeHash, activeFileIndex]);
+
+  // Reset autoplay flag when navigating to new media
+  useEffect(() => {
+    autoplayTriggeredRef.current = false;
+  }, [mediaId, category]);
+
+  const handleSeasonChange = async (season) => {
+    setSelectedSeason(season);
+    handleEpisodeChange({ episode_number: 1 });
+  };
+
+  const handleEpisodeChange = async (episode, openVideoModal = false) => {
+    setSelectedEpisode(episode);
+
+    // Guard against undefined itemInfo
+    if (!itemInfo?.id) {
+      console.warn('Cannot update watched item: itemInfo is undefined');
+      return;
+    }
+
+    try {
+      await addWatchedItem({
+        tmdbId: itemInfo.id,
+        mediaType: itemInfo.type,
+        title: getTitle(itemInfo),
+        season: selectedSeason?.season_number || 1,
+        episode: episode.episode_number,
+        posterPath: itemInfo.poster_path || itemInfo.image,
+        rating: itemInfo.vote_average || itemInfo.rating
+      });
+    } catch (error) {
+      console.error('Error updating watched item:', error);
+    }
+
+    // If openVideoModal is true, open the video player modal
+    if (openVideoModal) {
+      // Load saved progress if available
+      if (activeHash && activeFileIndex !== null) {
+        const progress = progressService.getProgress(activeHash, activeFileIndex);
+        setVideoPlayerProgress(progress?.currentTime || 0);
+      }
+      
+      setUseAdFreePlayer(true);
+      setShowVideoModal(true);
+    }
+  };
+
+  const handleWatchFromBeginning = async () => {
+    if (!itemInfo) return;
+    
+    // Load saved progress if available
+    if (activeHash && activeFileIndex !== null) {
+      const progress = progressService.getProgress(activeHash, activeFileIndex);
+      setVideoPlayerProgress(progress?.currentTime || 0);
+    }
+    
+    setUseAdFreePlayer(true);
+    setShowVideoModal(true);
+  };
+
+  const handleContinue = async () => {
+    if (!itemInfo) return;
+    
+    const watchedItem = watchedItems?.find(w =>
+      w.tmdb_id === parseInt(itemInfo.id) && w.content_type === itemInfo.type
     );
-    const imageUrl = itemInfo.backdrop_path
-        ? `https://image.tmdb.org/t/p/original${itemInfo.backdrop_path}`
-        : itemInfo.cover
-            ? itemInfo.cover
-            : itemInfo.poster_path
-                ? `https://image.tmdb.org/t/p/original${itemInfo.poster_path}`
-                : 'https://via.placeholder.com/300x450?text=Loading...';
-    const title = getTitle(itemInfo);
-
-    const renderSubInfo = () => {
-        switch (itemInfo.type) {
-            case 'anime':
-                return (
-                    <div className='sub-info-container' style={{backgroundImage: `url(${imageUrl})`}}>
-                        <div className='sub-info-item'>
-                            <strong>Title:</strong> {' '}{title}
-                        </div>
-                        <div className='sub-info-item'>
-                            <strong>Genres:</strong> {itemInfo.genres.join(', ')}
-                        </div>
-                        <div className='sub-info-item'>
-                            <strong>Studios:</strong> {itemInfo.studios.join(', ')}
-                        </div>
-                        <div className='sub-info-item'>
-                            <strong>Country of Origin:</strong> {itemInfo.countryOfOrigin}
-                        </div>
-                        <div className='sub-info-item'>
-                            <strong>Release Date:</strong> {itemInfo.startDate.year}
-                        </div>
-                        <div className='sub-info-item'>
-                            <strong>Status:</strong> {itemInfo.status}
-                        </div>
-                        <div className='sub-info-item'>
-                            <strong>Rating:</strong> {(itemInfo.rating / 10).toFixed(1)}
-                        </div>
-                        <div className='sub-info-item'>
-                            <strong>Duration:</strong> {itemInfo.duration} min
-                        </div>
-                        <div className='sub-info-item'>
-                            <strong>Episodes:</strong> {itemInfo.currentEpisode}/
-                            {itemInfo.totalEpisodes}
-                        </div>
-                        <div className='sub-info-item'>
-                            <strong>Popularity:</strong> {itemInfo.popularity}
-                        </div>
-                        <div className='sub-info-item'>
-                            <strong>Synonyms:</strong> {itemInfo.synonyms.join(', ')}
-                        </div>
-                        <div className='sub-info-item'>
-                            <strong>Description:</strong> {itemInfo.description}
-                        </div>
-                        {itemInfo.characters && (
-                            <div className='sub-info-item'>
-                                <strong>Characters:</strong>{' '}
-                                {itemInfo.characters.map((char) => char.name.full).join(', ')}
-                            </div>
-                        )}
-                    </div>
-                );
-            case 'movies':
-                return (
-                    <div className="sub-info-container" style={{backgroundImage: `url(${imageUrl})`}}>
-                        <div className="sub-info-item">
-                            <strong>Title:</strong> {' '}{title}
-                        </div>
-                        <div className="sub-info-item">
-                            <strong>Original Title:</strong> {itemInfo.original_title}
-                        </div>
-                        <div className="sub-info-item">
-                            <strong>Genres:</strong>{' '}
-                            {itemInfo.genres.map((genre) => genre.name).join(', ')}
-                        </div>
-                        <div className="sub-info-item">
-                            <strong>Runtime:</strong> {itemInfo.runtime} min
-                        </div>
-                        <div className="sub-info-item">
-                            <strong>Release Date:</strong> {itemInfo.release_date}
-                        </div>
-                        <div className="sub-info-item">
-                            <strong>Country:</strong>{' '}
-                            {itemInfo.production_countries
-                                .map((country) => country.name)
-                                .join(', ')}
-                        </div>
-                        <div className="sub-info-item">
-                            <strong>Budget:</strong>{' '}
-                            {itemInfo.budget > 0
-                                ? `$${itemInfo.budget.toLocaleString()}`
-                                : 'N/A'}
-                        </div>
-                        <div className="sub-info-item">
-                            <strong>Revenue:</strong>{' '}
-                            {itemInfo.revenue > 0
-                                ? `$${itemInfo.revenue.toLocaleString()}`
-                                : 'N/A'}
-                        </div>
-                        <div className="sub-info-item">
-                            <strong>Production Companies:</strong>{' '}
-                            {itemInfo.production_companies
-                                .map((company) => company.name)
-                                .join(', ')}
-                        </div>
-                        <div className="sub-info-item">
-                            <strong>Status:</strong> {itemInfo.status}
-                        </div>
-                        <div className="sub-info-item">
-                            <strong>Tagline:</strong> {itemInfo.tagline}
-                        </div>
-                        <div className="sub-info-item">
-                            <strong>Overview:</strong> {itemInfo.overview}
-                        </div>
-                    </div>
-                );
-            case 'shows':
-                return (
-                    <div className="sub-info-container" style={{backgroundImage: `url(${imageUrl})`}}>
-                        <div className="sub-info-item">
-                            <strong>Title:</strong> {' '}{title}
-                        </div>
-                        <div className="sub-info-item">
-                            <strong>Original Name:</strong> {itemInfo.original_name}
-                        </div>
-                        <div className="sub-info-item">
-                            <strong>Genres:</strong>{' '}
-                            {itemInfo.genres.map((genre) => genre.name).join(', ')}
-                        </div>
-                        <div className="sub-info-item">
-                            <strong>First Air Date:</strong> {itemInfo.first_air_date}
-                        </div>
-                        <div className="sub-info-item">
-                            <strong>Number of Seasons:</strong> {itemInfo.number_of_seasons}
-                        </div>
-                        <div className="sub-info-item">
-                            <strong>Number of Episodes:</strong> {itemInfo.number_of_episodes}
-                        </div>
-                        <div className="sub-info-item">
-                            <strong>Runtime per Episode:</strong>{' '}
-                            {itemInfo.episode_run_time[0]} min
-                        </div>
-                        <div className="sub-info-item">
-                            <strong>Networks:</strong>{' '}
-                            {itemInfo.networks.map((network) => network.name).join(', ')}
-                        </div>
-                        <div className="sub-info-item">
-                            <strong>Languages:</strong> {itemInfo.languages.join(', ')}
-                        </div>
-                        <div className="sub-info-item">
-                            <strong>Status:</strong> {itemInfo.status}
-                        </div>
-                        <div className="sub-info-item">
-                            <strong>Tagline:</strong> {itemInfo.tagline}
-                        </div>
-                        {itemInfo.last_episode_to_air && (
-                            <div className="sub-info-item">
-                                <strong>Last Episode Aired:</strong>{' '}
-                                {itemInfo.last_episode_to_air.name} (Episode{' '}
-                                {itemInfo.last_episode_to_air.episode_number})
-                            </div>
-                        )}
-                        {itemInfo.next_episode_to_air && (
-                            <div className="sub-info-item">
-                                <strong>Next Episode:</strong>{' '}
-                                {itemInfo.next_episode_to_air.air_date}
-                                <CountdownTimer
-                                    targetDate={itemInfo.next_episode_to_air.airDate}
-                                />
-                            </div>
-                        )}
-                        <div className="sub-info-item">
-                            <strong>Overview:</strong> {itemInfo.overview}
-                        </div>
-                    </div>
-                );
-            default:
-                return null;
+    
+    if (watchedItem) {
+      // Set season/episode from watched item
+      if (itemInfo.type === 'shows' && itemInfo.seasons) {
+        const season = itemInfo.seasons.find(s => s.season_number === watchedItem.season);
+        if (season) {
+          setSelectedSeason(season);
+          setSelectedEpisode({ episode_number: watchedItem.episode });
         }
-    };
+      } else if (itemInfo.type === 'anime') {
+        setSelectedEpisode({ episode_number: watchedItem.episode });
+      }
+      
+      // Load saved progress
+      if (activeHash && activeFileIndex !== null) {
+        const progress = progressService.getProgress(activeHash, activeFileIndex);
+        setVideoPlayerProgress(progress?.currentTime || 0);
+      }
+      
+      setUseAdFreePlayer(true);
+      setShowVideoModal(true);
+    }
+  };
 
-    return (
-        <div id={'infoPage'}>
-            <StarryBackground/>
-            <Header
-                onSearchClick={() => {
-                    setIsSearchVisible(!isSearchVisible);
-                    toggleSearchBar();
-                }}
-            />
-            <div className="info-page">
-                {isSearchVisible && <SearchBar activeTab={activeTab}/>}{' '}
-                {/* Toggle SearchBar */}
-                {renderSubInfo()}
-                <div className="content">
-                    <div className="main-content">
-                        <div className="video-player">
-                            <div className={'player-buttons-left'}>
-                            </div>
-                            <iframe
-                                className={'video'}
-                                src={videoSrc}
-                                width='100%'
-                                height='100%'
-                                frameBorder='0'
-                                allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
-                                allowFullScreen
-                            ></iframe>
-                            {itemInfo.type !== 'anime' && (
-                                <div className='player-buttons'>
-                                    <button
-                                        className={`player-button ${videoPlayerState.provider === 'Vidsrc' ? 'active' : ''}`}
-                                        onClick={() => switchProvider('Vidsrc')}
-                                    >
-                                        Good
-                                    </button>
-                                    <button
-                                        className={`player-button ${videoPlayerState.provider === '2embed' ? 'active' : ''}`}
-                                        onClick={() => switchProvider('2embed')}
-                                    >
-                                        Best
-                                    </button>
-                                    <button
-                                        className={`player-button ${videoPlayerState.provider === 'NontonGo' ? 'active' : ''}`}
-                                        onClick={() => switchProvider('NontonGo')}
-                                    >
-                                        Medium
-                                    </button>
-                                    <button
-                                        className={`player-button ${videoPlayerState.provider === 'smashy' ? 'active' : ''}`}
-                                        onClick={() => switchProvider('smashy')}
-                                    >
-                                        Good
-                                    </button>
-                                    <button
-                                        className={`player-button ${videoPlayerState.provider === 'SuperEmbed' ? 'active' : ''}`}
-                                        onClick={() => switchProvider('SuperEmbed')}
-                                    >
-                                        Good+
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                        {itemInfo.type !== 'movies' && (
-                            <div className='side-content' ref={sideContentRef}>
-                                <div className='episodes-list'>
-                                    <div className='season-selector'>
-                                        {itemInfo.type === 'anime' ? (
-                                            <div className='season-text'>
-                                                Season {itemInfo.season || 1}
-                                            </div>
-                                        ) : (
-                                            <select
-                                                value={selectedSeason?.season_number || 1}
-                                                onChange={(e) =>
-                                                    handleSeasonChange(
-                                                        itemInfo.seasons.find(
-                                                            (season) =>
-                                                                season.season_number ===
-                                                                parseInt(e.target.value),
-                                                        ),
-                                                    )
-                                                }
-                                            >
-                                                {itemInfo.seasons?.map((season) => (
-                                                    <option key={season.id} value={season.season_number}>
-                                                        {season.name}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        )}
-                                    </div>
+  /**
+   * Handle user switching to an alternative torrent source
+   * Called from VideoPlayer settings menu
+   */
+  const handleSourceChange = async (newSource) => {
+    console.log('🔄 User requested source change:', newSource.Name);
+    
+    const newUrl = await switchToAlternativeSource(
+      newSource, 
+      itemInfo, 
+      selectedEpisode?.episode_number
+    );
+    
+    if (newUrl) {
+      console.log('✅ Successfully switched to new source');
+      setTorrentStreamUrl(newUrl);
+    } else {
+      console.error('❌ Failed to switch source');
+      // Optionally show error toast to user
+    }
+  };
 
-                                    <div className='episodes-grid'>
-                                        {Array.from(
-                                            {
-                                                length:
-                                                    selectedSeason?.episode_count ||
-                                                    itemInfo.totalEpisodes ||
-                                                    0,
-                                            },
-                                            (_, index) => (
-                                                <button
-                                                    key={index + 1}
-                                                    className={`episode-bubble ${index + 1 === selectedEpisode?.episode_number ? 'active' : ''}`}
-                                                    onClick={() =>
-                                                        handleEpisodeChange({episode_number: index + 1})
-                                                    }
-                                                >
-                                                    {index + 1}
-                                                </button>
-                                            ),
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-                {itemInfo.recommendations && itemInfo.recommendations.length > 0 && (
-                    <VideoCardGrid
-                        contentType={itemInfo.type}
-                        title='Recommended For You'
-                        customItems={itemInfo.recommendations}
-                    />
-                )}
-                <Footer/>
-            </div>
+  const constructVideoUrl = (provider, season = 1, episode = 1) => {
+    const id = itemInfo?.id;
+    if (!id) return '';
+
+    switch (provider) {
+      case 'NontonGo':
+        return itemInfo.type === 'shows'
+          ? `https://NontonGo.win/embed/tv/${id}/${season}/${episode}`
+          : `https://NontonGo.win/embed/movie/${id}`;
+      case 'smashy':
+        return itemInfo.type === 'shows'
+          ? `https://player.smashy.stream/tv/${id}?s=${season}&e=${episode}&remove=watchWithFriends|addSubtitles|search|episodes&playerList=F|SU|J|NM|SY|FV|O|I|ST|U|E|SO|D|DM|RD|H|CA|M|K|G&subLang=English`
+          : `https://player.smashy.stream/movie/${id}?remove=watchWithFriends|addSubtitles|search|episodes&playerList=F|SU|J|NM|SY|FV|O|I|ST|U|E|SO|D|DM|RD|H|CA|M|K|G&subLang=English`;
+      case 'SuperEmbed':
+        return itemInfo.type === 'shows'
+          ? `https://moviesapi.club/tv/${id}-${season}-${episode}`
+          : `https://moviesapi.club/movie/${id}`;
+      case 'Vidsrc' :
+        if (itemInfo.type === 'shows') {
+          return `https://embed.su/embed/tv/${id}/${season}/${episode}`;
+        } else {
+          return `https://embed.su/embed/movie/${id}`;
+        }
+      case 'Anime':
+        if (itemInfo.type === 'anime') {
+          return `https://vidsrc.cc/v2/embed/anime/ani${id}/${episode}/sub?autoPlay=true&&autoSkipIntro=true`;
+        } else if (itemInfo.type === 'shows') {
+          return `https://vidsrc.cc/v2/embed/tv/${id}/${season}/${episode}?autoPlay=true`;
+        } else {
+          return `https://vidsrc.cc/v2/embed/movie/${id}?autoPlay=true`;
+        }
+
+      case '2embed':
+        if (itemInfo.type === 'shows') {
+          return `https://www.2embed.cc/embedtv/${id}&s=${season}&e=${episode}`;
+        } else if (itemInfo.type === 'anime') {
+          let title =
+            itemInfo.title.userPreferred ||
+            itemInfo.title.english ||
+            itemInfo.title.romaji ||
+            itemInfo.title.native ||
+            'Unknown Title';
+          title = title.replace(/ /g, '-').toLowerCase();
+          return `https://2anime.xyz/embed/${title}-episode-${episode}`;
+        } else {
+          return `https://www.2embed.cc/embed/${id}`;
+        }
+      default:
+        return '';
+    }
+  };
+
+  if (isLoading) {
+    return <LoadingIndicator />;
+  }
+
+  if (error) {
+    return <div className="error-message">{error}</div>;
+  }
+
+  if (!itemInfo) {
+    return null; // or a loading state
+  }
+  const toggleSearchBar = () => {
+    document.getElementById('infoPage').scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const videoSrc = constructVideoUrl(
+    videoPlayerState.provider,
+    selectedSeason?.season_number,
+    selectedEpisode?.episode_number,
+  );
+  const backdropUrl = itemInfo.backdrop_path
+    ? `https://image.tmdb.org/t/p/original${itemInfo.backdrop_path}`
+    : itemInfo.cover
+      ? itemInfo.cover
+      : itemInfo.poster_path
+        ? `https://image.tmdb.org/t/p/original${itemInfo.poster_path}`
+        : null;
+  const title = getTitle(itemInfo);
+  
+  // Get watched item for Continue button
+  const watchedItem = watchedItems?.find(w =>
+    w.tmdb_id === parseInt(itemInfo.id) && w.content_type === itemInfo.type
+  );
+  
+  // Compute the effective selected episode - use watchedItem if selectedEpisode is still default
+  // This ensures the episode list highlights correctly even before the state update completes
+  const effectiveSelectedEpisode = (() => {
+    // If selectedEpisode matches watchedItem, use it
+    if (selectedEpisode?.episode_number === watchedItem?.episode) {
+      return selectedEpisode;
+    }
+    // If selectedEpisode is default (1) or not set, and we have a watchedItem, use watchedItem
+    if ((selectedEpisode?.episode_number === 1 || !selectedEpisode) && watchedItem?.episode) {
+      return { episode_number: watchedItem.episode };
+    }
+    // Otherwise use selectedEpisode as-is
+    return selectedEpisode;
+  })();
+  
+  // Get year, rating, runtime info
+  const year = itemInfo.release_date 
+    ? new Date(itemInfo.release_date).getFullYear()
+    : itemInfo.first_air_date
+      ? new Date(itemInfo.first_air_date).getFullYear()
+      : itemInfo.startDate?.year || '';
+  
+  const rating = itemInfo.vote_average 
+    ? itemInfo.vote_average.toFixed(1)
+    : itemInfo.rating 
+      ? (itemInfo.rating / 10).toFixed(1)
+      : '';
+  
+  const runtime = itemInfo.type === 'movies'
+    ? `${itemInfo.runtime || 0} min`
+    : itemInfo.type === 'shows'
+      ? `${itemInfo.number_of_seasons || 0} Seasons`
+      : itemInfo.totalEpisodes
+        ? `${itemInfo.totalEpisodes} Episodes`
+        : '';
+  
+  const overview = itemInfo.type === 'anime' 
+    ? cleanHtmlTags(itemInfo.overview || itemInfo.description || '')
+    : itemInfo.overview || itemInfo.description || '';
+
+  const renderSubInfo = () => {
+    const renderDetailCard = (icon, label, value, highlight = false, compact = false, span2 = false) => {
+      if (!value) return null;
+      return (
+        <div className={`detail-card ${highlight ? 'highlight' : ''} ${compact ? 'compact' : ''} ${span2 ? 'span-2' : ''}`}>
+          <div className="detail-card-icon">{icon}</div>
+          <div className="detail-card-content">
+            <div className="detail-card-label">{label}</div>
+            <div className="detail-card-value">{value}</div>
+          </div>
         </div>
+      );
+    };
+
+    const renderGenreBadges = (genres) => {
+      if (!genres || genres.length === 0) return null;
+      const genreList = Array.isArray(genres) 
+        ? (genres[0]?.name ? genres.map(g => g.name) : genres)
+        : [];
+      return (
+        <div className="detail-card full-width">
+          <div className="detail-card-icon"><Film size={20} /></div>
+          <div className="detail-card-content">
+            <div className="detail-card-label">Genres</div>
+            <div className="genre-badges">
+              {genreList.map((genre, idx) => (
+                <span key={idx} className="genre-badge">{genre}</span>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+
+    const renderLinksCard = (links) => {
+      const validLinks = links.filter(l => l.url);
+      if (validLinks.length === 0) return null;
+      return (
+        <div className="detail-card full-width links-card">
+          {validLinks.map((link, idx) => (
+            <a 
+              key={idx} 
+              href={link.url} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="link-button"
+            >
+              {link.icon}
+              <span>{link.label}</span>
+            </a>
+          ))}
+        </div>
+      );
+    };
+
+    const renderSectionHeader = (title) => (
+      <div className="details-group-title">{title}</div>
     );
+
+    const renderNextEpisodeFeatured = (nextEpisode) => {
+      if (!nextEpisode) return null;
+      const episodeTitle = nextEpisode.name || `Episode ${nextEpisode.episode_number || nextEpisode.episode}`;
+      let airDate = nextEpisode.air_date;
+      let countdownDate = airDate;
+      
+      // Handle anime airingTime (Unix timestamp)
+      if (!airDate && nextEpisode.airingTime) {
+        const dateObj = new Date(nextEpisode.airingTime * 1000);
+        airDate = dateObj.toISOString().split('T')[0];
+        countdownDate = dateObj;
+      } else if (airDate) {
+        countdownDate = new Date(airDate);
+      }
+      
+      return (
+        <div className="next-episode-featured">
+          <div className="next-episode-badge">UPCOMING</div>
+          <div className="next-episode-info">
+            <div className="next-episode-label">Next Episode</div>
+            <div className="next-episode-title">{episodeTitle}</div>
+            {airDate && <div className="next-episode-date">{airDate}</div>}
+            {nextEpisode.runtime && <div className="next-episode-date" style={{ fontSize: '0.9rem', color: '#999' }}>{nextEpisode.runtime} min</div>}
+          </div>
+          <div className="next-episode-countdown">
+            {countdownDate && <CountdownTimer targetDate={countdownDate} />}
+          </div>
+        </div>
+      );
+    };
+
+    const renderStatsBadges = (stats, isAnime = false, hasRating = false) => {
+      const validStats = stats.filter(s => s.value !== null && s.value !== undefined && s.value !== '');
+      if (validStats.length === 0) return null;
+      // For anime: use column layout only if there's no rating (to save space)
+      // If rating exists, use normal horizontal layout
+      const useColumnLayout = isAnime && !hasRating;
+      return (
+        <div className={`stats-badges ${useColumnLayout ? 'stats-badges-anime' : ''}`}>
+          {validStats.map((stat, idx) => (
+            <div key={idx} className="stat-badge">
+              <div className="stat-badge-value">{stat.value}</div>
+              <div className="stat-badge-label">{stat.label}</div>
+            </div>
+          ))}
+        </div>
+      );
+    };
+
+    switch (itemInfo.type) {
+      case 'anime':
+        const animeStartDate = itemInfo.startDate?.year 
+          ? `${itemInfo.startDate.year}${itemInfo.startDate.month ? `-${String(itemInfo.startDate.month).padStart(2, '0')}` : ''}${itemInfo.startDate.day ? `-${String(itemInfo.startDate.day).padStart(2, '0')}` : ''}`
+          : itemInfo.startDate?.year;
+        const animeEndDate = itemInfo.endDate?.year 
+          ? `${itemInfo.endDate.year}${itemInfo.endDate.month ? `-${String(itemInfo.endDate.month).padStart(2, '0')}` : ''}${itemInfo.endDate.day ? `-${String(itemInfo.endDate.day).padStart(2, '0')}` : ''}`
+          : null;
+        // overview is already cleaned at the source for anime
+        const cleanDescription = overview || null;
+        
+        // Prepare primary stats
+        const animePrimaryStats = [
+          { value: itemInfo.rating ? `${itemInfo.rating}/100` : null, label: 'Rating' },
+          { value: (itemInfo.currentEpisode || itemInfo.totalEpisodes) ? `${itemInfo.currentEpisode || 0}/${itemInfo.totalEpisodes || 0}` : null, label: 'Episodes' },
+          { value: itemInfo.duration ? `${itemInfo.duration} min` : null, label: 'Duration' }
+        ];
+
+        // Prepare links
+        const animeLinks = [
+          itemInfo.malId ? { 
+            url: `https://myanimelist.net/anime/${itemInfo.malId}`, 
+            label: 'MyAnimeList', 
+            icon: <ExternalLink size={18} /> 
+          } : null,
+          itemInfo.trailer?.id ? { 
+            url: `https://www.youtube.com/watch?v=${itemInfo.trailer.id}`, 
+            label: 'Trailer', 
+            icon: <Play size={18} /> 
+          } : null
+        ].filter(Boolean);
+
+        return (
+          <div className="details-container">
+            <div className="details-header">
+              <h2>About</h2>
+            </div>
+            <div className="details-grid">
+              {/* Level 1: Description Hero */}
+              {cleanDescription && (
+                <div className="detail-card full-width description-card">
+                  <div className="detail-card-content">
+                    <div className="detail-card-label">Description</div>
+                    <div className="detail-card-value description-text">{cleanDescription}</div>
+                  </div>
+                </div>
+              )}
+
+              {/* Level 2: Primary Row - Title + Stats */}
+              {renderDetailCard(<Film size={20} />, 'Title', title, true)}
+              {renderStatsBadges(animePrimaryStats, true, !!itemInfo.rating)}
+              
+              {/* Title Variations */}
+              {itemInfo.title?.romaji && itemInfo.title.romaji !== title && 
+                renderDetailCard(<Globe size={20} />, 'Romaji Title', itemInfo.title.romaji)}
+              {itemInfo.title?.english && itemInfo.title.english !== title && 
+                renderDetailCard(<Globe size={20} />, 'English Title', itemInfo.title.english)}
+              {itemInfo.title?.native && itemInfo.title.native !== title && 
+                renderDetailCard(<Globe size={20} />, 'Native Title', itemInfo.title.native)}
+
+              {/* Level 3: Genres */}
+              {renderGenreBadges(itemInfo.genres)}
+
+              {/* Level 4: Dates Section */}
+              <div className="details-group">
+                {renderSectionHeader('Dates & Schedule')}
+                {animeStartDate && renderDetailCard(<Calendar size={20} />, 'Start Date', animeStartDate)}
+                {animeEndDate && renderDetailCard(<Calendar size={20} />, 'End Date', animeEndDate)}
+                {itemInfo.releaseDate && renderDetailCard(<Calendar size={20} />, 'Release Year', itemInfo.releaseDate)}
+                {itemInfo.season && renderDetailCard(<CalendarDays size={20} />, 'Season', `${itemInfo.season} ${itemInfo.startDate?.year || ''}`.trim())}
+                {/* Featured Next Episode - separate row */}
+                {itemInfo.nextAiringEpisode && renderNextEpisodeFeatured({
+                  episode: itemInfo.nextAiringEpisode.episode,
+                  episode_number: itemInfo.nextAiringEpisode.episode,
+                  name: `Episode ${itemInfo.nextAiringEpisode.episode}`,
+                  air_date: itemInfo.nextAiringEpisode.airingTime ? new Date(itemInfo.nextAiringEpisode.airingTime * 1000).toISOString().split('T')[0] : null,
+                  airingTime: itemInfo.nextAiringEpisode.airingTime
+                })}
+              </div>
+
+              {/* Level 5: Production Section */}
+              <div className="details-group">
+                {renderSectionHeader('Production')}
+                {itemInfo.studios?.length > 0 && renderDetailCard(<Building2 size={20} />, 'Studios', itemInfo.studios.join(', '))}
+                {renderDetailCard(<MapPin size={20} />, 'Country of Origin', itemInfo.countryOfOrigin)}
+                {itemInfo.type && renderDetailCard(<Info size={20} />, 'Type', itemInfo.type)}
+                {renderDetailCard(<BarChart3 size={20} />, 'Status', itemInfo.status)}
+              </div>
+
+              {/* Level 6: Technical Section */}
+              <div className="details-group">
+                {renderSectionHeader('Technical')}
+                {itemInfo.subOrDub && renderDetailCard(<Languages size={20} />, 'Sub/Dub', itemInfo.subOrDub.toUpperCase())}
+                {itemInfo.isLicensed !== undefined && renderDetailCard(
+                  itemInfo.isLicensed ? <CheckCircle size={20} /> : <XCircle size={20} />, 
+                  'Licensed', 
+                  itemInfo.isLicensed ? 'Yes' : 'No',
+                  false,
+                  true
+                )}
+                {itemInfo.isAdult !== undefined && renderDetailCard(
+                  itemInfo.isAdult ? <XCircle size={20} /> : <CheckCircle size={20} />, 
+                  'Adult Content', 
+                  itemInfo.isAdult ? 'Yes' : 'No',
+                  false,
+                  true
+                )}
+                {itemInfo.popularity && renderDetailCard(<TrendingUp size={20} />, 'Popularity', itemInfo.popularity.toLocaleString(), false, true)}
+                {itemInfo.color && (
+                  <div className="detail-card compact">
+                    <div className="detail-card-icon" style={{ color: itemInfo.color }}>
+                      <Film size={20} />
+                    </div>
+                    <div className="detail-card-content">
+                      <div className="detail-card-label">Theme Color</div>
+                      <div className="detail-card-value" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ 
+                          display: 'inline-block', 
+                          width: '20px', 
+                          height: '20px', 
+                          backgroundColor: itemInfo.color, 
+                          borderRadius: '4px',
+                          border: '1px solid rgba(255,255,255,0.2)'
+                        }}></span>
+                        {itemInfo.color}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Level 7: Additional Info */}
+              {itemInfo.synonyms?.length > 0 && (
+                <div className="details-group">
+                  {renderSectionHeader('Additional Information')}
+                  <div className="detail-card full-width">
+                    <div className="detail-card-icon"><Languages size={20} /></div>
+                    <div className="detail-card-content">
+                      <div className="detail-card-label">Synonyms</div>
+                      <div className="synonyms-list">{itemInfo.synonyms.join(', ')}</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Level 8: Links Row */}
+              {renderLinksCard(animeLinks)}
+            </div>
+          </div>
+        );
+      case 'movies':
+        // Prepare primary stats
+        const moviePrimaryStats = [
+          { value: itemInfo.vote_average ? `${itemInfo.vote_average.toFixed(1)}/10` : null, label: 'Rating' },
+          { value: itemInfo.runtime ? `${itemInfo.runtime} min` : null, label: 'Runtime' },
+          { value: itemInfo.vote_count ? itemInfo.vote_count.toLocaleString() : null, label: 'Votes' }
+        ];
+
+        // Prepare links
+        const movieLinks = [
+          (itemInfo.imdb_id || itemInfo.external_ids?.imdb_id) ? { 
+            url: `https://www.imdb.com/title/${itemInfo.imdb_id || itemInfo.external_ids?.imdb_id}`, 
+            label: 'IMDb', 
+            icon: <ExternalLink size={18} /> 
+          } : null,
+          itemInfo.homepage ? { 
+            url: itemInfo.homepage, 
+            label: 'Homepage', 
+            icon: <Home size={18} /> 
+          } : null,
+          itemInfo.external_ids?.wikidata_id ? { 
+            url: `https://www.wikidata.org/wiki/${itemInfo.external_ids.wikidata_id}`, 
+            label: 'Wikidata', 
+            icon: <ExternalLink size={18} /> 
+          } : null,
+          itemInfo.external_ids?.facebook_id ? { 
+            url: `https://www.facebook.com/${itemInfo.external_ids.facebook_id}`, 
+            label: 'Facebook', 
+            icon: <LinkIcon size={18} /> 
+          } : null,
+          itemInfo.external_ids?.instagram_id ? { 
+            url: `https://www.instagram.com/${itemInfo.external_ids.instagram_id}`, 
+            label: 'Instagram', 
+            icon: <LinkIcon size={18} /> 
+          } : null,
+          itemInfo.external_ids?.twitter_id ? { 
+            url: `https://twitter.com/${itemInfo.external_ids.twitter_id}`, 
+            label: 'Twitter', 
+            icon: <LinkIcon size={18} /> 
+          } : null
+        ].filter(Boolean);
+
+        return (
+          <div className="details-container">
+            <div className="details-header">
+              <h2>About</h2>
+            </div>
+            <div className="details-grid">
+              {/* Level 1: Overview Hero */}
+              {overview && (
+                <div className="detail-card full-width description-card">
+                  <div className="detail-card-content">
+                    <div className="detail-card-label">Overview</div>
+                    <div className="detail-card-value description-text">{overview}</div>
+                  </div>
+                </div>
+              )}
+
+              {/* Level 2: Primary Row - Title + Stats */}
+              {renderDetailCard(<Film size={20} />, 'Title', title, true)}
+              {renderDetailCard(<Globe size={20} />, 'Original Title', itemInfo.original_title)}
+              {renderStatsBadges(moviePrimaryStats)}
+
+              {/* Level 3: Tagline & Genres */}
+              {itemInfo.tagline && (
+                <div className="detail-card full-width highlight">
+                  <div className="detail-card-content">
+                    <div className="detail-card-label">Tagline</div>
+                    <div className="detail-card-value tagline-text">{itemInfo.tagline}</div>
+                  </div>
+                </div>
+              )}
+              {renderGenreBadges(itemInfo.genres)}
+
+              {/* Level 4: Dates & Numbers */}
+              <div className="details-group">
+                {renderSectionHeader('Release & Financials')}
+                {renderDetailCard(<Calendar size={20} />, 'Release Date', itemInfo.release_date)}
+                {itemInfo.budget && renderDetailCard(<DollarSign size={20} />, 'Budget', itemInfo.budget > 0 ? `$${itemInfo.budget.toLocaleString()}` : 'N/A')}
+                {itemInfo.revenue && renderDetailCard(<DollarSign size={20} />, 'Revenue', itemInfo.revenue > 0 ? `$${itemInfo.revenue.toLocaleString()}` : 'N/A', true)}
+                {itemInfo.popularity && renderDetailCard(<TrendingUp size={20} />, 'Popularity', itemInfo.popularity.toFixed(2), false, true)}
+              </div>
+
+              {/* Level 5: Production Section */}
+              <div className="details-group">
+                {renderSectionHeader('Production')}
+                {itemInfo.production_companies?.length > 0 && 
+                  renderDetailCard(<Building2 size={20} />, 'Production Companies', itemInfo.production_companies.map((company) => company.name).join(', '))}
+                {itemInfo.production_countries?.length > 0 && 
+                  renderDetailCard(<MapPin size={20} />, 'Production Countries', itemInfo.production_countries.map((country) => country.name).join(', '))}
+                {itemInfo.belongs_to_collection && (
+                  <div className="detail-card">
+                    <div className="detail-card-icon"><Film size={20} /></div>
+                    <div className="detail-card-content">
+                      <div className="detail-card-label">Collection</div>
+                      <div className="detail-card-value">{itemInfo.belongs_to_collection.name}</div>
+                    </div>
+                  </div>
+                )}
+                {renderDetailCard(<BarChart3 size={20} />, 'Status', itemInfo.status)}
+              </div>
+
+              {/* Level 6: Technical Section */}
+              <div className="details-group">
+                {renderSectionHeader('Technical')}
+                {itemInfo.original_language && renderDetailCard(<Languages size={20} />, 'Original Language', itemInfo.original_language.toUpperCase(), false, true)}
+                {itemInfo.spoken_languages?.length > 0 && 
+                  renderDetailCard(<Languages size={20} />, 'Spoken Languages', itemInfo.spoken_languages.map((lang) => lang.name || lang.english_name || lang.iso_639_1).join(', '))}
+                {itemInfo.adult !== undefined && renderDetailCard(
+                  itemInfo.adult ? <XCircle size={20} /> : <CheckCircle size={20} />, 
+                  'Adult Content', 
+                  itemInfo.adult ? 'Yes' : 'No',
+                  false,
+                  true
+                )}
+              </div>
+
+              {/* Level 7: Links Row */}
+              {renderLinksCard(movieLinks)}
+            </div>
+          </div>
+        );
+      case 'shows':
+        // Prepare primary stats
+        const showPrimaryStats = [
+          { value: itemInfo.vote_average ? `${itemInfo.vote_average.toFixed(1)}/10` : null, label: 'Rating' },
+          { value: itemInfo.number_of_seasons ? `${itemInfo.number_of_seasons}` : null, label: 'Seasons' },
+          { value: itemInfo.number_of_episodes ? `${itemInfo.number_of_episodes}` : null, label: 'Episodes' },
+          { value: itemInfo.episode_run_time?.[0] ? `${itemInfo.episode_run_time[0]} min` : null, label: 'Runtime' }
+        ];
+
+        // Prepare links
+        const showLinks = [
+          itemInfo.external_ids?.imdb_id ? { 
+            url: `https://www.imdb.com/title/${itemInfo.external_ids.imdb_id}`, 
+            label: 'IMDb', 
+            icon: <ExternalLink size={18} /> 
+          } : null,
+          itemInfo.external_ids?.tvdb_id ? { 
+            url: `https://www.thetvdb.com/series/${itemInfo.external_ids.tvdb_id}`, 
+            label: 'TVDB', 
+            icon: <ExternalLink size={18} /> 
+          } : null,
+          itemInfo.homepage ? { 
+            url: itemInfo.homepage, 
+            label: 'Homepage', 
+            icon: <Home size={18} /> 
+          } : null,
+          itemInfo.external_ids?.wikidata_id ? { 
+            url: `https://www.wikidata.org/wiki/${itemInfo.external_ids.wikidata_id}`, 
+            label: 'Wikidata', 
+            icon: <ExternalLink size={18} /> 
+          } : null,
+          itemInfo.external_ids?.facebook_id ? { 
+            url: `https://www.facebook.com/${itemInfo.external_ids.facebook_id}`, 
+            label: 'Facebook', 
+            icon: <LinkIcon size={18} /> 
+          } : null,
+          itemInfo.external_ids?.instagram_id ? { 
+            url: `https://www.instagram.com/${itemInfo.external_ids.instagram_id}`, 
+            label: 'Instagram', 
+            icon: <LinkIcon size={18} /> 
+          } : null,
+          itemInfo.external_ids?.twitter_id ? { 
+            url: `https://twitter.com/${itemInfo.external_ids.twitter_id}`, 
+            label: 'Twitter', 
+            icon: <LinkIcon size={18} /> 
+          } : null
+        ].filter(Boolean);
+
+        return (
+          <div className="details-container">
+            <div className="details-header">
+              <h2>About</h2>
+            </div>
+            <div className="details-grid">
+              {/* Level 1: Overview Hero */}
+              {overview && (
+                <div className="detail-card full-width description-card">
+                  <div className="detail-card-content">
+                    <div className="detail-card-label">Overview</div>
+                    <div className="detail-card-value description-text">{overview}</div>
+                  </div>
+                </div>
+              )}
+
+              {/* Level 2: Primary Row - Title + Stats */}
+              {renderDetailCard(<Tv size={20} />, 'Title', title, true)}
+              {renderDetailCard(<Globe size={20} />, 'Original Name', itemInfo.original_name)}
+              {renderStatsBadges(showPrimaryStats)}
+
+              {/* Level 3: Tagline & Genres */}
+              {itemInfo.tagline && (
+                <div className="detail-card full-width highlight">
+                  <div className="detail-card-content">
+                    <div className="detail-card-label">Tagline</div>
+                    <div className="detail-card-value tagline-text">{itemInfo.tagline}</div>
+                  </div>
+                </div>
+              )}
+              {renderGenreBadges(itemInfo.genres)}
+
+              {/* Level 4: Dates Section */}
+              <div className="details-group">
+                {renderSectionHeader('Dates & Schedule')}
+                {renderDetailCard(<Calendar size={20} />, 'First Air Date', itemInfo.first_air_date)}
+                {itemInfo.last_air_date && renderDetailCard(<Calendar size={20} />, 'Last Air Date', itemInfo.last_air_date)}
+                {itemInfo.last_episode_to_air && (
+                  <div className="detail-card">
+                    <div className="detail-card-icon"><CalendarDays size={20} /></div>
+                    <div className="detail-card-content">
+                      <div className="detail-card-label">Last Episode Aired</div>
+                      <div className="detail-card-value">
+                        {itemInfo.last_episode_to_air.name} 
+                        <span className="episode-number"> (S{itemInfo.last_episode_to_air.season_number}E{itemInfo.last_episode_to_air.episode_number})</span>
+                        {itemInfo.last_episode_to_air.air_date && ` - ${itemInfo.last_episode_to_air.air_date}`}
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {itemInfo.last_episode_to_air?.runtime && renderDetailCard(<Clock3 size={20} />, 'Last Episode Runtime', `${itemInfo.last_episode_to_air.runtime} min`, false, true)}
+                {/* Featured Next Episode - separate row */}
+                {renderNextEpisodeFeatured(itemInfo.next_episode_to_air)}
+              </div>
+
+              {/* Level 5: Production Section */}
+              <div className="details-group">
+                {renderSectionHeader('Production')}
+                {itemInfo.networks?.length > 0 && renderDetailCard(<Building2 size={20} />, 'Networks', itemInfo.networks.map((network) => network.name).join(', '))}
+                {itemInfo.production_companies?.length > 0 && 
+                  renderDetailCard(<Building2 size={20} />, 'Production Companies', itemInfo.production_companies.map((company) => company.name).join(', '))}
+                {itemInfo.created_by?.length > 0 && (
+                  <div className="detail-card">
+                    <div className="detail-card-icon"><Users size={20} /></div>
+                    <div className="detail-card-content">
+                      <div className="detail-card-label">Created By</div>
+                      <div className="detail-card-value">{itemInfo.created_by.map((creator) => creator.name).join(', ')}</div>
+                    </div>
+                  </div>
+                )}
+                {itemInfo.type && renderDetailCard(<Info size={20} />, 'Type', itemInfo.type)}
+                {itemInfo.in_production !== undefined && renderDetailCard(
+                  itemInfo.in_production ? <CheckCircle size={20} /> : <XCircle size={20} />, 
+                  'In Production', 
+                  itemInfo.in_production ? 'Yes' : 'No',
+                  false,
+                  true
+                )}
+                {renderDetailCard(<BarChart3 size={20} />, 'Status', itemInfo.status)}
+              </div>
+
+              {/* Level 6: Technical Section */}
+              <div className="details-group">
+                {renderSectionHeader('Technical')}
+                {itemInfo.origin_country?.length > 0 && 
+                  renderDetailCard(<MapPin size={20} />, 'Origin Country', itemInfo.origin_country.join(', '))}
+                {itemInfo.production_countries?.length > 0 && 
+                  renderDetailCard(<MapPin size={20} />, 'Production Countries', itemInfo.production_countries.map((country) => country.name).join(', '))}
+                {itemInfo.original_language && renderDetailCard(<Languages size={20} />, 'Original Language', itemInfo.original_language.toUpperCase(), false, true)}
+                {itemInfo.spoken_languages?.length > 0 && 
+                  renderDetailCard(<Languages size={20} />, 'Spoken Languages', itemInfo.spoken_languages.map((lang) => lang.name || lang.english_name || lang.iso_639_1).join(', '))}
+                {itemInfo.languages?.length > 0 && renderDetailCard(<Languages size={20} />, 'Languages', itemInfo.languages.join(', '), false, true)}
+                {itemInfo.vote_count && renderDetailCard(<Eye size={20} />, 'Vote Count', itemInfo.vote_count.toLocaleString(), false, true)}
+                {itemInfo.popularity && renderDetailCard(<TrendingUp size={20} />, 'Popularity', itemInfo.popularity.toFixed(2), false, true)}
+                {itemInfo.adult !== undefined && renderDetailCard(
+                  itemInfo.adult ? <XCircle size={20} /> : <CheckCircle size={20} />, 
+                  'Adult Content', 
+                  itemInfo.adult ? 'Yes' : 'No',
+                  false,
+                  true
+                )}
+              </div>
+
+              {/* Level 7: Links Row */}
+              {renderLinksCard(showLinks)}
+            </div>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div id={'infoPage'}>
+      <StarryBackground />
+      <Header
+        onSearchClick={() => {
+          setIsSearchVisible(!isSearchVisible);
+          toggleSearchBar();
+        }}
+      />
+      <div className="info-page">
+        {isSearchVisible && <SearchBar activeTab={contextActiveTab} />}
+        
+        {/* Netflix-Style Hero Section */}
+        <div className="netflix-hero">
+          {/* Background: poster/trailer → preview video when ready */}
+          <div className="hero-background">
+            {usingTorrent && torrentStreamUrl && !showVideoModal ? (
+              <video
+                src={torrentStreamUrl}
+                muted
+                loop
+                autoPlay
+                className="hero-background-video"
+              />
+            ) : (
+              <img src={backdropUrl} alt={title} className="hero-background-image" />
+            )}
+          </div>
+          
+          {/* Gradient Overlay */}
+          <div className="hero-gradient-overlay" />
+          
+          {/* Left Content: Title, Meta, Overview, Buttons */}
+          <div className="hero-content-left">
+            <h1 
+              className="hero-title"
+              style={{
+                fontSize: title.length > 60 
+                  ? `${Math.max(2, 4 - (title.length - 60) * 0.05)}rem`
+                  : title.length > 40
+                  ? `${Math.max(2.5, 4 - (title.length - 40) * 0.03)}rem`
+                  : '4rem'
+              }}
+            >
+              {title}
+            </h1>
+            <div className="hero-meta">
+              {year && <span>{year}</span>}
+              {year && rating && <span className="meta-separator">|</span>}
+              {rating && <span>{rating}</span>}
+              {(year || rating) && runtime && <span className="meta-separator">|</span>}
+              {runtime && <span>{runtime}</span>}
+            </div>
+            {overview && (
+              <p className="hero-overview">
+                {overview.length > 200 ? `${overview.slice(0, 200)}...` : overview}
+              </p>
+            )}
+            
+            <div className="hero-actions">
+              <button className="btn-watch" onClick={handleWatchFromBeginning}>
+                <Play size={20} />
+                Watch Now
+              </button>
+              {watchedItem && itemInfo.type !== 'movies' && (
+                <button className="btn-continue" onClick={handleContinue}>
+                  Continue S{watchedItem.season}E{watchedItem.episode}
+                </button>
+              )}
+            </div>
+          </div>
+          
+          {/* Right Side: Rich Episode Cards WITH Thumbnails (shows/anime only) */}
+          {itemInfo.type !== 'movies' && (
+            <div className="hero-episode-panel" ref={heroEpisodePanelRef}>
+              <div className="episode-panel-header">
+                {itemInfo.type === 'anime' ? (
+                  <div className="season-text">
+                    Season {itemInfo.season || selectedSeason?.season_number || 1}
+                  </div>
+                ) : (
+                  <select
+                    value={selectedSeason?.season_number || 1}
+                    onChange={(e) =>
+                      handleSeasonChange(
+                        itemInfo.seasons.find(
+                          (season) => season.season_number === parseInt(e.target.value)
+                        )
+                      )
+                    }
+                    className="episode-panel-season-select"
+                  >
+                    {itemInfo.seasons?.map((season) => (
+                      <option key={season.id} value={season.season_number}>
+                        {season.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+              <div className="episode-cards-scroll">
+                {episodesWithThumbnails.map((ep) => (
+                  <div
+                    key={ep.episode_number}
+                    className={`episode-card ${ep.episode_number === effectiveSelectedEpisode?.episode_number ? 'active' : ''}`}
+                    onClick={() => handleEpisodeChange({ episode_number: ep.episode_number }, true)}
+                  >
+                    {ep.thumbnail_url && (
+                      <img 
+                        src={ep.thumbnail_url} 
+                        alt={ep.name || `Episode ${ep.episode_number}`}
+                        className="episode-card-thumbnail"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                        }}
+                      />
+                    )}
+                    <div className="episode-card-info">
+                      <span className="ep-number">{ep.episode_number}</span>
+                      <span className="ep-name">{ep.name || `Episode ${ep.episode_number}`}</span>
+                      {ep.runtime && <span className="ep-runtime">{ep.runtime}m</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {/* Tabs Overlaid on Hero Bottom */}
+          <div className="hero-tabs">
+            <button
+              className={`tab ${infoPageTab === 'details' ? 'active' : ''}`}
+              onClick={() => setInfoPageTab('details')}
+            >
+              Details
+            </button>
+            {itemInfo.type !== 'movies' && (
+              <button
+                className={`tab ${infoPageTab === 'episodes' ? 'active' : ''}`}
+                onClick={() => setInfoPageTab('episodes')}
+              >
+                Episodes
+              </button>
+            )}
+          </div>
+        </div>
+        
+        {/* Tab Content Section (Below Hero) */}
+        <div className="tab-content-section">
+          {infoPageTab === 'episodes' && itemInfo.type !== 'movies' && (
+            <div className="tab-episodes">
+              <div id="tab-episode-grid" ref={sideContentRef}>
+                <div className="tab-episode-header">
+                  {itemInfo.type === 'anime' ? (
+                    <div className="season-text">
+                      Season {itemInfo.season || selectedSeason?.season_number || 1}
+                    </div>
+                  ) : (
+                    <select
+                      value={selectedSeason?.season_number || 1}
+                      onChange={(e) =>
+                        handleSeasonChange(
+                          itemInfo.seasons.find(
+                            (season) => season.season_number === parseInt(e.target.value)
+                          )
+                        )
+                      }
+                      className="tab-season-select"
+                    >
+                      {itemInfo.seasons?.map((season) => (
+                        <option key={season.id} value={season.season_number}>
+                          {season.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+                <div className="tab-episode-cards">
+                  {episodesWithThumbnails.map((ep) => (
+                    <div
+                      key={ep.episode_number}
+                      className={`tab-episode-card ${ep.episode_number === effectiveSelectedEpisode?.episode_number ? 'active' : ''}`}
+                      onClick={() => handleEpisodeChange({ episode_number: ep.episode_number }, true)}
+                    >
+                      <div className="tab-episode-thumbnail-wrapper">
+                        {ep.thumbnail_url ? (
+                          <img 
+                            src={ep.thumbnail_url} 
+                            alt={ep.name || `Episode ${ep.episode_number}`}
+                            className="tab-episode-thumbnail"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.nextElementSibling.style.display = 'flex';
+                            }}
+                          />
+                        ) : null}
+                        <div className="tab-episode-placeholder" style={{ display: ep.thumbnail_url ? 'none' : 'flex' }}>
+                          <span className="placeholder-ep-num">{ep.episode_number}</span>
+                        </div>
+                        <div className="tab-episode-overlay">
+                          <span className="play-icon">▶</span>
+                        </div>
+                      </div>
+                      <div className="tab-episode-info">
+                        <div className="tab-episode-title">
+                          <span className="tab-ep-number">E{ep.episode_number}</span>
+                          <span className="tab-ep-name">{ep.name || `Episode ${ep.episode_number}`}</span>
+                        </div>
+                        {ep.runtime && <span className="tab-ep-runtime">{ep.runtime} min</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {infoPageTab === 'details' && (
+            <div className="tab-details">
+              {renderSubInfo()}
+            </div>
+          )}
+        </div>
+        
+        {/* Recommendations */}
+        {itemInfo.recommendations && itemInfo.recommendations.length > 0 && (
+          <VideoCardGrid
+            contentType={itemInfo.type}
+            title="Recommended For You"
+            customItems={itemInfo.recommendations}
+          />
+        )}
+        
+        <Footer />
+      </div>
+
+      {/* VideoPlayer Modal - Full-screen Netflix-style player */}
+      {showVideoModal && (
+        <VideoModal
+          isOpen={showVideoModal}
+          onClose={() => setShowVideoModal(false)}
+          title={title}
+          useAdFreePlayer={useAdFreePlayer}
+          onPlayerTypeChange={setUseAdFreePlayer}
+          torrentStreamUrl={torrentStreamUrl}
+          videoSrc={videoSrc}
+        >
+          <div className="modal-layout">
+            {/* Player Area and Sidebar */}
+            <div className="modal-player-wrapper">
+              <div className="modal-player">
+                {useAdFreePlayer && torrentStreamUrl ? (
+                  <VideoPlayer
+                    src={torrentStreamUrl}
+                    title={title}
+                    onClose={() => setShowVideoModal(false)}
+                    torrentHash={activeHash}
+                    fileIndex={activeFileIndex}
+                    initialTime={videoPlayerProgress}
+                    isDebridStream={isDebridStream}
+                    isMovie={itemInfo.type === 'movies'}
+                    torrentSubtitles={torrentSubtitles}
+                    // NEW: Video source selection
+                    alternativeSources={alternativeTorrents}
+                    currentSourceName={currentSourceName}
+                    onSourceChange={handleSourceChange}
+                  />
+                ) : (
+                  <iframe
+                    src={videoSrc}
+                    allowFullScreen
+                    className="modal-iframe"
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  />
+                )}
+              </div>
+              
+              {/* Episode Sidebar (for shows/anime) */}
+              {itemInfo.type !== 'movies' && (
+                <div id="modal-episode-list" className="modal-episode-sidebar">
+                  <div className="modal-episode-header">
+                    {itemInfo.type === 'anime' ? (
+                      <div className="modal-season-text">
+                        Season {itemInfo.season || selectedSeason?.season_number || 1}
+                      </div>
+                    ) : (
+                      <select
+                        value={selectedSeason?.season_number || 1}
+                        onChange={(e) =>
+                          handleSeasonChange(
+                            itemInfo.seasons.find(
+                              (season) => season.season_number === parseInt(e.target.value)
+                            )
+                          )
+                        }
+                        className="modal-season-select"
+                      >
+                        {itemInfo.seasons?.map((season) => (
+                          <option key={season.id} value={season.season_number}>
+                            {season.name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                  <div className="modal-episode-cards">
+                    {episodesWithThumbnails.map((ep) => (
+                      <div
+                        key={ep.episode_number}
+                        className={`modal-ep-card ${ep.episode_number === effectiveSelectedEpisode?.episode_number ? 'active' : ''}`}
+                        onClick={() => handleEpisodeChange({ episode_number: ep.episode_number })}
+                      >
+                        {ep.thumbnail_url && (
+                          <img 
+                            src={ep.thumbnail_url} 
+                            alt={ep.name || `Episode ${ep.episode_number}`}
+                            className="modal-ep-thumbnail"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                            }}
+                          />
+                        )}
+                        <div className="modal-ep-info">
+                          <span className="modal-ep-number">{ep.episode_number}</span>
+                          <span className="modal-ep-name">{ep.name || `Episode ${ep.episode_number}`}</span>
+                          {ep.runtime && <span className="modal-ep-runtime">{ep.runtime}m</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </VideoModal>
+      )}
+    </div>
+  );
 };
 export default InfoPage;

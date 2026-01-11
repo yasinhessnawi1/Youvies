@@ -1,18 +1,24 @@
-import React, { useContext, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import {
   FaCheckCircle,
   FaRegCircle,
   FaStar,
 } from 'react-icons/fa';
-import { UserContext } from '../contexts/UserContext';
+import { useAuth } from '../contexts/AuthContext';
 import '../styles/components/ItemCard.css';
 import { getTitle } from '../utils/helper';
 import { Link } from 'react-router-dom';
 
 const ItemCard = React.memo(({ item }) => {
-  const { getWatchedItem } = useContext(UserContext);
+  const { watchedItems } = useAuth();
 
-  const isWatched = item && getWatchedItem(item.type,item.id, getTitle(item));
+  const isWatched = useMemo(() => {
+    if (!item || !watchedItems) return false;
+    return watchedItems.some(watched =>
+      watched.tmdb_id === parseInt(item.id) &&
+      watched.content_type === item.type
+    );
+  }, [item, watchedItems]);
 
 
   const { title, rating, imageUrl } = useMemo(() => {
@@ -20,24 +26,24 @@ const ItemCard = React.memo(({ item }) => {
     let imagePath = '';
     let itemTitle = '';
 
-    if (['movies', 'shows'].includes(item.type)) {
-      itemTitle = item.name || item.title || 'Title not found'; // Ensure it's a string
+    if (item.type === 'anime') {
+      // Handle anime data from AniList API
+      // title can be an object with {romaji, english, native, userPreferred}
+      if (typeof item.title === 'object' && item.title !== null) {
+        itemTitle = item.title.english || item.title.userPreferred || item.title.romaji || 'Title not found';
+      } else {
+        itemTitle = item.title || item.name || 'Title not found';
+      }
+      // Anime rating is 0-100, convert to 0-10
+      ratingValue = item.rating ? item.rating / 10 : 0;
+      imagePath = item.image || item.cover || null;
+    } else if (['movies', 'shows'].includes(item.type)) {
+      // Handle TMDB data
+      itemTitle = item.name || item.title || 'Title not found';
       ratingValue = item.vote_average || 0;
       imagePath = item.poster_path
         ? `https://image.tmdb.org/t/p/original${item.poster_path}`
-        : `https://via.placeholder.com/300x450?text=No+Image`;
-    } else if (item.type === 'anime') {
-      itemTitle =
-        item.title.userPreferred ||
-        item.title.romaji ||
-        item.title.english ||
-        item.title.native ||
-        'Unknown Title';
-      ratingValue = item.rating / 10 || 0;
-      imagePath =
-        item.image ||
-        item.cover ||
-        `https://via.placeholder.com/300x450?text=No+Image`;
+        : null;
     }
 
     return {
@@ -50,21 +56,25 @@ const ItemCard = React.memo(({ item }) => {
     item.vote_average,
     item.poster_path,
     item.rating,
-    item.image,
-    item.cover,
     item.type,
     item.title,
+    item.image,
   ]);
+
+  // Fallback gradient for missing images
+  const fallbackStyle = {
+    background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
+  };
 
   return (
     <Link
-      to={`/info/${item.id}/${item.type}`}
+      to={`/info/${item.type}/${item.id}`}
       style={{ textDecoration: 'none' }}
     >
       <div className='item-card'>
         <div
           className='item-image'
-          style={{ backgroundImage: `url(${imageUrl})` }}
+          style={imageUrl ? { backgroundImage: `url(${imageUrl})` } : fallbackStyle}
         >
           <div className='watched-icon'>
             {isWatched ? <FaCheckCircle color='green' /> : <FaRegCircle />}
@@ -79,6 +89,7 @@ const ItemCard = React.memo(({ item }) => {
                 color={index < rating / 2 ? 'gold' : 'grey'}
               />
             ))}
+            {rating}
           </div>
         </div>
       </div>

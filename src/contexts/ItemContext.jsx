@@ -6,12 +6,13 @@ import React, {
   useRef,
   useCallback,
 } from 'react';
-import { fetchItems, fetchItemsByGenre, fetchOneItem } from '../api/ItemsApi';
+import { fetchItems, fetchItemsByGenre, fetchOneItem, fetchCarouselItems } from '../api/ItemsApi';
 import {
   fetchRecommendations,
   fetchTvSeasonDetails,
 } from '../api/MediaService';
-import { UserContext } from './UserContext';
+import { useAuth } from './AuthContext';
+import { getAggregatedRecommendations, getFallbackRecommendations } from '../services/recommendationService';
 
 const ItemContext = createContext();
 const CACHE_DURATION = 1000 * 60 * 10; // 10 min
@@ -24,81 +25,8 @@ export const ItemProvider = ({ children }) => {
   const [pageTracker, setPageTracker] = useState({});
   const [cacheTime, setCacheTime] = useState(Date.now());
   const [itemsCache, setItemsCache] = useState({});
-  const [watchedItems, setWatchedItems] = useState([]);
-  const {user , addToWatchedList, updateUser} = useContext(UserContext);
-
-  const previousUserWatchedRef = useRef(user?.user?.watched);
+  const { watchedItems } = useAuth();
   const hasFetched = useRef({});
-
-  const fetchWatchedItems = useCallback(
-    async (userWatchedList) => {
-      if (!userWatchedList) return;
-
-      const newFetchedItems = [];
-      for (let i = userWatchedList.length - 1; i >= 0; i--) {
-        if (!userWatchedList[i]) continue;
-        let [type, id, title, season, episode, poster, rating, extra] = userWatchedList[i].split(':');
-
-        // Validate the item before fetching
-        if (!type || !id || !title || isNaN(id)) {
-          console.warn(`Invalid watched item: ${userWatchedList[i]}`);
-          userWatchedList.splice(i, 1);
-          continue;
-        } else if (extra) {
-          poster = poster + ':'+rating;
-          rating = extra;
-        }
-        else if (!poster || !rating || isNaN(rating)) {
-          console.warn(`Invalid watched item: ${userWatchedList[i]}`);
-          const item = await fetchOneItem(type, id);
-          if (!item) {
-            console.warn(`Invalid watched item: ${userWatchedList[i]}`);
-            continue;
-          }
-          poster = item.poster_path || item.image;
-          rating = item.vote_average || item.rating || 0.0;
-          userWatchedList[i] = `${type}:${id}:${title}:${season}:${episode}:${poster}:${rating}`;
-        }
-        let finalItem;
-        switch (type) {
-          case 'movies': finalItem = {
-            id,
-            title,
-            type,
-            poster_path: poster,
-            vote_average: rating,
-          };
-            break;
-          case 'shows': finalItem = {
-            id,
-            title,
-            type,
-            season,
-            episode,
-            poster_path: poster,
-            vote_average: rating,
-          };
-            break;
-          case 'anime': finalItem = {
-            id,
-            title: {english: title},
-            type,
-            season,
-            episode,
-            image: poster,
-            rating,
-          };
-            break;
-
-        }
-        newFetchedItems.push(finalItem);
-      }
-
-      setWatchedItems(newFetchedItems);
-      updateUser(userWatchedList);
-    },
-    [updateUser],
-  );
 
   useEffect(() => {
     const initializeItems = async () => {
@@ -116,14 +44,10 @@ export const ItemProvider = ({ children }) => {
         localStorage.removeItem('cachedItems');
         localStorage.removeItem('cacheTime');
       }
-
-      if (user && user.user.watched !== previousUserWatchedRef.current) {
-        await fetchWatchedItems(user.user.watched);
-      }
     };
 
     initializeItems();
-  }, [user, fetchWatchedItems]);
+  }, []);
 
   useEffect(() => {
     if (Object.keys(items).length > 0) {
@@ -174,15 +98,13 @@ export const ItemProvider = ({ children }) => {
 
     setIsLoading(true);
     try {
+      // Fetch trending items for banners (more visually appealing and current)
       const [movies, shows, anime] = await Promise.all([
-        fetchItems('movies', 1, 20),
-        fetchItems('shows', 1, 20),
-        fetchItems('anime', 1, 50),
+        fetchCarouselItems('movies', 'trending', 1, { timeWindow: 'week' }),
+        fetchCarouselItems('shows', 'trending', 1, { timeWindow: 'week' }),
+        fetchCarouselItems('anime', 'trending', 1),
       ]);
 
-      movies.forEach((item) => (item.type = 'movies'));
-      shows.forEach((item) => (item.type = 'shows'));
-      anime.forEach((item) => (item.type = 'anime'));
       const fetchedItems = {
         'movies-home': movies,
         'shows-home': shows,
@@ -209,7 +131,8 @@ export const ItemProvider = ({ children }) => {
       if (!hasFetched.current[itemKey]) {
         setIsLoading(true);
         try {
-          const genreItems = await fetchItemsByGenre(contentType, genre, 1, 20);
+          const genreItems = await fetchItemsByGenre(contentType, genre, 1);
+          console.log('genreItems:', itemKey);
           genreItems.forEach((item) => (item.type = contentType));
 
           setItems((prevItems) => ({
@@ -240,28 +163,24 @@ export const ItemProvider = ({ children }) => {
       setIsLoading(true);
       try {
         const item = await fetchOneItem(category, mediaId);
-        if (category === 'movies') {
-          item.recommendations = await fetchRecommendations(
-            mediaId,
-            'movies',
-          ).then((response) =>
-            response.map((movie) => ({ ...movie, type: 'movies' })),
-          );
-        } else if (category === 'shows') {
-          item.episodes = [];
-          item.recommendations = await fetchRecommendations(
-            mediaId,
-            'shows',
-          ).then((response) =>
-            response.map((show) => ({ ...show, type: 'shows' })),
-          );
-        } else if (category === 'anime') {
-          item.recommendations = item.recommendations.map((anime) => ({
-            ...anime,
-            type: 'anime',
-          }));
+        if (!item) {
+          console.error('Failed to fetch item details');
+          return null;
         }
 
+        if (category === 'movies') {
+          const response = await fetchRecommendations(mediaId, 'movies');
+          item.recommendations = (response || []).map((movie) => ({ ...movie, type: 'movies' }));
+        } else if (category === 'shows') {
+          const response = await fetchRecommendations(mediaId, 'shows');
+          item.recommendations = (response || []).map((show) => ({ ...show, type: 'shows' }));
+        } else if (category === 'anime') {
+          // Anime recommendations from AniList API are included in the anime details
+          // The fetchOneAnime response already includes recommendations
+          item.recommendations = Array.isArray(item.recommendations)
+            ? item.recommendations.map((anime) => ({ ...anime, type: 'anime' }))
+            : [];
+        }
         setItemsCache((prevCache) => ({
           ...prevCache,
           [cacheKey]: item,
@@ -306,6 +225,99 @@ export const ItemProvider = ({ children }) => {
     [itemsCache],
   );
 
+  const fetchCarouselList = useCallback(
+    async (category, listType, page = 1, extraParams = {}) => {
+      // Use consistent cache key without page for single-page carousels
+      const cacheKey = `${category}-${listType}`;
+      
+      // Check cache first
+      if (items[cacheKey] && items[cacheKey].length > 0) {
+        return items[cacheKey];
+      }
+
+      // Prevent duplicate concurrent requests
+      if (hasFetched.current[cacheKey] === 'fetching') {
+        // Wait a bit and check if data arrived
+        await new Promise(resolve => setTimeout(resolve, 100));
+        if (items[cacheKey] && items[cacheKey].length > 0) {
+          return items[cacheKey];
+        }
+        return [];
+      }
+      
+      hasFetched.current[cacheKey] = 'fetching';
+
+      try {
+        const carouselItems = await fetchCarouselItems(category, listType, page, extraParams);
+        
+        if (carouselItems && carouselItems.length > 0) {
+          setItems((prevItems) => ({
+            ...prevItems,
+            [cacheKey]: carouselItems,
+          }));
+          setCacheTime(Date.now());
+          hasFetched.current[cacheKey] = 'done';
+        } else {
+          hasFetched.current[cacheKey] = 'empty';
+        }
+        
+        return carouselItems || [];
+      } catch (error) {
+        console.error(`Error fetching carousel list ${category}/${listType}:`, error);
+        hasFetched.current[cacheKey] = 'error';
+        return [];
+      }
+    },
+    [items],
+  );
+
+  const fetchUserRecommendations = useCallback(
+    async (mediaType) => {
+      const cacheKey = `recommendations-${mediaType}`;
+      
+      // Check cache first
+      if (items[cacheKey]) {
+        return items[cacheKey];
+      }
+
+      setIsLoading(true);
+      try {
+        let recommendations = [];
+        
+        // Get recommendations from watched items
+        if (watchedItems && watchedItems.length > 0) {
+          recommendations = await getAggregatedRecommendations(watchedItems, mediaType);
+        }
+        
+        // If no recommendations, use fallback
+        if (recommendations.length === 0) {
+          recommendations = await getFallbackRecommendations(mediaType);
+        }
+        
+        setItems((prevItems) => ({
+          ...prevItems,
+          [cacheKey]: recommendations,
+        }));
+        
+        setCacheTime(Date.now());
+        return recommendations;
+      } catch (error) {
+        console.error(`Error fetching user recommendations for ${mediaType}:`, error);
+        // Try fallback on error
+        try {
+          const fallback = await getFallbackRecommendations(mediaType);
+          return fallback;
+        } catch (fallbackError) {
+          console.error(`Error fetching fallback recommendations:`, fallbackError);
+          return [];
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [items, watchedItems],
+  );
+
   const value = {
     items,
     genres,
@@ -314,12 +326,13 @@ export const ItemProvider = ({ children }) => {
     setGenres,
     isLoading,
     watchedItems,
-    setWatchedItems,
     fetchAllItems,
     fetchGenreItems,
     fetchMoreItems,
     fetchMediaInfo,
     fetchSeasonEpisodes,
+    fetchCarouselList,
+    fetchUserRecommendations,
     itemsCache,
     setItemsCache,
   };

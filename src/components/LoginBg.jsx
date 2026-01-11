@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import GridMotion from './GridMotion';
-import { useItemContext } from '../contexts/ItemContext';
 import { fetchItems } from '../api/ItemsApi';
 
 const ItemsGrid = () => {
@@ -18,7 +17,7 @@ const ItemsGrid = () => {
       if (!itemsCache['login-items'] && !isLoading) {
         setIsLoading(true);
         const [movies, anime] = await Promise.all([
-          fetchItems('anime', 1, 7),
+          fetchItems('anime', 1),
           fetchItems('movies', 1),
         ]);
 
@@ -54,7 +53,7 @@ const ItemsGrid = () => {
       const imageUrl =
         item.backdrop_path || item.poster_path
           ? `https://image.tmdb.org/t/p/original${item.backdrop_path || item.poster_path}`
-          : item.cover || item.image;
+          : null;
 
       if (imageUrl) {
         formattedItems.push(imageUrl);
@@ -63,12 +62,10 @@ const ItemsGrid = () => {
 
     // Ensure the array has exactly 28 items
     const totalItems = 28;
-    const combinedWithCustomContent = fillArrayToLength(
+    return fillArrayToLength(
       formattedItems,
       totalItems,
     );
-
-    return combinedWithCustomContent;
   };
 
   const fillArrayToLength = (items, length) => {

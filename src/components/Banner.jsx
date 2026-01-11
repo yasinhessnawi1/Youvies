@@ -4,7 +4,7 @@ import { useItemContext } from '../contexts/ItemContext';
 import Button from './Button';
 import leftArrow from '../utils/left-arrow.png';
 import rightArrow from '../utils/right-arrow.png';
-import {getTitle} from "../utils/helper"; // For navigation icons
+import {getTitle, cleanHtmlTags} from "../utils/helper"; // For navigation icons
 
 const Banner = ({ contentType }) => {
   const { items, isLoading, fetchAllItems } = useItemContext();
@@ -78,25 +78,21 @@ const Banner = ({ contentType }) => {
   };
 
   const getImageUrl = (item) => {
-    if (!item) return 'https://via.placeholder.com/300x450?text=Loading...';
-    switch (item.type) {
-      case 'movies':
-      case 'shows':
-        return item.backdrop_path
+    if (!item) return null;
+    // Handle anime images (from AniList API)
+    if (item.type === 'anime') {
+      return item.cover || item.image || null;
+    }
+    // Handle TMDB images
+    return item.backdrop_path
             ? `https://image.tmdb.org/t/p/original${item.backdrop_path}`
             : item.poster_path
                 ? `https://image.tmdb.org/t/p/original${item.poster_path}`
-                : `https://via.placeholder.com/300x450?text=Loading...`;
-      case 'anime':
-        return item.cover ||
-            item.image ||
-            'https://via.placeholder.com/300x450?text=Image+Not+Found.';
-      default:
-        return 'https://via.placeholder.com/300x450?text=Image+Not+Found.';
-    }
+                : null;
   };
 
   const imageUrl = getImageUrl(currentItem);
+  const fallbackBackground = 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)';
 
   return (
       <div
@@ -108,7 +104,7 @@ const Banner = ({ contentType }) => {
         <div
             className='banner-background fade-in'
             style={{
-              backgroundImage: `url(${imageUrl})`,
+              backgroundImage: imageUrl ? `url(${imageUrl})` : fallbackBackground,
               zIndex: 1,
             }}
         ></div>
@@ -118,7 +114,9 @@ const Banner = ({ contentType }) => {
             <div
                 className='banner-background fade-out'
                 style={{
-                  backgroundImage: `url(${getImageUrl(items[itemKey][prevIndex])})`,
+                  backgroundImage: getImageUrl(items[itemKey]?.[prevIndex]) 
+                    ? `url(${getImageUrl(items[itemKey][prevIndex])})` 
+                    : fallbackBackground,
                   zIndex: 0,
                 }}
                 onAnimationEnd={() => setPrevIndex(null)}
@@ -132,20 +130,23 @@ const Banner = ({ contentType }) => {
         <div className='banner-content'>
           <h1 className='banner-title'>{getTitle(currentItem)}</h1>
           <p className='banner-description'>
-            {showFullDescription
-                ? currentItem.overview ||
-                currentItem.description ||
-                'Description loading...'
-                : (
-                    currentItem.overview ||
-                    currentItem.description ||
-                    'Description loading ...'
-                ).slice(0, 120)}
-            {currentItem.overview && currentItem.overview.length > 120 && (
-                <span onClick={handleReadMore} className='read-more'>
-              {showFullDescription ? ' Show Less' : '... Read More'}
-            </span>
-            )}
+            {(() => {
+              const description = currentItem.overview || currentItem.description || '';
+              const cleanDesc = currentItem.type === 'anime' ? cleanHtmlTags(description) : description;
+              const displayText = showFullDescription ? cleanDesc : cleanDesc.slice(0, 120);
+              const originalLength = cleanDesc.length;
+              
+              return (
+                <>
+                  {displayText || 'Description loading...'}
+                  {originalLength > 120 && (
+                    <span onClick={handleReadMore} className='read-more'>
+                      {showFullDescription ? ' Show Less' : '... Read More'}
+                    </span>
+                  )}
+                </>
+              );
+            })()}
           </p>
           <div className='banner-actions'>
             <Button text='Info' category={currentItem.type} id={currentItem.id} />
@@ -161,8 +162,8 @@ const Banner = ({ contentType }) => {
         <div className='banner-preview'>
           {nextItems.map((item, index) => (
               <div key={index} className='preview-item'>
-                <img  src={getImageUrl(item)} alt={item.title || item.name || 'Next Item'} />
-                <span className='preview-title'>{getTitle(item) ||'Title'}</span>
+                <img  src={getImageUrl(item)} alt={getTitle(item) || 'Next Item'} />
+                <span className='preview-title'>{getTitle(item) || 'Title'}</span>
               </div>
           ))}
         </div>

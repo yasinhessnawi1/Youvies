@@ -11,8 +11,29 @@ const fetchFromTmdb = async (endpoint, params = {}, show = false) => {
   if (show) {
     url += '&append_to_response=seasons&append_to_response=external_ids';
   }
+
   const response = await fetch(url);
-  return handleApiErrors(response);
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      console.warn(`⚠️ TMDB API returned 404 for ${endpoint}`);
+      return null; // Return null for invalid TMDB IDs instead of throwing
+    }
+    console.warn('TMDB API returned an error:', response.status, response.statusText);
+    throw new Error(`TMDB API error: ${response.status} ${response.statusText}`);
+  }
+
+  const data = await response.json();
+
+  if (!data.results && !data.id && !data.name && !data.title) {
+    if (data) {
+      return data;
+    } else {
+      console.warn('TMDB API returned null or missing data');
+      return null;
+    }
+  }
+  return data.results || data;
 };
 
 // Functions for Movies
@@ -27,6 +48,18 @@ export const fetchNowPlayingMovies = async (page) => {
 
 export const fetchPopularMovies = async (page) => {
   return await fetchFromTmdb('/movie/popular', { page });
+};
+
+export const fetchTrendingMovies = async (timeWindow = 'week', page = 1) => {
+  return await fetchFromTmdb(`/trending/movie/${timeWindow}`, { page });
+};
+
+export const fetchTopRatedMovies = async (page = 1) => {
+  return await fetchFromTmdb('/movie/top_rated', { page });
+};
+
+export const fetchUpcomingMovies = async (page = 1) => {
+  return await fetchFromTmdb('/movie/upcoming', { page });
 };
 
 export const fetchMoviesByGenre = async (genreId, page = 1) => {
@@ -45,13 +78,33 @@ export const fetchShowDetails = async (seriesId) => {
   return data;
 };
 
-export const fetchAiringTodayShows = async (page) => {
-  return await fetchFromTmdb('/tv/airing_today', { page });
-};
+
 
 export const fetchPopularShows = async (page) => {
   return await fetchFromTmdb('/tv/popular', { page });
 };
+
+export const fetchTrendingShows = async (timeWindow = 'week', page = 1) => {
+  return await fetchFromTmdb(`/trending/tv/${timeWindow}`, { page });
+};
+
+export const fetchTopRatedShows = async (page = 1) => {
+  return await fetchFromTmdb('/tv/top_rated', { page });
+};
+
+export const fetchAiringTodayShows = async (page = 1) => {
+  return await fetchFromTmdb('/tv/airing_today', { page });
+};
+
+export const fetchOnTheAirShows = async (page = 1) => {
+  return await fetchFromTmdb('/tv/on_the_air', { page });
+};
+
+// Note: Anime is now fetched from AnimeShowApi.jsx using the AniList API
+// The TMDB anime fetch below is kept as a fallback but not used by default
+// export const fetchPopularAnime = async (page) => {
+//   return await fetchFromTmdb('/discover/tv', { page , sort_by : 'popularity.desc' , with_genres : '16,10759'});
+// };
 
 export const fetchShowsByGenre = async (genreId, page = 1) => {
   return await fetchFromTmdb('/discover/tv', {
@@ -104,8 +157,13 @@ export const fetchTvEpisodeDetails = async (
   );
 };
 
-// Functions for fetching recommendation for movies:
+// Functions for fetching recommendation for movies/shows
+// Note: Anime recommendations are handled separately in AnimeShowApi
 export const fetchRecommendations = async (movieId, type) => {
-  type = type === 'movies' ? 'movie' : 'tv';
-  return await fetchFromTmdb(`/${type}/${movieId}/recommendations`);
+  // Don't try TMDB for anime - it won't work since anime IDs are from AniList
+  if (type === 'anime') {
+    return [];  // Anime recommendations handled separately
+  }
+  const tmdbType = type === 'movies' ? 'movie' : 'tv';
+  return await fetchFromTmdb(`/${tmdbType}/${movieId}/recommendations`);
 };

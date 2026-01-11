@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom'; // Ensure you create this file a
 const Button = ({ text, onClick, title, id = '', category }) => {
   const navigate = useNavigate();
   if (text.toString().toLowerCase().includes('info')) {
-    onClick = () => navigate(`/info/${id}/${category}`);
+    onClick = () => navigate(`/info/${category}/${id}`);
   }
   return (
     <button type='button' className='btn' onClick={onClick} title={title}>

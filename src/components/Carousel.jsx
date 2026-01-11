@@ -4,6 +4,7 @@ import React, {
   forwardRef,
   useImperativeHandle,
   useCallback,
+  useMemo,
 } from 'react';
 import { useItemContext } from '../contexts/ItemContext';
 import ItemCard from './ItemCard';
@@ -24,6 +25,8 @@ const Carousel = forwardRef(
           title = '',
           isRelated,
           customItems = null,
+          listType = null,
+          extraParams,
         },
         ref
     ) => {
@@ -32,10 +35,16 @@ const Carousel = forwardRef(
         selectedGenre,
         setSelectedGenre,
         fetchGenreItems,
+        fetchCarouselList,
         isLoading,
       } = useItemContext();
 
       const [error, setError] = useState(null);
+      const [localLoading, setLocalLoading] = useState(false);
+      const [fetchAttempted, setFetchAttempted] = useState(false);
+
+      // Memoize extraParams to prevent infinite loops
+      const memoizedExtraParams = useMemo(() => extraParams || {}, [JSON.stringify(extraParams)]);
 
       // Show/Hide "Show All" overlay
       const [showAllOpen, setShowAllOpen] = useState(false);
@@ -53,8 +62,8 @@ const Carousel = forwardRef(
       const updateItemsPerPage = useCallback(() => {
         if (window.innerWidth > 1629) {
           setItemsPerPage(6);
-        }else if (window.innerWidth > 1400) {
-            setItemsPerPage(5);
+        } else if (window.innerWidth > 1400) {
+          setItemsPerPage(5);
         } else if (window.innerWidth > 1200) {
           setItemsPerPage(4);
         } else if (window.innerWidth > 938) {
@@ -80,49 +89,82 @@ const Carousel = forwardRef(
       }, [customItems]);
 
       // Determine the key for context items
-      const itemKey = isHomePage
+      const itemKey = listType
+          ? `${contentType}-${listType}`
+          : isHomePage
           ? `${contentType}-home`
           : `${contentType}-${selectedGenre}`;
 
       // Fetch initial items if no customItems
       useEffect(() => {
         const loadInitialItems = async () => {
-          if (!customItems && !items[itemKey]) {
+          if (customItems) return; // Don't fetch if custom items provided
+          
+          // Check if we already have items in context cache
+          if (items[itemKey] && items[itemKey].length > 0) {
+            setFetchAttempted(true);
+            return; // Already have data
+          }
+          
+          if (listType) {
+            // Fetch from specialized list endpoint
+            setLocalLoading(true);
+            try {
+              const result = await fetchCarouselList(contentType, listType, 1, memoizedExtraParams);
+              setFetchAttempted(true);
+            } catch (err) {
+              console.error(`Carousel fetch error for ${itemKey}:`, err);
+              setError('Failed to load items.');
+              setFetchAttempted(true);
+            } finally {
+              setLocalLoading(false);
+            }
+          } else if (selectedGenre) {
+            // Fetch from genre endpoint (existing behavior)
+            setLocalLoading(true);
             try {
               await fetchGenreItems(contentType, selectedGenre);
+              setFetchAttempted(true);
             } catch (err) {
+              console.error(`Carousel fetch error for ${itemKey}:`, err);
               setError('Failed to load items.');
+              setFetchAttempted(true);
+            } finally {
+              setLocalLoading(false);
             }
           }
         };
         loadInitialItems();
-      }, [
-        contentType,
-        selectedGenre,
-        fetchGenreItems,
-        itemKey,
-        isHomePage,
-        items,
-        customItems,
-      ]);
+        // Only depend on itemKey and the fetch functions, not items object
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, [itemKey, listType, selectedGenre, contentType]);
 
       // Final array of items to show in the carousel
       const allItems = customItems || items[itemKey] || [];
-
+      
+      // Don't render if:
+      // - No items AND fetch was attempted AND not loading (empty result)
+      // - Unless it's a custom items carousel (always render those)
+      const shouldRender = customItems !== null || 
+                          allItems.length > 0 || 
+                          localLoading || 
+                          isLoading || 
+                          !fetchAttempted;
+      
       // The function that decides which items are visible
       const getVisibleItems = () => {
         return allItems.slice(currentIndex, currentIndex + itemsPerPage);
       };
 
-      // Next/prev “page” logic
+      // Next/prev "page" logic
       const nextPage = (e) => {
         e.preventDefault();
         e.stopPropagation();
-        // If there's more items ahead
         if (currentIndex + itemsPerPage < allItems.length) {
           setCurrentIndex(currentIndex + itemsPerPage);
         }
       };
+      
       const prevPage = (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -130,6 +172,11 @@ const Carousel = forwardRef(
           setCurrentIndex(currentIndex - itemsPerPage);
         }
       };
+
+      // Don't render empty carousels (except while loading)
+      if (!shouldRender) {
+        return null;
+      }
 
       return (
           <>
@@ -144,8 +191,8 @@ const Carousel = forwardRef(
                         (isHomePage
                             ? `${contentType} Home`
                             : genres
-                                .find((g) => g.id === selectedGenre)
-                                ?.name.toUpperCase())
+                                ?.find((g) => g.id === selectedGenre)
+                                ?.name?.toUpperCase())
                     }
                     onClose={() => setShowAllOpen(false)}
                 />
@@ -158,7 +205,7 @@ const Carousel = forwardRef(
                     title ||
                     (isHomePage
                         ? `${contentType} Carousel`
-                        : `${genres.find((g) => g.id === selectedGenre)?.name} Carousel`)
+                        : `${genres?.find((g) => g.id === selectedGenre)?.name} Carousel`)
                 }
                 role="region"
             >
@@ -176,12 +223,12 @@ const Carousel = forwardRef(
                           (isHomePage
                               ? `${contentType} Home`
                               : genres
-                                  .find((g) => g.id === selectedGenre)
-                                  ?.name.toUpperCase())}
+                                  ?.find((g) => g.id === selectedGenre)
+                                  ?.name?.toUpperCase())}
                     </h4>
                   </div>
-                  {/* Genre dropdown (optional) */}
-                  {!isHomePage && genres && genres.length > 1 && !customItems && (
+                  {/* Genre dropdown (optional) - only show if not using listType and not customItems */}
+                  {!isHomePage && !listType && genres && genres.length > 1 && !customItems && (
                       <div className="dropdown">
                         <button
                             type="button"
@@ -200,8 +247,8 @@ const Carousel = forwardRef(
                                   }}
                                   title={`Select ${genre.name}`}
                               >
-                        {genre.name}
-                      </span>
+                                {genre.name}
+                              </span>
                           ))}
                         </div>
                       </div>
@@ -211,29 +258,33 @@ const Carousel = forwardRef(
                 {/* "Show All" button if there are more items than we can show in one page */}
                 {allItems.length > itemsPerPage && (
                     <div className="show-all-button">
-                    <Button
-                        text={"Show All"}
-                        onClick={() => setShowAllOpen(true)}
-                    >
-                    </Button>
+                      <Button
+                          text={"Show All"}
+                          onClick={() => setShowAllOpen(true)}
+                      />
                     </div>
                 )}
               </div>
 
               {/* Carousel Section */}
               <div className="carousel-container">
+                {/* Show loading indicator while fetching */}
+                {(localLoading || isLoading) && allItems.length === 0 && (
+                    <div className="carousel-loading">
+                      <LoadingIndicator />
+                    </div>
+                )}
+                
                 {getVisibleItems().length > 0 && (
                     <div className="carousel-inner-container">
-                      {/* Prev button if not on first page */}
-
-                          <button
-                              className="carousel-button left"
-                              onClick={prevPage}
-                              aria-label="Scroll Left"
-                          >
-                            <img src={leftArrow} alt="Right Arrow" className="arrow"/>
-                          </button>
-
+                      {/* Prev button */}
+                      <button
+                          className="carousel-button left"
+                          onClick={prevPage}
+                          aria-label="Scroll Left"
+                      >
+                        <img src={leftArrow} alt="Left Arrow" className="arrow"/>
+                      </button>
 
                       {/* Visible Items */}
                       <div className="carousel-items">
@@ -242,11 +293,9 @@ const Carousel = forwardRef(
                               <ItemCard item={item} isRelated={isRelated} />
                             </div>
                         ))}
-                        {/* Possibly show a loading spinner if needed */}
-                        {isLoading && <LoadingIndicator />}
                       </div>
 
-                      {/* Next button if there’s still more items */}
+                      {/* Next button if there's still more items */}
                       {currentIndex + itemsPerPage < allItems.length && (
                           <button
                               className="carousel-button right"

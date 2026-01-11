@@ -1,16 +1,15 @@
-import React, { useContext, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import StarryBackground from '../components/static/StarryBackground';
 import '../styles/page/LoginPage.css';
-import { UserContext } from '../contexts/UserContext';
-import { registerUser } from '../api/UserApi';
+import { useAuth } from '../contexts/AuthContext';
 import { useLoading } from '../contexts/LoadingContext';
 import LoadingIndicator from '../components/static/LoadingIndicator';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import ItemsGrid from '../components/LoginBg';
 
 const LoginPage = () => {
-  const { login, user } = useContext(UserContext);
+  const { signIn, signUp, user, loading } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [email, setEmail] = useState('');
@@ -22,26 +21,19 @@ const LoginPage = () => {
 
   // Check if user is already logged in
   useEffect(() => {
-    if (user) {
+    if (!loading && user) {
       navigate('/home');
-    } else {
-      const storedUser = localStorage.getItem('user');
-      if (storedUser) {
-        const parsedUser = JSON.parse(storedUser);
-        // Assuming login function sets the user context
-        login(parsedUser.username, parsedUser.password); // Adjust as necessary
-      }
     }
-  }, [user, navigate, login]);
+  }, [user, loading, navigate]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setErrorMessage('');
     try {
-      await login(username, password);
-      if (localStorage.getItem('user')) navigate('/home');
+      await signIn(email, password);
       setIsLoading(false);
+      navigate('/home');
     } catch (error) {
       setErrorMessage('Login failed: ' + error.message);
       setIsLoading(false);
@@ -53,18 +45,15 @@ const LoginPage = () => {
     setIsLoading(true);
     setErrorMessage('');
     try {
-      let newUser = {
-        username: username,
-        password: password,
-        email: email,
-      };
-      await registerUser(newUser);
-      await handleLogin(e);
+      await signUp(email, password, username);
+      // After signup, automatically sign in
+      await signIn(email, password);
+      setIsLoading(false);
+      navigate('/home');
     } catch (error) {
       setErrorMessage('Sign-up failed: ' + error.message);
       setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   const togglePasswordVisibility = (e) => {
@@ -101,12 +90,12 @@ const LoginPage = () => {
                     <div className='title'>Log in</div>
                     <form onSubmit={handleLogin} className='flip-card__form'>
                       <input
-                        type='text'
-                        value={username}
-                        autoComplete={'username'}
-                        onChange={(e) => setUsername(e.target.value)}
-                        placeholder='Username'
-                        name='username'
+                        type='email'
+                        value={email}
+                        autoComplete={'email'}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder='Email'
+                        name='email'
                         className='flip-card__input'
                         required
                       />

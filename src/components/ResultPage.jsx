@@ -17,7 +17,10 @@ const ResultPage = ({ items, contentType, selectedGenre, title, onClose }) => {
     const [error, setError] = useState(null);
     const [isFetching, setIsFetching] = useState(false);
     const containerRef = useRef(null);
-    const [hasNextPage, setHasNextPage] = useState(true);
+    
+    // Only enable pagination if we have a valid contentType (not for custom items like recommendations)
+    const canFetchMore = !!contentType && ['movies', 'shows', 'anime'].includes(contentType);
+    const [hasNextPage, setHasNextPage] = useState(canFetchMore);
 
     const { scrollYProgress } = useScroll({ container: containerRef });
     const scaleX = useSpring(scrollYProgress, {
@@ -33,24 +36,25 @@ const ResultPage = ({ items, contentType, selectedGenre, title, onClose }) => {
 
     // Function to load more items
     const loadMoreItems = useCallback(async (startIndex, stopIndex) => {
-        if (!hasNextPage || isFetching || isLoading) return;
+        // Don't try to fetch more if contentType is invalid or not set
+        if (!canFetchMore || !hasNextPage || isFetching || isLoading) return;
 
         setIsFetching(true);
         try {
             const newItems = await fetchMoreItems(contentType, selectedGenre);
             if (newItems && newItems.length > 0) {
                 setAllItems(prev => [...prev, ...newItems]);
-                setHasNextPage(newItems.length >= 20); // Assuming 10 is the page size
+                setHasNextPage(newItems.length >= 20);
             } else {
                 setHasNextPage(false);
             }
         } catch (err) {
-            setError('Failed to load more items.');
+            console.error('Failed to load more items:', err);
             setHasNextPage(false);
         } finally {
             setIsFetching(false);
         }
-    }, [fetchMoreItems, contentType, selectedGenre, isFetching, isLoading, hasNextPage]);
+    }, [fetchMoreItems, contentType, selectedGenre, isFetching, isLoading, hasNextPage, canFetchMore]);
 
     const Cell = ({ columnIndex, rowIndex, style, data }) => {
         const { columnCount, items } = data;
@@ -167,16 +171,6 @@ const ResultPage = ({ items, contentType, selectedGenre, title, onClose }) => {
                       </AutoSizer>
                   </div>
 
-                  {(isLoading || isFetching) && (
-                    <motion.div
-                      className="loading-info"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                    >
-                        Loading more...
-                    </motion.div>
-                  )}
                   {error && (
                     <motion.div
                       className="error-message"

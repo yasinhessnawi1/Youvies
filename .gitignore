@@ -15,3 +15,8 @@ firebase
 /node_modules
 build
 /build
+docs/
+dist/
+scripts/
+.env*
+*.env

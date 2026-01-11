@@ -1,12 +1,11 @@
 import React, {
   useCallback,
-  useContext,
   useEffect,
   useRef,
   useState,
 } from 'react';
 import { searchItems } from '../api/ItemsApi';
-import { UserContext } from '../contexts/UserContext';
+import { useAuth } from '../contexts/AuthContext';
 import '../styles/components/SearchBar.css';
 import LoadingIndicator from './static/LoadingIndicator';
 import { debounce } from '../utils/debounce';
@@ -14,7 +13,7 @@ import { getTitle } from '../utils/helper';
 import { Link } from 'react-router-dom';
 
 const SearchBar = ({ activeTab }) => {
-  const { user } = useContext(UserContext);
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -68,28 +67,91 @@ const SearchBar = ({ activeTab }) => {
   }, [dropdownRef]);
 
 
-  const imageUrl = (activeTab, currentItem) => {
-    switch (activeTab) {
-      case 'movies':
-      case 'shows':
-        return currentItem.poster_path
-          ? `https://image.tmdb.org/t/p/original${currentItem.poster_path}`
-          : `https://via.placeholder.com/300x450?text=Loading...`;
-      case 'anime':
-        return currentItem.image
-          ? currentItem.image
-          : currentItem.cover
-            ? currentItem.cover
-            : 'https://via.placeholder.com/300x450?text=Loading...';
-      case 'home':
-        return currentItem.poster_path
-          ? `https://image.tmdb.org/t/p/original${currentItem.poster_path}`
-          : currentItem.image
-            ? currentItem.image
-            : 'https://via.placeholder.com/300x450?text=Loading...';
-      default:
-        return 'https://via.placeholder.com/45x45?text=Loading...';
+  // Check if item has a valid image
+  const hasImage = (item) => {
+    if (item.type === 'anime') {
+      return !!(item.image || item.cover);
     }
+    return !!item.poster_path;
+  };
+
+  // Get image URL only if available (no placeholders)
+  const getImageUrl = (item) => {
+    if (item.type === 'anime') {
+      return item.image || item.cover;
+    }
+    if (item.poster_path) {
+      return `https://image.tmdb.org/t/p/w185${item.poster_path}`;
+    }
+    return null;
+  };
+
+  // Get type label for display
+  const getTypeLabel = (item) => {
+    switch (item.type) {
+      case 'movies':
+        return 'Movie';
+      case 'shows':
+        return 'TV Show';
+      case 'anime':
+        // Anime can have different formats (TV, MOVIE, OVA, ONA, SPECIAL, MUSIC)
+        const format = item.format || item.type_format || 'Anime';
+        if (format === 'TV') return 'Anime Series';
+        if (format === 'MOVIE') return 'Anime Movie';
+        if (format === 'OVA') return 'OVA';
+        if (format === 'ONA') return 'ONA';
+        if (format === 'SPECIAL') return 'Special';
+        return 'Anime';
+      default:
+        return '';
+    }
+  };
+
+  // Get year from item
+  const getYear = (item) => {
+    if (item.type === 'anime') {
+      return item.releaseDate || item.seasonYear || item.year || '';
+    }
+    if (item.type === 'movies') {
+      return item.release_date ? item.release_date.split('-')[0] : '';
+    }
+    if (item.type === 'shows') {
+      return item.first_air_date ? item.first_air_date.split('-')[0] : '';
+    }
+    return '';
+  };
+
+  // Get rating from item
+  const getRating = (item) => {
+    if (item.type === 'anime') {
+      // Anime rating is usually out of 100
+      const rating = item.rating || item.averageScore;
+      return rating ? `${rating}%` : '';
+    }
+    // TMDB rating is out of 10
+    const rating = item.vote_average;
+    return rating ? `${rating.toFixed(1)}★` : '';
+  };
+
+  // Get additional info (episodes for shows/anime, runtime for movies)
+  const getAdditionalInfo = (item) => {
+    if (item.type === 'anime') {
+      const episodes = item.totalEpisodes || item.episodes;
+      const status = item.status;
+      let info = [];
+      if (episodes) info.push(`${episodes} eps`);
+      if (status) info.push(status);
+      return info.join(' • ');
+    }
+    if (item.type === 'shows') {
+      // Shows don't have episode count in search results
+      return '';
+    }
+    if (item.type === 'movies') {
+      // Movies don't have runtime in search results
+      return '';
+    }
+    return '';
   };
 
   return (
@@ -176,24 +238,43 @@ const SearchBar = ({ activeTab }) => {
       {/* Show Loading Indicator when loading */}
       {searchResults && searchResults.length > 0 && (
         <div className='search-results-dropdown' ref={dropdownRef}>
-          {searchResults.map((item) => (
-            <Link
-              to={`/info/${item.id}/${item.type}`}
-              style={{ textDecoration: 'none' }}
-              key={item.id}
-            >
-              <div className='search-result-item'>
-                <img
-                  src={imageUrl(activeTab, item)}
-                  alt={getTitle(item)}
-                  className='search-result-image'
-                />
-                <div className='search-result-info'>
-                  <h4>{`${getTitle(item)}`}</h4>
+          {searchResults.map((item) => {
+            const itemHasImage = hasImage(item);
+            const imageUrl = getImageUrl(item);
+            const typeLabel = getTypeLabel(item);
+            const year = getYear(item);
+            const rating = getRating(item);
+            const additionalInfo = getAdditionalInfo(item);
+
+            return (
+              <Link
+                to={`/info/${item.type}/${item.id}`}
+                style={{ textDecoration: 'none' }}
+                key={`${item.type}-${item.id}`}
+              >
+                <div className={`search-result-item ${!itemHasImage ? 'no-image' : ''}`}>
+                  {itemHasImage && (
+                    <img
+                      src={imageUrl}
+                      alt={getTitle(item)}
+                      className='search-result-image'
+                    />
+                  )}
+                  <div className='search-result-info'>
+                    <h4 className='search-result-title'>{getTitle(item)}</h4>
+                    <div className='search-result-meta'>
+                      {typeLabel && <span className='search-result-type'>{typeLabel}</span>}
+                      {year && <span className='search-result-year'>{year}</span>}
+                      {rating && <span className='search-result-rating'>{rating}</span>}
+                    </div>
+                    {additionalInfo && (
+                      <div className='search-result-extra'>{additionalInfo}</div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>

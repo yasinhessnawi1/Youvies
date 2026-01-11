@@ -14,7 +14,6 @@ const HomePage = () => {
   const [isSearchVisible, setIsSearchVisible] = useState(false); // New state to manage search bar visibility
 
   const {
-    isLoading,
     items,
     genres,
     selectedGenre,
@@ -22,7 +21,55 @@ const HomePage = () => {
     setGenres,
     fetchAllItems,
     watchedItems,
+    fetchUserRecommendations,
   } = useItemContext();
+
+  // State for recommendation carousels
+  const [movieRecommendations, setMovieRecommendations] = useState([]);
+  const [showRecommendations, setShowRecommendations] = useState([]);
+  const [animeRecommendations, setAnimeRecommendations] = useState([]);
+
+  // Helper to check if user has watched items of a specific type
+  const hasWatchedType = (mediaType) => {
+    const allWatched = watchedItems || [];
+    return allWatched.some((item) => {
+      const itemType = item.type || item.content_type;
+      return itemType === mediaType;
+    });
+  };
+
+  // Helper to get watched items filtered by type
+  const getWatchedByType = (mediaType) => {
+    const allWatched = watchedItems || [];
+    return allWatched.filter((item) => {
+      const itemType = item.type || item.content_type;
+      return itemType === mediaType;
+    });
+  };
+
+  // Memoized filtered watched items for each type
+  const watchedMovies = getWatchedByType('movies');
+  const watchedShows = getWatchedByType('shows');
+  const watchedAnime = getWatchedByType('anime');
+
+  // Fetch recommendations when component mounts or watched items change
+  useEffect(() => {
+    const loadRecommendations = async () => {
+      if (hasWatchedType('movies')) {
+        const recs = await fetchUserRecommendations('movies');
+        setMovieRecommendations(recs);
+      }
+      if (hasWatchedType('shows')) {
+        const recs = await fetchUserRecommendations('shows');
+        setShowRecommendations(recs);
+      }
+      if (hasWatchedType('anime')) {
+        const recs = await fetchUserRecommendations('anime');
+        setAnimeRecommendations(recs);
+      }
+    };
+    loadRecommendations();
+  }, [watchedItems, fetchUserRecommendations]);
 
   const hasFetched = useRef(false);
   useEffect(() => {
@@ -91,33 +138,31 @@ const HomePage = () => {
             break;
           case 'anime':
             genresData = [
-              { id: '1', name: 'Action' },
-              { id: '2', name: 'Adventure' },
-              { id: '3', name: 'Comedy' },
-              { id: '4', name: 'Drama' },
-              { id: '5', name: 'Fantasy' },
-              { id: '6', name: 'Horror' },
-              { id: '7', name: 'Mystery' },
-              { id: '8', name: 'Romance' },
-              { id: '9', name: 'Sci-Fi' },
-              { id: '10', name: 'Thriller' },
-              { id: '11', name: 'Sports' },
-              { id: '12', name: 'Slice of Life' },
-              { id: '13', name: 'Supernatural' },
+              { id: 'Action', name: 'Action' },
+              { id: 'Adventure', name: 'Adventure' },
+              { id: 'Comedy', name: 'Comedy' },
+              { id: 'Drama', name: 'Drama' },
+              { id: 'Fantasy', name: 'Fantasy' },
+              { id: 'Horror', name: 'Horror' },
+              { id: 'Mecha', name: 'Mecha' },
+              { id: 'Music', name: 'Music' },
+              { id: 'Mystery', name: 'Mystery' },
+              { id: 'Psychological', name: 'Psychological' },
+              { id: 'Romance', name: 'Romance' },
+              { id: 'Sci-Fi', name: 'Sci-Fi' },
+              { id: 'Slice of Life', name: 'Slice of Life' },
+              { id: 'Sports', name: 'Sports' },
+              { id: 'Supernatural', name: 'Supernatural' },
+              { id: 'Thriller', name: 'Thriller' },
             ];
             break;
           default:
-            break;
+            genresData = [{28 : 'Action'}]
         }
 
         setGenres(genresData);
-        if (activeTab !== 'anime') {
-          setSelectedGenre(genresData.length > 0 ? genresData[0].id : '');
-        } else {
-          setSelectedGenre(genresData.length > 0 ? genresData[0].name : '');
-        }
+        setSelectedGenre(genresData.length > 0 ? genresData[0].id : 'Unknown');
       };
-
       loadGenres();
     }
   }, [activeTab, setGenres, setSelectedGenre]);
@@ -130,44 +175,218 @@ const HomePage = () => {
     if (activeTab === 'home') {
       return (
         <>
-          <Banner contentType='movies' />{' '}
-          {/* Banner displaying movies on the homepage */}
-          <VideoCardGrid title='Recently Watched' customItems={watchedItems} />
+          <Banner contentType="movies" />
+          {/* Continue Watching / Recently Watched */}
+          {watchedItems?.length > 0 && (
+            <VideoCardGrid
+              title="Continue Watching"
+              customItems={watchedItems}
+            />
+          )}
+          {/* Recommended For You - aggregated from all watched */}
+          {(movieRecommendations.length > 0 ||
+            showRecommendations.length > 0 ||
+            animeRecommendations.length > 0) && (
+            <VideoCardGrid
+              title="Recommended For You"
+              customItems={[
+                ...movieRecommendations,
+                ...showRecommendations,
+                ...animeRecommendations,
+              ].slice(0, 20)}
+            />
+          )}
+          {/* Movies Carousels */}
           <VideoCardGrid
-            contentType='movies'
-            isHomePage
-            title={'Latest Movies'}
+            contentType="movies"
+            listType="trending"
+            title="Trending Movies"
+            extraParams={{ timeWindow: 'week' }}
           />
           <VideoCardGrid
-            contentType='shows'
-            isHomePage
-            title={'Airing Now Shows'}
+            contentType="movies"
+            listType="top_rated"
+            title="Top Rated Movies"
+          />
+          {/* TV Shows Carousels */}
+          <VideoCardGrid
+            contentType="shows"
+            listType="popular"
+            title="Popular TV Shows"
           />
           <VideoCardGrid
-            contentType='anime'
-            isHomePage
-            title={'Trending Anime'}
+            contentType="shows"
+            listType="airing_today"
+            title="Airing Today"
+          />
+          {/* Anime Carousels */}
+          <VideoCardGrid
+            contentType="anime"
+            listType="trending"
+            title="Trending Anime"
+          />
+          <VideoCardGrid
+            contentType="anime"
+            listType="popular"
+            title="Popular Anime"
           />
         </>
       );
-    } else {
+    } else if (activeTab === 'movies') {
       return (
         <>
-          <Banner contentType={activeTab} />
+          <Banner contentType="movies" />
+          {/* Continue Watching Movies - only show if user has watched movies */}
+          {watchedMovies.length > 0 && (
+            <VideoCardGrid
+              title="Continue Watching"
+              customItems={watchedMovies}
+            />
+          )}
+          {/* Movie Recommendations - only show if user has watched movies */}
+          {hasWatchedType('movies') && movieRecommendations.length > 0 && (
+            <VideoCardGrid
+              title="Recommended For You"
+              customItems={movieRecommendations}
+            />
+          )}
           <VideoCardGrid
-            contentType={activeTab}
+            contentType="movies"
+            listType="trending"
+            title="Trending Movies"
+            extraParams={{ timeWindow: 'day' }}
+          />
+          <VideoCardGrid
+            contentType="movies"
+            listType="now_playing"
+            title="Now Playing"
+          />
+          <VideoCardGrid
+            contentType="movies"
+            listType="top_rated"
+            title="Top Rated Movies"
+          />
+          <VideoCardGrid
+            contentType="movies"
+            listType="upcoming"
+            title="Upcoming Movies"
+          />
+          {/* Genre Selector Carousel - existing */}
+          <VideoCardGrid
+            contentType="movies"
             genres={genres}
             selectedGenre={selectedGenre}
             setSelectedGenre={setSelectedGenre}
           />
+        </>
+      );
+    } else if (activeTab === 'shows') {
+      return (
+        <>
+          <Banner contentType="shows" />
+          {/* Continue Watching Shows - only show if user has watched shows */}
+          {watchedShows.length > 0 && (
+            <VideoCardGrid
+              title="Continue Watching"
+              customItems={watchedShows}
+            />
+          )}
+          {/* Show Recommendations - only show if user has watched shows */}
+          {hasWatchedType('shows') && showRecommendations.length > 0 && (
+            <VideoCardGrid
+              title="Recommended For You"
+              customItems={showRecommendations}
+            />
+          )}
           <VideoCardGrid
-            contentType={activeTab}
-            isHomePage
-            title={`Trending ${activeTab}`}
+            contentType="shows"
+            listType="trending"
+            title="Trending Shows"
+            extraParams={{ timeWindow: 'day' }}
+          />
+          <VideoCardGrid
+            contentType="shows"
+            listType="airing_today"
+            title="Airing Today"
+          />
+          <VideoCardGrid
+            contentType="shows"
+            listType="on_the_air"
+            title="On The Air"
+          />
+          <VideoCardGrid
+            contentType="shows"
+            listType="top_rated"
+            title="Top Rated Shows"
+          />
+          {/* Genre Selector Carousel - existing */}
+          <VideoCardGrid
+            contentType="shows"
+            genres={genres}
+            selectedGenre={selectedGenre}
+            setSelectedGenre={setSelectedGenre}
+          />
+        </>
+      );
+    } else if (activeTab === 'anime') {
+      return (
+        <>
+          <Banner contentType="anime" />
+          {/* Continue Watching Anime - only show if user has watched anime */}
+          {watchedAnime.length > 0 && (
+            <VideoCardGrid
+              title="Continue Watching"
+              customItems={watchedAnime}
+            />
+          )}
+          {/* Anime Recommendations - only show if user has watched anime */}
+          {hasWatchedType('anime') && animeRecommendations.length > 0 && (
+            <VideoCardGrid
+              title="Recommended For You"
+              customItems={animeRecommendations}
+            />
+          )}
+          <VideoCardGrid
+            contentType="anime"
+            listType="airing_schedule"
+            title="Airing Today"
+          />
+          <VideoCardGrid
+            contentType="anime"
+            listType="trending"
+            title="Trending Anime"
+          />
+          <VideoCardGrid
+            contentType="anime"
+            listType="popular"
+            title="Popular Anime"
+          />
+          <VideoCardGrid
+            contentType="anime"
+            listType="new_episodes"
+            title="New Episodes"
+          />
+          <VideoCardGrid
+            contentType="anime"
+            listType="top_rated_anime"
+            title="Anime Movies"
+          />
+          <VideoCardGrid
+            contentType="anime"
+            listType="seasonal"
+            title="This Year's Anime"
+          />
+          {/* Genre Selector Carousel - existing */}
+          <VideoCardGrid
+            contentType="anime"
+            genres={genres}
+            selectedGenre={selectedGenre}
+            setSelectedGenre={setSelectedGenre}
           />
         </>
       );
     }
+    return null;
   };
   return (
     <div id={'homePage'}>
@@ -178,9 +397,9 @@ const HomePage = () => {
         }}
       />
       <StarryBackground />
-      <div className='home-page' translate={'yes'}>
+      <div className="home-page" translate={'yes'}>
         {isSearchVisible && <SearchBar activeTab={activeTab} />}
-        <div className='home_content'>{renderContent()}</div>
+        <div className="home_content">{renderContent()}</div>
         <Footer />
       </div>
     </div>
