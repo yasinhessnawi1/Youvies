@@ -76,9 +76,8 @@ const MosaicTile = React.memo(({ item, onHover, onLeave, onClick, tileSize }) =>
 
 // Hover tooltip component
 const HoverTooltip = ({ item, position }) => {
-  if (!item) return null;
-
   const title = useMemo(() => {
+    if (!item) return 'Unknown';
     if (item.type === 'anime') {
       if (typeof item.title === 'object' && item.title !== null) {
         return item.title.english || item.title.userPreferred || item.title.romaji || 'Unknown';
@@ -89,6 +88,7 @@ const HoverTooltip = ({ item, position }) => {
   }, [item]);
 
   const rating = useMemo(() => {
+    if (!item) return 'N/A';
     if (item.type === 'anime') {
       return item.rating ? (item.rating / 10).toFixed(1) : 'N/A';
     }
@@ -96,6 +96,7 @@ const HoverTooltip = ({ item, position }) => {
   }, [item]);
 
   const year = useMemo(() => {
+    if (!item) return '';
     if (item.type === 'anime') {
       return item.releaseDate || item.seasonYear || '';
     }
@@ -104,6 +105,7 @@ const HoverTooltip = ({ item, position }) => {
   }, [item]);
 
   const imageUrl = useMemo(() => {
+    if (!item) return null;
     if (item.type === 'anime') {
       return item.image || item.cover || null;
     }
@@ -111,6 +113,8 @@ const HoverTooltip = ({ item, position }) => {
       ? `https://image.tmdb.org/t/p/w185${item.poster_path}`
       : null;
   }, [item]);
+
+  if (!item) return null;
 
   return (
     <div 

@@ -476,7 +476,7 @@ const InfoPage = () => {
 
   // Use proactively prepared torrent for preview
   useEffect(() => {
-    const usePreparedTorrent = async () => {
+    const handlePreparedTorrent = async () => {
       // Early return if essential data is missing
       if (!itemInfo?.id) {
         return;
@@ -521,7 +521,7 @@ const InfoPage = () => {
       }
     };
 
-    usePreparedTorrent();
+    handlePreparedTorrent();
   }, [itemInfo?.id, selectedSeason?.season_number, selectedEpisode?.episode_number]);
 
   // Autoplay support - triggered when navigating from Random page with ?autoplay=true

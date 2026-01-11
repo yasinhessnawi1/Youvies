@@ -157,7 +157,7 @@ export const fetchAnimeAdvanced = async (params = {}) => {
     // Fallback to popular if advanced search fails
     try {
       const fallbackResponse = await axios.get(`${BASE_URL}/popular`, {
-        params: { page, perPage: params.perPage || 20 },
+        params: { page: params.page || 1, perPage: params.perPage || 20 },
       });
       return handleAnimeApiErrors(fallbackResponse.data?.results || []);
     } catch (fallbackError) {
