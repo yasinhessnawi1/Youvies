@@ -835,100 +835,170 @@ const VideoPlayer = ({
    * @returns {string} - Modified VTT content
    */
   const applySubtitleOffset = useCallback((vttContent, offsetSeconds) => {
-    if (!vttContent) return vttContent;
-    if (offsetSeconds === 0) return vttContent;
+    if (!vttContent) {
+      console.warn('⚠️ applySubtitleOffset: No VTT content provided');
+      return vttContent;
+    }
+    if (offsetSeconds === 0) {
+      console.log('⏱️ applySubtitleOffset: Offset is 0, returning original content');
+      return vttContent;
+    }
+    
+    console.log(`⏱️ applySubtitleOffset: Applying ${offsetSeconds}s offset to content (${vttContent.length} chars)`);
+    
+    let modifiedCount = 0;
+    let firstCueOriginalTime = null;
+    let firstCueNewTime = null;
+    let sampleLines = [];
+    
+    // Normalize line endings (Windows \r\n -> \n, Mac \r -> \n)
+    const normalizedContent = vttContent.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
     
     // Process VTT content line by line
-    const lines = vttContent.split('\n');
-    const modifiedLines = lines.map(line => {
+    const lines = normalizedContent.split('\n');
+    const modifiedLines = lines.map((line, idx) => {
       // Match timestamp lines with various formats
       // 00:00:00.000 --> 00:00:05.000
+      // 00:00:00,000 --> 00:00:05,000
       // 00:00.000 --> 00:05.000
+      // Can have leading whitespace or cue identifiers
       // Can have optional positioning after timestamps
-      const timestampRegex = /^(\d{1,2}:\d{2}(?::\d{2})?[.,]\d{1,3})\s*-->\s*(\d{1,2}:\d{2}(?::\d{2})?[.,]\d{1,3})(.*)$/;
+      const timestampRegex = /^\s*(\d{1,2}:\d{2}(?::\d{2})?[.,]\d{1,3})\s*-->\s*(\d{1,2}:\d{2}(?::\d{2})?[.,]\d{1,3})(.*)$/;
       const match = line.match(timestampRegex);
+      
+      // Log first few lines that SHOULD contain timestamps for debugging
+      if (idx < 20 && line.includes('-->')) {
+        sampleLines.push({ idx, line: line.substring(0, 50), matched: !!match });
+      }
       
       if (match) {
         const startTime = parseTimestamp(match[1]);
         const endTime = parseTimestamp(match[2]);
         const rest = match[3] || '';
         
-        // Apply offset
-        const newStartTime = formatTimestamp(startTime + offsetSeconds);
-        const newEndTime = formatTimestamp(endTime + offsetSeconds);
+        // Apply offset, but ensure times don't go negative
+        const newStartTime = Math.max(0, startTime + offsetSeconds);
+        const newEndTime = Math.max(0, endTime + offsetSeconds);
         
-        return `${newStartTime} --> ${newEndTime}${rest}`;
+        // Track first cue for debugging
+        if (modifiedCount === 0) {
+          firstCueOriginalTime = startTime;
+          firstCueNewTime = newStartTime;
+          console.log(`   Original line: "${line}"`);
+          console.log(`   Parsed: start=${startTime}, end=${endTime}`);
+          console.log(`   New: start=${newStartTime}, end=${newEndTime}`);
+        }
+        modifiedCount++;
+        
+        const newLine = `${formatTimestamp(newStartTime)} --> ${formatTimestamp(newEndTime)}${rest}`;
+        return newLine;
       }
       
       return line;
     });
     
-    return modifiedLines.join('\n');
+    const result = modifiedLines.join('\n');
+    
+    if (modifiedCount > 0 && firstCueOriginalTime !== null) {
+      console.log(`✅ Applied offset ${offsetSeconds > 0 ? '+' : ''}${offsetSeconds.toFixed(1)}s to ${modifiedCount} cues`);
+      console.log(`   First cue: ${firstCueOriginalTime.toFixed(2)}s → ${firstCueNewTime.toFixed(2)}s`);
+    } else {
+      console.warn(`⚠️ No timestamps matched! Sample lines with '-->':`, sampleLines);
+      // Log first 500 chars of content for debugging
+      console.log('📄 Content preview:', vttContent.substring(0, 500));
+    }
+    
+    return result;
   }, [parseTimestamp, formatTimestamp]);
 
   /**
    * Apply subtitle track to video element
-   * Optimized to minimize flickering during timing adjustments
+   * IMPORTANT: Must fully reset textTracks for browser to load new cues
    */
   const applySubtitleTrack = useCallback((content, subtitle) => {
     if (!videoRef.current || !content) return;
-    
+
     const video = videoRef.current;
-    
-    // Create new blob URL first
-    const blob = new Blob([content], { type: 'text/vtt; charset=utf-8' });
-    const newSubtitleUrl = URL.createObjectURL(blob);
-    
-    // Get or create track element
-    let track = video.querySelector('track[data-custom-subtitle="true"]');
-    
-    if (!track) {
-      // Remove any existing tracks first
-      const existingTracks = video.querySelectorAll('track');
-      existingTracks.forEach(t => {
-        if (t.src && t.src.startsWith('blob:')) {
-          URL.revokeObjectURL(t.src);
-        }
-        t.remove();
-      });
-      
-      // Create new track
-      track = document.createElement('track');
-      track.kind = 'subtitles';
-      track.default = true;
-      track.setAttribute('data-custom-subtitle', 'true');
-      video.appendChild(track);
-    }
-    
-    // Update track properties
-    track.label = subtitle ? `${subtitle.language} (${subtitle.source})` : 'Subtitles';
-    track.srclang = subtitle ? subtitle.language.toLowerCase().substring(0, 2) : 'en';
-    
-    // Revoke old blob URL after setting new one
+
+    // Store old URL for cleanup
     const oldUrl = currentBlobUrlRef.current;
-    
-    // Set new source
-    track.src = newSubtitleUrl;
-    currentBlobUrlRef.current = newSubtitleUrl;
-    
-    // Revoke old URL after a small delay to prevent flicker
-    if (oldUrl) {
-      setTimeout(() => URL.revokeObjectURL(oldUrl), 100);
-    }
-    
-    // Ensure track is enabled
-    if (video.textTracks && video.textTracks.length > 0) {
-      // Disable all tracks first, then enable ours
-      for (let i = 0; i < video.textTracks.length; i++) {
+
+    // Step 1: Disable and remove all existing text tracks first
+    if (video.textTracks) {
+      for (let i = video.textTracks.length - 1; i >= 0; i--) {
         video.textTracks[i].mode = 'disabled';
       }
-      // Small delay then enable to ensure browser picks up new content
-      requestAnimationFrame(() => {
-        if (video.textTracks && video.textTracks.length > 0) {
-          video.textTracks[0].mode = 'showing';
-        }
-      });
     }
+
+    // Step 2: Remove all track elements from DOM
+    const existingTracks = video.querySelectorAll('track');
+    existingTracks.forEach(t => {
+      t.remove();
+    });
+
+    // Step 3: Cleanup old blob URL immediately
+    if (oldUrl) {
+      URL.revokeObjectURL(oldUrl);
+    }
+
+    // Step 4: Create new blob URL with unique timestamp to bust cache
+    const blob = new Blob([content], { type: 'text/vtt; charset=utf-8' });
+    const newSubtitleUrl = URL.createObjectURL(blob);
+    currentBlobUrlRef.current = newSubtitleUrl;
+
+    // Step 5: Create fresh track element
+    const track = document.createElement('track');
+    track.kind = 'subtitles';
+    track.label = subtitle ? `${subtitle.language} (${subtitle.source})` : 'Subtitles';
+    track.srclang = subtitle ? subtitle.language.toLowerCase().substring(0, 2) : 'en';
+    track.default = true;
+    track.setAttribute('data-custom-subtitle', 'true');
+    track.src = newSubtitleUrl;
+
+    // Step 6: Add track to video BEFORE setting up load handler
+    video.appendChild(track);
+
+    // Step 7: Wait for track to load, then enable it
+    const handleTrackLoad = () => {
+      // Give browser a moment to parse the track
+      setTimeout(() => {
+        if (video.textTracks && video.textTracks.length > 0) {
+          const textTrack = video.textTracks[video.textTracks.length - 1]; // Get the last added track
+          
+          // Verify we have the right track
+          if (textTrack.label === track.label) {
+            console.log('🎬 Track loaded, cues:', textTrack.cues?.length || 'unknown');
+            
+            // Force reload by toggling mode
+            textTrack.mode = 'hidden';
+            setTimeout(() => {
+              textTrack.mode = 'showing';
+              console.log('🎬 Track mode toggled to showing, cues:', textTrack.cues?.length || 0);
+              
+              // Verify first few cues have correct timing
+              if (textTrack.cues && textTrack.cues.length > 0) {
+                const firstCue = textTrack.cues[0];
+                console.log('🎬 First cue timing:', {
+                  start: firstCue.startTime.toFixed(2),
+                  end: firstCue.endTime.toFixed(2),
+                  text: firstCue.text.substring(0, 40)
+                });
+              }
+            }, 50);
+          }
+        }
+        track.removeEventListener('load', handleTrackLoad);
+      }, 100);
+    };
+
+    track.addEventListener('load', handleTrackLoad);
+
+    // Also trigger load if it's already loaded (race condition)
+    if (track.readyState === 2) { // HAVE_CURRENT_DATA
+      handleTrackLoad();
+    }
+
+    console.log('🎬 Track replaced with new timing, content length:', content.length);
   }, []);
 
   /**
@@ -975,15 +1045,35 @@ const VideoPlayer = ({
   // Ref to track pending offset update for debouncing
   const offsetUpdateTimeoutRef = useRef(null);
   
+  // Use refs to avoid stale closures in callbacks
+  const rawSubtitleContentRef = useRef(rawSubtitleContent);
+  const currentSubtitleRef = useRef(currentSubtitle);
+
+  // Keep refs in sync
+  useEffect(() => {
+    rawSubtitleContentRef.current = rawSubtitleContent;
+  }, [rawSubtitleContent]);
+
+  useEffect(() => {
+    currentSubtitleRef.current = currentSubtitle;
+  }, [currentSubtitle]);
+
   /**
    * Apply the subtitle offset to the track
    */
   const applyOffsetToTrack = useCallback((offset) => {
-    if (rawSubtitleContent && currentSubtitle) {
-      const adjustedContent = applySubtitleOffset(rawSubtitleContent, offset);
-      applySubtitleTrack(adjustedContent, currentSubtitle);
+    // Use refs to get latest values and avoid stale closures
+    const content = rawSubtitleContentRef.current;
+    const subtitle = currentSubtitleRef.current;
+
+    if (content && subtitle) {
+      const adjustedContent = applySubtitleOffset(content, offset);
+      applySubtitleTrack(adjustedContent, subtitle);
+      console.log(`🔄 Applied offset ${offset}s to subtitle track`);
+    } else {
+      console.warn('Cannot apply offset - missing subtitle content or subtitle object');
     }
-  }, [rawSubtitleContent, currentSubtitle, applySubtitleOffset, applySubtitleTrack]);
+  }, [applySubtitleOffset, applySubtitleTrack]);
 
   // Ref to debounce saving to IndexedDB
   const saveTimingTimeoutRef = useRef(null);
@@ -1089,6 +1179,10 @@ const VideoPlayer = ({
     return cues;
   }, [parseTimestamp, formatTimestamp]);
   
+  // State for visible cues (computed periodically, not on every render)
+  const [visibleCues, setVisibleCues] = useState([]);
+  const [currentCueIndex, setCurrentCueIndex] = useState(-1);
+
   // Parse cues when raw subtitle content changes
   useEffect(() => {
     if (rawSubtitleContent) {
@@ -1101,83 +1195,144 @@ const VideoPlayer = ({
   }, [rawSubtitleContent, parseSubtitleCues]);
   
   /**
-   * Get current cue index based on video time and offset
+   * Update visible cues periodically when timing controls are open
    */
-  const getCurrentCueIndex = useCallback(() => {
-    if (!videoRef.current || subtitleCues.length === 0) return -1;
-    
-    const currentVideoTime = videoRef.current.currentTime;
-    // The effective subtitle time (what subtitle time should be showing now)
-    const effectiveTime = currentVideoTime - subtitleOffset;
-    
-    for (let i = 0; i < subtitleCues.length; i++) {
-      const cue = subtitleCues[i];
-      if (effectiveTime >= cue.startTime && effectiveTime <= cue.endTime) {
-        return i;
-      }
+  useEffect(() => {
+    if (!showTimingControls || subtitleCues.length === 0) {
+      return;
     }
-    
-    // Find nearest upcoming cue
-    for (let i = 0; i < subtitleCues.length; i++) {
-      if (subtitleCues[i].startTime > effectiveTime) {
-        return Math.max(0, i - 1);
+
+    const updateVisibleCues = () => {
+      if (!videoRef.current) return;
+
+      const currentVideoTime = videoRef.current.currentTime;
+      const rangeSeconds = 100;
+
+      // Find current cue index
+      // When offset is applied: adjustedTime = originalTime + offset
+      // So to find which original cue is showing at currentVideoTime:
+      // originalTime = currentVideoTime - offset
+      // But we need to find the cue that, when adjusted, shows at currentVideoTime
+      // So: adjustedTime = originalTime + offset = currentVideoTime
+      // Therefore: originalTime = currentVideoTime - offset
+      const effectiveTime = currentVideoTime - subtitleOffset;
+      let newCurrentIndex = -1;
+
+      // Find the cue that, when adjusted, is currently showing
+      // We check which original cue's adjusted time range contains currentVideoTime
+      for (let i = 0; i < subtitleCues.length; i++) {
+        const cue = subtitleCues[i];
+        const adjustedStart = cue.startTime + subtitleOffset;
+        const adjustedEnd = cue.endTime + subtitleOffset;
+        
+        if (currentVideoTime >= adjustedStart && currentVideoTime <= adjustedEnd) {
+          newCurrentIndex = i;
+          break;
+        }
       }
-    }
-    
-    return subtitleCues.length - 1;
-  }, [subtitleCues, subtitleOffset]);
-  
+
+      // If no exact match, find nearest based on adjusted times
+      if (newCurrentIndex === -1) {
+        let closestIndex = -1;
+        let closestDistance = Infinity;
+        
+        for (let i = 0; i < subtitleCues.length; i++) {
+          const cue = subtitleCues[i];
+          const adjustedStart = cue.startTime + subtitleOffset;
+          const distance = Math.abs(currentVideoTime - adjustedStart);
+          
+          if (distance < closestDistance) {
+            closestDistance = distance;
+            closestIndex = i;
+          }
+        }
+        
+        newCurrentIndex = closestIndex >= 0 ? closestIndex : subtitleCues.length - 1;
+      }
+
+      // Filter visible cues based on adjusted times
+      const filtered = subtitleCues.filter(cue => {
+        const adjustedStart = cue.startTime + subtitleOffset;
+        return adjustedStart >= (currentVideoTime - rangeSeconds) &&
+               adjustedStart <= (currentVideoTime + rangeSeconds);
+      });
+
+      // Add isCurrent flag
+      const cuesWithCurrent = filtered.map(cue => ({
+        ...cue,
+        isCurrent: cue.index === newCurrentIndex
+      }));
+
+      setVisibleCues(cuesWithCurrent);
+      setCurrentCueIndex(newCurrentIndex);
+    };
+
+    // Update immediately
+    updateVisibleCues();
+
+    // Update every 500ms while timing controls are open
+    const interval = setInterval(updateVisibleCues, 500);
+
+    return () => clearInterval(interval);
+  }, [showTimingControls, subtitleCues, subtitleOffset]);
+
   /**
    * Handle user clicking on a subtitle cue to sync
    * The clicked cue should be what's playing NOW
    */
   const handleCueSync = useCallback((cue) => {
     if (!videoRef.current) return;
-    
+
     const currentVideoTime = videoRef.current.currentTime;
+
+    // IMPORTANT: The cue.startTime here is the ORIGINAL timing from subtitleCues
+    // We need to account for any existing offset when calculating the new offset
+    // If there's already an offset, we need to work with the original timing
+    const currentOffset = subtitleOffset; // Get current offset from state
     
     // Calculate offset: we want cue.startTime + offset = currentVideoTime
+    // This means: when video is at currentVideoTime, show subtitle that originally started at cue.startTime
     const newOffset = currentVideoTime - cue.startTime;
     const roundedOffset = Math.round(newOffset * 10) / 10;
-    
+
     console.log(`🎯 Syncing to cue: "${cue.text.substring(0, 40)}..."`);
-    console.log(`   Cue start time: ${cue.startTime.toFixed(2)}s`);
-    console.log(`   Video time: ${currentVideoTime.toFixed(2)}s`);
+    console.log(`   Cue original start time: ${cue.startTime.toFixed(2)}s`);
+    console.log(`   Current video time: ${currentVideoTime.toFixed(2)}s`);
+    console.log(`   Current offset: ${currentOffset > 0 ? '+' : ''}${currentOffset.toFixed(1)}s`);
     console.log(`   New offset: ${roundedOffset > 0 ? '+' : ''}${roundedOffset.toFixed(1)}s`);
-    
-    // Apply the offset
-    handleSubtitleOffsetChange(roundedOffset, true);
-    
+
+    // Apply the offset immediately - use refs to get latest values
+    const content = rawSubtitleContentRef.current;
+    const subtitle = currentSubtitleRef.current;
+
+    if (content && subtitle) {
+      // Update state first
+      setSubtitleOffset(roundedOffset);
+
+      // Apply offset to ORIGINAL content (not previously adjusted content)
+      const adjustedContent = applySubtitleOffset(content, roundedOffset);
+      
+      // Apply the new track
+      applySubtitleTrack(adjustedContent, subtitle);
+
+      // Save to IndexedDB
+      if (currentSubtitleId) {
+        saveSubtitleTiming(currentSubtitleId, roundedOffset, subtitle, title);
+      }
+
+      console.log(`🔄 Applied sync offset ${roundedOffset > 0 ? '+' : ''}${roundedOffset.toFixed(1)}s to subtitle track`);
+    } else {
+      console.warn('Cannot sync - missing subtitle content or subtitle object', {
+        hasContent: !!content,
+        hasSubtitle: !!subtitle
+      });
+    }
+
     // Show feedback
     setSyncFeedback(`✓ Synced! Offset: ${roundedOffset > 0 ? '+' : ''}${roundedOffset.toFixed(1)}s`);
     setTimeout(() => setSyncFeedback(''), 3000);
-    
-  }, [handleSubtitleOffsetChange]);
-  
-  /**
-   * Get cues to display in the sync picker (within ±100s of current video time)
-   */
-  const getVisibleCues = useCallback(() => {
-    if (subtitleCues.length === 0 || !videoRef.current) return [];
-    
-    const currentVideoTime = videoRef.current.currentTime;
-    const rangeSeconds = 100; // Show cues within ±100 seconds
-    
-    // Filter cues within the time range
-    const visibleCues = subtitleCues.filter(cue => {
-      // Account for current offset when checking visibility
-      const adjustedStart = cue.startTime + subtitleOffset;
-      return adjustedStart >= (currentVideoTime - rangeSeconds) && 
-             adjustedStart <= (currentVideoTime + rangeSeconds);
-    });
-    
-    const currentIndex = getCurrentCueIndex();
-    
-    return visibleCues.map((cue) => ({
-      ...cue,
-      isCurrent: cue.index === currentIndex
-    }));
-  }, [subtitleCues, getCurrentCueIndex, subtitleOffset]);
+
+  }, [applySubtitleOffset, applySubtitleTrack, currentSubtitleId, title, subtitleOffset]);
 
   // Load online subtitle
   const loadOnlineSubtitle = useCallback(async (subtitle) => {
@@ -2390,7 +2545,7 @@ const VideoPlayer = ({
                             </div>
                             
                             <div className="sync-picker-list">
-                              {getVisibleCues().map((cue) => (
+                              {visibleCues.map((cue) => (
                                 <button
                                   key={cue.index}
                                   onClick={() => handleCueSync(cue)}
@@ -2399,13 +2554,13 @@ const VideoPlayer = ({
                                   {cue.text}
                                 </button>
                               ))}
-                              
-                              {getVisibleCues().length === 0 && subtitleCues.length > 0 && (
+
+                              {visibleCues.length === 0 && subtitleCues.length > 0 && (
                                 <div className="sync-picker-empty">
                                   No subtitles in ±100s range. Try seeking closer to dialogue.
                                 </div>
                               )}
-                              
+
                               {subtitleCues.length === 0 && (
                                 <div className="sync-picker-empty">
                                   No subtitle cues available
