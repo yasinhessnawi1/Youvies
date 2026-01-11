@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useRef, useState } from 'react';
+import React, { useContext, useEffect, useRef, useState, useCallback } from 'react';
 import '../styles/page/InfoPage.css';
 import '../styles/page/MediaPage.css';
 import Header from '../components/static/Header';
@@ -19,14 +19,14 @@ import { TabContext } from '../contexts/TabContext';
 import VideoPlayer from '../components/VideoPlayer';
 import VideoModal from '../components/VideoModal';
 import progressService from '../services/progressService';
-import { Star, Calendar, Clock, Play, Film, Tv, Globe, Users, Award, TrendingUp, DollarSign, Building2, MapPin, Languages, CalendarDays, Clock3, BarChart3, Heart, ExternalLink, Link2, Eye, Tag, Link as LinkIcon, Home, CheckCircle, XCircle, Info } from 'lucide-react';
+import { Calendar, Play, Film, Tv, Globe, Users, TrendingUp, DollarSign, Building2, MapPin, Languages, CalendarDays, Clock3, BarChart3, ExternalLink, Eye, Link as LinkIcon, Home, CheckCircle, XCircle, Info } from 'lucide-react';
 import { fetchTvSeasonDetails } from '../api/MediaService';
 import { fetchAnimeEpisodes } from '../api/AnimeShowApi';
 
 const InfoPage = () => {
   const { activeTab: contextActiveTab } = React.useContext(TabContext);
   const { isLoading, setIsLoading } = useLoading();
-  const { videoPlayerState, switchProvider } = useContext(VideoPlayerContext);
+  const { videoPlayerState } = useContext(VideoPlayerContext);
   const { category, mediaId } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const { fetchMediaInfo, itemsCache } = useItemContext();
@@ -37,7 +37,6 @@ const InfoPage = () => {
   const [isSearchVisible, setIsSearchVisible] = useState(false);
   const { addWatchedItem, watchedItems, user, loading } = useAuth();
   const { 
-    autoSearchAndSelect, 
     prepareTorrent, 
     activeHash, 
     activeFileIndex, 
@@ -63,6 +62,102 @@ const InfoPage = () => {
   const lastWatchedItemRef = useRef(null);
   const autoplayTriggeredRef = useRef(false);
 
+  // Memoize initializeSelectedSeasonAndEpisode to avoid recreating it every render
+  const initializeSelectedSeasonAndEpisode = useCallback(async (item, watchedItemsList, authLoading, currentUser, addToWatched, prepTorrent) => {
+    if (!item) return;
+    
+    // Wait briefly for watchedItems to load if still loading
+    // This prevents defaulting to S1E1 when watchedItems is about to load
+    if (authLoading) {
+      console.log('⏳ Waiting for watchedItems to load...');
+      // Wait up to 1.5 seconds, checking every 100ms
+      for (let i = 0; i < 15; i++) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+    
+    const title = getTitle(item) || '';
+
+    // Check if item is already watched
+    const watchedItem = watchedItemsList?.find(w =>
+      w.tmdb_id === parseInt(item.id) && w.content_type === item.type
+    );
+
+    let initialSeason = { season_number: 1, episode_count: 1 };
+    let initialEpisode = { episode_number: 1 };
+
+    if (item.type === 'anime') {
+      let seasonNum = 1;
+      if (item.season) {
+        if (typeof item.season === 'string') {
+          const seasonMap = {
+            'WINTER': 1, 'winter': 1,
+            'SPRING': 2, 'spring': 2,
+            'SUMMER': 3, 'summer': 3,
+            'FALL': 4, 'fall': 4, 'AUTUMN': 4, 'autumn': 4
+          };
+          seasonNum = seasonMap[item.season.toLowerCase()] || 1;
+        } else {
+          seasonNum = parseInt(item.season) || 1;
+        }
+      }
+
+      initialSeason = {
+        season_number: seasonNum,
+        episode_count: item.totalEpisodes,
+      };
+      if (watchedItem) {
+        console.log('✅ Found watched anime item:', watchedItem);
+        initialSeason = {
+          season_number: watchedItem.season || seasonNum,
+          episode_count: item.totalEpisodes,
+        };
+        initialEpisode = { episode_number: watchedItem.episode || 1 };
+      }
+    } else if (item.seasons && item.seasons.length > 0) {
+      initialSeason = item.seasons[0];
+      if (watchedItem) {
+        console.log('✅ Found watched show item:', watchedItem);
+        initialSeason =
+          item.seasons.find(
+            (s) => s.season_number === watchedItem.season,
+          ) || initialSeason;
+        initialEpisode = { episode_number: watchedItem.episode || 1 };
+      }
+    }
+
+    // Add to watched list (only if user is authenticated)
+    if (currentUser && !authLoading) {
+      try {
+        await addToWatched({
+          tmdbId: item.id,
+          mediaType: item.type,
+          title: title,
+          season: initialSeason.season_number,
+          episode: initialEpisode.episode_number,
+          posterPath: item.type === 'anime' ? item.image : item.poster_path,
+          rating: item.type === 'anime' ? item.rating : item.vote_average
+        });
+      } catch (error) {
+        console.error('Error adding to watched list:', error);
+      }
+    }
+
+    setSelectedSeason(initialSeason);
+    setSelectedEpisode(initialEpisode);
+
+    // 🚀 PROACTIVE OPTIMIZATION: Start preparing torrent in background immediately
+    if (item) {
+      if (item.type === 'movies') {
+        console.log('🔮 Proactively preparing movie torrent...');
+        prepTorrent(item);
+      } else if (item.type === 'shows' || item.type === 'anime') {
+        console.log('🔮 Proactively preparing episode torrent...');
+        prepTorrent(item, initialSeason.season_number, initialEpisode.episode_number);
+      }
+    }
+  }, []);
+
   useEffect(() => {
     const loadMediaInfo = async () => {
       if (isLoading || !mediaId || !category) return;
@@ -86,7 +181,7 @@ const InfoPage = () => {
       if (itemsCache[cacheKey]) {
         setItemInfo(itemsCache[cacheKey]);
         // Wait for watchedItems to load before initializing season/episode
-        await initializeSelectedSeasonAndEpisode(itemsCache[cacheKey]);
+        await initializeSelectedSeasonAndEpisode(itemsCache[cacheKey], watchedItems, loading, user, addWatchedItem, prepareTorrent);
         return;
       }
 
@@ -101,7 +196,7 @@ const InfoPage = () => {
 
         setItemInfo(fetchedItem);
         // Wait for watchedItems to load before initializing season/episode
-        await initializeSelectedSeasonAndEpisode(fetchedItem);
+        await initializeSelectedSeasonAndEpisode(fetchedItem, watchedItems, loading, user, addWatchedItem, prepareTorrent);
       } catch (err) {
         console.error('Error loading media info:', err);
         setError('Failed to load media information. Please try again later.');
@@ -110,113 +205,19 @@ const InfoPage = () => {
       }
     };
 
-    const initializeSelectedSeasonAndEpisode = async (item) => {
-      if (!item || isLoading) return;
-      
-      // Wait briefly for watchedItems to load if still loading
-      // This prevents defaulting to S1E1 when watchedItems is about to load
-      if (loading) {
-        console.log('⏳ Waiting for watchedItems to load...');
-        // Wait up to 1.5 seconds, checking every 100ms
-        for (let i = 0; i < 15; i++) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-          // Check if we have watchedItems now (they might have loaded)
-          // We'll check watchedItems in the next part of the function
-        }
-      }
-      
-      const title = getTitle(item) || '';
-
-      // Check if item is already watched
-      // watchedItems is always an array (empty if not loaded yet)
-      const watchedItem = watchedItems?.find(w =>
-        w.tmdb_id === parseInt(item.id) && w.content_type === item.type
-      );
-
-      let initialSeason = { season_number: 1, episode_count: 1 };
-      let initialEpisode = { episode_number: 1 };
-
-      if (item.type === 'anime') {
-        // Anime typically don't have traditional seasons like TV shows
-        // Use season 1 for all episodes, but preserve season info if available
-        let seasonNum = 1;
-        if (item.season) {
-          if (typeof item.season === 'string') {
-            // For seasonal anime, still map to numbers for UI purposes
-            const seasonMap = {
-              'WINTER': 1, 'winter': 1,
-              'SPRING': 2, 'spring': 2,
-              'SUMMER': 3, 'summer': 3,
-              'FALL': 4, 'fall': 4, 'AUTUMN': 4, 'autumn': 4
-            };
-            seasonNum = seasonMap[item.season.toLowerCase()] || 1;
-          } else {
-            seasonNum = parseInt(item.season) || 1;
-          }
-        }
-
-        initialSeason = {
-          season_number: seasonNum,
-          episode_count: item.totalEpisodes,
-        };
-        if (watchedItem) {
-          console.log('✅ Found watched anime item:', watchedItem);
-          initialSeason = {
-            season_number: watchedItem.season || seasonNum,
-            episode_count: item.totalEpisodes,
-          };
-          initialEpisode = { episode_number: watchedItem.episode || 1 };
-        }
-      } else if (item.seasons && item.seasons.length > 0) {
-        initialSeason = item.seasons[0];
-        if (watchedItem) {
-          console.log('✅ Found watched show item:', watchedItem);
-          initialSeason =
-            item.seasons.find(
-              (s) => s.season_number === watchedItem.season,
-            ) || initialSeason;
-          initialEpisode = { episode_number: watchedItem.episode || 1 };
-        }
-      }
-
-      // Add to watched list (only if user is authenticated)
-      if (user && !loading) {
-        try {
-          await addWatchedItem({
-            tmdbId: item.id,
-            mediaType: item.type,
-            title: title,
-            season: initialSeason.season_number,
-            episode: initialEpisode.episode_number,
-            posterPath: item.type === 'anime' ? item.image : item.poster_path,
-            rating: item.type === 'anime' ? item.rating : item.vote_average
-          });
-        } catch (error) {
-          console.error('Error adding to watched list:', error);
-        }
-      }
-
-      setSelectedSeason(initialSeason);
-      setSelectedEpisode(initialEpisode);
-
-      // 🚀 PROACTIVE OPTIMIZATION: Start preparing torrent in background immediately
-      // This happens while user is reading info/trailer - by the time they click play, torrent is ready
-      if (item) {
-        if (item.type === 'movies') {
-          console.log('🔮 Proactively preparing movie torrent...');
-          prepareTorrent(item);
-        } else if (item.type === 'shows' || item.type === 'anime') {
-          console.log('🔮 Proactively preparing episode torrent...');
-          prepareTorrent(item, initialSeason.season_number, initialEpisode.episode_number);
-        }
-      }
-    };
-
     loadMediaInfo();
-  }, [mediaId, category, watchedItems, loading]); // Added watchedItems and loading as dependencies
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mediaId, category]); // Only re-run when mediaId or category changes
 
   // Re-initialize season/episode when watchedItems finishes loading
   // This handles the case where media info loads before watchedItems
+  // Memoize itemInfo properties to avoid unnecessary re-runs
+  const itemInfoId = itemInfo?.id;
+  const itemInfoType = itemInfo?.type;
+  const itemInfoTotalEpisodes = itemInfo?.totalEpisodes;
+  const itemInfoSeasons = itemInfo?.seasons;
+  const itemInfoSeason = itemInfo?.season;
+
   useEffect(() => {
     if (!itemInfo || loading) return;
     
@@ -229,20 +230,17 @@ const InfoPage = () => {
     }
 
     // Use functional update to check current state and update if needed
-    // This ensures we're always working with the latest state
     setSelectedEpisode(currentEpisode => {
       // Check if current episode already matches watchedItem
       if (currentEpisode?.episode_number === watchedItem.episode) {
         console.log('✅ Episode already matches watchedItem, no update needed');
         lastWatchedItemRef.current = watchedItem;
-        return currentEpisode; // No change needed
+        return currentEpisode;
       }
 
-      // Check if current selection is default (episode 1) or not yet set
       const isDefaultEpisode = 
         currentEpisode?.episode_number === 1 || !currentEpisode;
 
-      // Check if we've already processed this exact watchedItem
       const watchedItemKey = `${watchedItem.season}-${watchedItem.episode}`;
       const lastWatchedKey = lastWatchedItemRef.current 
         ? `${lastWatchedItemRef.current.season}-${lastWatchedItemRef.current.episode}`
@@ -257,49 +255,42 @@ const InfoPage = () => {
         alreadyProcessed
       });
 
-      // Update if:
-      // 1. Current is default (ep 1) - meaning initialization happened before watchedItems loaded
-      // 2. OR we haven't processed this watchedItem yet
       if (isDefaultEpisode || !alreadyProcessed) {
         console.log('🔄 Updating episode from watchedItems:', watchedItem.episode);
         lastWatchedItemRef.current = watchedItem;
         return { episode_number: watchedItem.episode || 1 };
       }
 
-      // User has manually selected something different, don't override
       console.log('⏭️ User has selected non-default episode, not overriding');
       return currentEpisode;
     });
 
     // Also update season
     setSelectedSeason(currentSeason => {
-      let newSeason = currentSeason || { season_number: 1, episode_count: 1 };
-
       if (itemInfo.type === 'anime') {
         let seasonNum = watchedItem.season || 1;
-        if (itemInfo.season) {
-          if (typeof itemInfo.season === 'string') {
+        if (itemInfoSeason) {
+          if (typeof itemInfoSeason === 'string') {
             const seasonMap = {
               'WINTER': 1, 'winter': 1,
               'SPRING': 2, 'spring': 2,
               'SUMMER': 3, 'summer': 3,
               'FALL': 4, 'fall': 4, 'AUTUMN': 4, 'autumn': 4
             };
-            seasonNum = seasonMap[itemInfo.season.toLowerCase()] || seasonNum;
+            seasonNum = seasonMap[itemInfoSeason.toLowerCase()] || seasonNum;
           } else {
-            seasonNum = parseInt(itemInfo.season) || seasonNum;
+            seasonNum = parseInt(itemInfoSeason) || seasonNum;
           }
         }
         
-        // Only update if current is default or not matching
         if (currentSeason?.season_number === 1 || !currentSeason || currentSeason?.season_number !== watchedItem.season) {
           return {
             season_number: watchedItem.season || seasonNum,
-            episode_count: itemInfo.totalEpisodes,
+            episode_count: itemInfoTotalEpisodes,
           };
         }
-      } else if (itemInfo.seasons && itemInfo.seasons.length > 0) {
-        const foundSeason = itemInfo.seasons.find(
+      } else if (itemInfoSeasons && itemInfoSeasons.length > 0) {
+        const foundSeason = itemInfoSeasons.find(
           (s) => s.season_number === watchedItem.season
         );
         if (foundSeason && (currentSeason?.season_number === 1 || !currentSeason || currentSeason?.season_number !== watchedItem.season)) {
@@ -309,7 +300,7 @@ const InfoPage = () => {
 
       return currentSeason;
     });
-  }, [watchedItems, loading, itemInfo?.id, itemInfo?.type, itemInfo?.totalEpisodes, itemInfo?.seasons]); // Run when watchedItems finishes loading
+  }, [watchedItems, loading, itemInfoId, itemInfoType, itemInfoTotalEpisodes, itemInfoSeasons, itemInfoSeason, itemInfo]);
 
   useEffect(() => {
     if (selectedEpisode && sideContentRef.current) {
@@ -475,15 +466,19 @@ const InfoPage = () => {
   }, [itemInfo, selectedSeason]);
 
   // Use proactively prepared torrent for preview
+  // Memoize the key values to avoid unnecessary re-runs
+  const selectedSeasonNumber = selectedSeason?.season_number;
+  const selectedEpisodeNumber = selectedEpisode?.episode_number;
+
   useEffect(() => {
     const handlePreparedTorrent = async () => {
       // Early return if essential data is missing
-      if (!itemInfo?.id) {
+      if (!itemInfoId) {
         return;
       }
 
       // For shows/anime, wait for season/episode to be selected
-      if ((itemInfo.type === 'shows' || itemInfo.type === 'anime') && (!selectedSeason || !selectedEpisode)) {
+      if ((itemInfoType === 'shows' || itemInfoType === 'anime') && (!selectedSeasonNumber || !selectedEpisodeNumber)) {
         return;
       }
 
@@ -495,15 +490,13 @@ const InfoPage = () => {
 
       // Get or wait for the prepared torrent (reuses in-progress preparation)
       // For movies, don't pass season/episode to match the cache key from proactive prep
-      const streamUrl = itemInfo.type === 'movies'
+      const streamUrl = itemInfoType === 'movies'
         ? await prepareTorrent(itemInfo)
-        : await prepareTorrent(itemInfo, selectedSeason?.season_number, selectedEpisode?.episode_number);
+        : await prepareTorrent(itemInfo, selectedSeasonNumber, selectedEpisodeNumber);
 
       if (streamUrl) {
         console.log('✅ Torrent stream ready, using torrent player');
         console.log('📍 Stream URL:', streamUrl);
-        console.log('📍 Torrent hash:', activeHash);
-        console.log('📍 File index:', activeFileIndex);
         setTorrentStreamUrl(streamUrl);
         setUsingTorrent(true);
 
@@ -522,7 +515,8 @@ const InfoPage = () => {
     };
 
     handlePreparedTorrent();
-  }, [itemInfo?.id, selectedSeason?.season_number, selectedEpisode?.episode_number]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [itemInfoId, itemInfoType, selectedSeasonNumber, selectedEpisodeNumber, prepareTorrent]);
 
   // Autoplay support - triggered when navigating from Random page with ?autoplay=true
   useEffect(() => {
@@ -536,8 +530,9 @@ const InfoPage = () => {
           autoplayTriggeredRef.current = true;
           
           // Clear the autoplay param from URL
-          searchParams.delete('autoplay');
-          setSearchParams(searchParams, { replace: true });
+          const newParams = new URLSearchParams(searchParams);
+          newParams.delete('autoplay');
+          setSearchParams(newParams, { replace: true });
           
           // Load saved progress if available
           if (activeHash && activeFileIndex !== null) {
@@ -553,7 +548,7 @@ const InfoPage = () => {
       
       return () => clearTimeout(autoplayTimeout);
     }
-  }, [searchParams, itemInfo, isLoading, usingTorrent, torrentStreamUrl, activeHash, activeFileIndex]);
+  }, [searchParams, setSearchParams, itemInfo, isLoading, usingTorrent, torrentStreamUrl, activeHash, activeFileIndex]);
 
   // Reset autoplay flag when navigating to new media
   useEffect(() => {
@@ -1604,6 +1599,7 @@ const InfoPage = () => {
                 ) : (
                   <iframe
                     src={videoSrc}
+                    title={`Video player for ${title}`}
                     allowFullScreen
                     className="modal-iframe"
                     frameBorder="0"

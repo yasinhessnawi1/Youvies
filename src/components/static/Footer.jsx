@@ -55,15 +55,15 @@ const Footer = () => {
 
   const renderFooterLinks = () => (
     <div className='footer-links'>
-      <a href='#' className='footer-link'>
+      <button type="button" className='footer-link' onClick={() => {}}>
         About Us
-      </a>
-      <a href='#' className='footer-link'>
+      </button>
+      <button type="button" className='footer-link' onClick={() => {}}>
         Contact
-      </a>
-      <a href='#' className='footer-link'>
+      </button>
+      <button type="button" className='footer-link' onClick={() => {}}>
         Privacy Policy
-      </a>
+      </button>
     </div>
   );
 

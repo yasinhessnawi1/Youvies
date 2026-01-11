@@ -168,30 +168,23 @@ const RandomPage = () => {
   const mosaicContainerRef = useRef(null);
   const loadingRef = useRef(null);
 
-  // Calculate how many items we need based on viewport
-  const calculateItemsNeeded = useCallback(() => {
-    if (!mosaicContainerRef.current) return 500;
-    const container = mosaicContainerRef.current;
-    const width = container.clientWidth;
-    const height = container.clientHeight;
-    const tilesPerRow = Math.ceil(width / tileSize);
-    const tilesPerCol = Math.ceil(height / (tileSize * 1.5));
-    // Load extra for scrolling
-    return tilesPerRow * tilesPerCol * 3;
-  }, [tileSize]);
+  // Ref to track if initial load has happened
+  const initialLoadDone = useRef(false);
+  const loadingInProgress = useRef(false);
 
   // Fetch items
-  const loadItems = useCallback(async (pageNum, append = false) => {
-    if (loading) return;
+  const loadItems = useCallback(async (pageNum, append = false, currentFilters = filters) => {
+    if (loadingInProgress.current) return;
     
     // Check if at least one filter is enabled
-    if (!filters.movies && !filters.shows && !filters.anime) {
+    if (!currentFilters.movies && !currentFilters.shows && !currentFilters.anime) {
       return;
     }
     
+    loadingInProgress.current = true;
     setLoading(true);
     try {
-      const newItems = await fetchRandomMosaicItems(filters, pageNum, 150);
+      const newItems = await fetchRandomMosaicItems(currentFilters, pageNum, 150);
       
       if (newItems.length === 0) {
         setHasMore(false);
@@ -203,20 +196,31 @@ const RandomPage = () => {
       console.error('Error loading mosaic items:', error);
     } finally {
       setLoading(false);
+      loadingInProgress.current = false;
     }
-  }, [filters, loading]);
+  }, [filters]);
 
   // Initial load
   useEffect(() => {
-    loadItems(1, false);
-  }, []);
+    if (!initialLoadDone.current) {
+      initialLoadDone.current = true;
+      loadItems(1, false, filters);
+    }
+  }, [loadItems, filters]);
 
-  // Reload when filters change
+  // Reload when filters change (but not on initial mount)
+  const filtersChangedRef = useRef(false);
   useEffect(() => {
+    // Skip on initial mount - we already handle that above
+    if (!filtersChangedRef.current) {
+      filtersChangedRef.current = true;
+      return;
+    }
+    
     setPage(1);
     setItems([]);
-    loadItems(1, false);
-  }, [filters.movies, filters.shows, filters.anime]);
+    loadItems(1, false, filters);
+  }, [filters.movies, filters.shows, filters.anime, loadItems, filters]);
 
   // Infinite scroll observer
   useEffect(() => {
@@ -269,8 +273,8 @@ const RandomPage = () => {
   const refreshItems = useCallback(() => {
     setPage(1);
     setItems([]);
-    loadItems(1, false);
-  }, [loadItems]);
+    loadItems(1, false, filters);
+  }, [loadItems, filters]);
 
   // Toggle filter
   const toggleFilter = useCallback((type) => {

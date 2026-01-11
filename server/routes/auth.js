@@ -278,7 +278,7 @@ router.put('/user/preferences/subtitle-language', authMiddleware, async (req, re
       return res.status(400).json({ error: 'Language is required' });
     }
     
-    const updated = await setPreferredSubtitleLanguage(req.user.id, language.toLowerCase());
+    await setPreferredSubtitleLanguage(req.user.id, language.toLowerCase());
     res.json({ 
       success: true, 
       message: `Preferred subtitle language set to ${language}`,

@@ -37,7 +37,6 @@ import {
  * @returns {Promise<Array>} Array of items with type field
  */
 export const fetchRandomMosaicItems = async (filters = { movies: true, shows: true, anime: true }, page = 1, itemsPerSource = 100) => {
-  const results = [];
   const promises = [];
 
   // Calculate pages needed to get desired items (TMDB returns 20 per page)

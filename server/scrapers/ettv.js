@@ -1,6 +1,5 @@
 const cheerio = require('cheerio');
 const axios = require('axios');
-const dev = require('request-promise');
 
 async function ettvCentral(query, page = '0') {
     const ALLURLARRAY = [];
@@ -8,10 +7,10 @@ async function ettvCentral(query, page = '0') {
     const url = "https://www.ettvcentral.com/torrents-search.php?search= " + query + "&page=" + page;
     let html;
     try {
-        html = await dev({
-            url: url,
+        const response = await axios.get(url, {
             // proxy: 'Enter your proxy uri here'
-        })
+        });
+        html = response.data;
 
     } catch {
         return null;
@@ -41,10 +40,10 @@ async function ettvCentral(query, page = '0') {
             if (ALLTORRENT[i]['Url'] === url) {
                 let html;
                 try {
-                    html = await dev({
-                        url: url,
+                    const response = await axios.get(url, {
                         // proxy: 'Enter your proxy uri here',
-                    })
+                    });
+                    html = response.data;
                 } catch {
                     return null;
                 }

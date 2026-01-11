@@ -100,13 +100,6 @@ function getLowQualityPenalty(name) {
   return { penalty: 0, quality: 'Good' };
 }
 
-// Legacy function for backward compatibility - now uses incremental penalties
-function isLowQualitySource(name) {
-  const { penalty } = getLowQualityPenalty(name);
-  // Only return true for truly unwatchable content (CAM)
-  return penalty <= -0.8;
-}
-
 // Helper function to detect non-English audio/subtitles
 function detectAudioLanguage(name) {
   const nameLower = name.toLowerCase();

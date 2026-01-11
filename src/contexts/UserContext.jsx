@@ -1,6 +1,6 @@
 // UserContext.jsx
 
-import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
+import React, { createContext, useState, useEffect, useCallback } from 'react';
 import { loginUser, logoutUser, editUser } from '../api/UserApi';
 import { useNavigate } from 'react-router-dom';
 import { config } from '../config/environment';
@@ -24,14 +24,49 @@ export const UserProvider = ({ children }) => {
       setPreferredSubtitleLanguage(savedSubtitlePref);
     }
   }, []);
+
+  // ============================================================================
+  // USER PREFERENCES (Subtitle Language)
+  // ============================================================================
+  
+  /**
+   * Fetch user preferences from server
+   */
+  const fetchUserPreferences = useCallback(async (currentUser) => {
+    // Get the token - check both possible locations (new Supabase format vs legacy)
+    const token = currentUser?.session?.access_token || currentUser?.token;
+    if (!token) return;
+    
+    try {
+      const apiBaseUrl = config.apiBaseUrl.replace('/api', '');
+      const response = await fetch(`${apiBaseUrl}/api/auth/user/preferences/subtitle-language`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.preferredLanguage) {
+          setPreferredSubtitleLanguage(data.preferredLanguage);
+          localStorage.setItem('preferredSubtitleLanguage', data.preferredLanguage);
+          console.log('📝 Loaded preferred subtitle language from server:', data.preferredLanguage);
+        }
+      } else {
+        console.warn('Failed to fetch subtitle preference from server:', response.status);
+      }
+    } catch (error) {
+      console.error('Failed to fetch user preferences:', error);
+    }
+  }, []);
   
   // Fetch user preferences from server when user logs in
   useEffect(() => {
     const token = user?.session?.access_token || user?.token;
     if (token) {
-      fetchUserPreferences();
+      fetchUserPreferences(user);
     }
-  }, [user]);
+  }, [user, fetchUserPreferences]);
 
   const login = async (username, password) => {
     try {
@@ -111,41 +146,6 @@ export const UserProvider = ({ children }) => {
       ) || null
     );
   };
-
-  // ============================================================================
-  // USER PREFERENCES (Subtitle Language)
-  // ============================================================================
-  
-  /**
-   * Fetch user preferences from server
-   */
-  const fetchUserPreferences = useCallback(async () => {
-    // Get the token - check both possible locations (new Supabase format vs legacy)
-    const token = user?.session?.access_token || user?.token;
-    if (!token) return;
-    
-    try {
-      const apiBaseUrl = config.apiBaseUrl.replace('/api', '');
-      const response = await fetch(`${apiBaseUrl}/api/auth/user/preferences/subtitle-language`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data.preferredLanguage) {
-          setPreferredSubtitleLanguage(data.preferredLanguage);
-          localStorage.setItem('preferredSubtitleLanguage', data.preferredLanguage);
-          console.log('📝 Loaded preferred subtitle language from server:', data.preferredLanguage);
-        }
-      } else {
-        console.warn('Failed to fetch subtitle preference from server:', response.status);
-      }
-    } catch (error) {
-      console.error('Failed to fetch user preferences:', error);
-    }
-  }, [user]);
 
   /**
    * Set user's preferred subtitle language

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import '../styles/page/HomePage.css';
 import Header from '../components/static/Header';
 import Banner from '../components/Banner';
@@ -29,64 +29,70 @@ const HomePage = () => {
   const [showRecommendations, setShowRecommendations] = useState([]);
   const [animeRecommendations, setAnimeRecommendations] = useState([]);
 
-  // Helper to check if user has watched items of a specific type
-  const hasWatchedType = (mediaType) => {
+  // Helper to check if user has watched items of a specific type - memoized
+  const hasWatchedType = useCallback((mediaType) => {
     const allWatched = watchedItems || [];
     return allWatched.some((item) => {
       const itemType = item.type || item.content_type;
       return itemType === mediaType;
     });
-  };
+  }, [watchedItems]);
 
   // Helper to get watched items filtered by type
-  const getWatchedByType = (mediaType) => {
+  const getWatchedByType = useCallback((mediaType) => {
     const allWatched = watchedItems || [];
     return allWatched.filter((item) => {
       const itemType = item.type || item.content_type;
       return itemType === mediaType;
     });
-  };
+  }, [watchedItems]);
 
   // Memoized filtered watched items for each type
-  const watchedMovies = getWatchedByType('movies');
-  const watchedShows = getWatchedByType('shows');
-  const watchedAnime = getWatchedByType('anime');
+  const watchedMovies = useMemo(() => getWatchedByType('movies'), [getWatchedByType]);
+  const watchedShows = useMemo(() => getWatchedByType('shows'), [getWatchedByType]);
+  const watchedAnime = useMemo(() => getWatchedByType('anime'), [getWatchedByType]);
+
+  // Memoize watched type checks to prevent re-running effect
+  const hasWatchedMovies = useMemo(() => hasWatchedType('movies'), [hasWatchedType]);
+  const hasWatchedShows = useMemo(() => hasWatchedType('shows'), [hasWatchedType]);
+  const hasWatchedAnime = useMemo(() => hasWatchedType('anime'), [hasWatchedType]);
 
   // Fetch recommendations when component mounts or watched items change
   useEffect(() => {
     const loadRecommendations = async () => {
-      if (hasWatchedType('movies')) {
+      if (hasWatchedMovies) {
         const recs = await fetchUserRecommendations('movies');
         setMovieRecommendations(recs);
       }
-      if (hasWatchedType('shows')) {
+      if (hasWatchedShows) {
         const recs = await fetchUserRecommendations('shows');
         setShowRecommendations(recs);
       }
-      if (hasWatchedType('anime')) {
+      if (hasWatchedAnime) {
         const recs = await fetchUserRecommendations('anime');
         setAnimeRecommendations(recs);
       }
     };
     loadRecommendations();
-  }, [watchedItems, fetchUserRecommendations]);
+  }, [hasWatchedMovies, hasWatchedShows, hasWatchedAnime, fetchUserRecommendations]);
 
   const hasFetched = useRef(false);
   useEffect(() => {
     setIsSearchVisible(false);
   }, [activeTab]);
 
+  // Check if home items exist - memoized to prevent reference changes
+  const hasHomeItems = useMemo(() => 
+    !!(items['movies-home'] && items['shows-home'] && items['anime-home']),
+    [items]
+  );
+
   useEffect(() => {
-    if (
-      !hasFetched.current &&
-      !items['movies-home'] &&
-      !items['shows-home'] &&
-      !items['anime-home']
-    ) {
+    if (!hasFetched.current && !hasHomeItems) {
       fetchAllItems();
       hasFetched.current = true;
     }
-  }, [fetchAllItems]);
+  }, [fetchAllItems, hasHomeItems]);
 
   useEffect(() => {
     if (activeTab !== 'home') {
@@ -244,7 +250,7 @@ const HomePage = () => {
             />
           )}
           {/* Movie Recommendations - only show if user has watched movies */}
-          {hasWatchedType('movies') && movieRecommendations.length > 0 && (
+          {hasWatchedMovies && movieRecommendations.length > 0 && (
             <VideoCardGrid
               title="Recommended For You"
               customItems={movieRecommendations}
@@ -340,7 +346,7 @@ const HomePage = () => {
             />
           )}
           {/* Anime Recommendations - only show if user has watched anime */}
-          {hasWatchedType('anime') && animeRecommendations.length > 0 && (
+          {hasWatchedAnime && animeRecommendations.length > 0 && (
             <VideoCardGrid
               title="Recommended For You"
               customItems={animeRecommendations}

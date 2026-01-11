@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import GridMotion from './GridMotion';
 import { fetchItems } from '../api/ItemsApi';
 
@@ -8,14 +8,42 @@ const ItemsGrid = () => {
     return cachedItems ? JSON.parse(cachedItems) : {};
   });
   const [gridItems, setGridItems] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const hasFetched = useRef(false);
+
+  const formatItems = useCallback((fetchedItems) => {
+    const formattedItems = [];
+
+    fetchedItems.forEach((item) => {
+      const imageUrl =
+        item.backdrop_path || item.poster_path
+          ? `https://image.tmdb.org/t/p/original${item.backdrop_path || item.poster_path}`
+          : null;
+
+      if (imageUrl) {
+        formattedItems.push(imageUrl);
+      }
+    });
+
+    const totalItems = 28;
+    return fillArrayToLength(formattedItems, totalItems);
+  }, []);
+
+  const fillArrayToLength = (items, length) => {
+    const filledItems = [...items];
+    while (filledItems.length < length) {
+      filledItems.push(`Item ${filledItems.length + 1}`);
+    }
+    return filledItems.slice(0, length);
+  };
 
   useEffect(() => {
     const fetchData = async () => {
+      if (hasFetched.current) return;
+      
       console.log('Fetching items...', itemsCache);
 
-      if (!itemsCache['login-items'] && !isLoading) {
-        setIsLoading(true);
+      if (!itemsCache['login-items']) {
+        hasFetched.current = true;
         const [movies, anime] = await Promise.all([
           fetchItems('anime', 1),
           fetchItems('movies', 1),
@@ -33,49 +61,15 @@ const ItemsGrid = () => {
 
         setItemsCache(updatedCache);
         localStorage.setItem('cachedItems', JSON.stringify(updatedCache));
-        setIsLoading(false);
-      } else if (itemsCache['login-items']) {
+      } else {
         // Use the cached items
         setGridItems(formatItems(itemsCache['login-items']));
+        hasFetched.current = true;
       }
     };
 
     fetchData();
-    // Only run on mount
-  }, []); // Empty dependency array means it runs only once after the initial render// Add dependencies to prevent unnecessary re-renders
-
-  const formatItems = (fetchedItems) => {
-    const formattedItems = [];
-
-    fetchedItems.forEach((item) => {
-      // Insert title or name
-      // Insert image URLs
-      const imageUrl =
-        item.backdrop_path || item.poster_path
-          ? `https://image.tmdb.org/t/p/original${item.backdrop_path || item.poster_path}`
-          : null;
-
-      if (imageUrl) {
-        formattedItems.push(imageUrl);
-      }
-    });
-
-    // Ensure the array has exactly 28 items
-    const totalItems = 28;
-    return fillArrayToLength(
-      formattedItems,
-      totalItems,
-    );
-  };
-
-  const fillArrayToLength = (items, length) => {
-    // Fill the array with placeholders or trim it to ensure it has exactly 'length' items
-    const filledItems = [...items];
-    while (filledItems.length < length) {
-      filledItems.push(`Item ${filledItems.length + 1}`);
-    }
-    return filledItems.slice(0, length);
-  };
+  }, [itemsCache, formatItems]);
 
   return (
     <div className='items-grid'>

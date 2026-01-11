@@ -44,7 +44,10 @@ const Carousel = forwardRef(
       const [fetchAttempted, setFetchAttempted] = useState(false);
 
       // Memoize extraParams to prevent infinite loops
-      const memoizedExtraParams = useMemo(() => extraParams || {}, [JSON.stringify(extraParams)]);
+      // Using a stable stringified version for dependency comparison
+      const extraParamsStr = JSON.stringify(extraParams || {});
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      const memoizedExtraParams = useMemo(() => extraParams || {}, [extraParamsStr]);
 
       // Show/Hide "Show All" overlay
       const [showAllOpen, setShowAllOpen] = useState(false);
@@ -95,13 +98,16 @@ const Carousel = forwardRef(
           ? `${contentType}-home`
           : `${contentType}-${selectedGenre}`;
 
+      // Check if we have cached items for this key
+      const hasCachedItems = !!(items[itemKey] && items[itemKey].length > 0);
+
       // Fetch initial items if no customItems
       useEffect(() => {
         const loadInitialItems = async () => {
           if (customItems) return; // Don't fetch if custom items provided
           
           // Check if we already have items in context cache
-          if (items[itemKey] && items[itemKey].length > 0) {
+          if (hasCachedItems) {
             setFetchAttempted(true);
             return; // Already have data
           }
@@ -110,7 +116,7 @@ const Carousel = forwardRef(
             // Fetch from specialized list endpoint
             setLocalLoading(true);
             try {
-              const result = await fetchCarouselList(contentType, listType, 1, memoizedExtraParams);
+              await fetchCarouselList(contentType, listType, 1, memoizedExtraParams);
               setFetchAttempted(true);
             } catch (err) {
               console.error(`Carousel fetch error for ${itemKey}:`, err);
@@ -135,9 +141,7 @@ const Carousel = forwardRef(
           }
         };
         loadInitialItems();
-        // Only depend on itemKey and the fetch functions, not items object
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-      }, [itemKey, listType, selectedGenre, contentType]);
+      }, [itemKey, listType, selectedGenre, contentType, customItems, hasCachedItems, fetchCarouselList, fetchGenreItems, memoizedExtraParams]);
 
       // Final array of items to show in the carousel
       const allItems = customItems || items[itemKey] || [];

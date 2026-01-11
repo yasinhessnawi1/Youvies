@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import '../styles/components/Banner.css';
 import { useItemContext } from '../contexts/ItemContext';
 import Button from './Button';
@@ -24,20 +24,27 @@ const Banner = ({ contentType }) => {
     hasFetched.current = true;
   }, [contentType, items, fetchAllItems, isLoading]);
 
+  // Memoize the goToNext function to prevent unnecessary re-renders
+  const itemKey = `${contentType}-home`;
+  const totalItems = items[itemKey]?.length || 0;
+
+  const goToNext = useCallback(() => {
+    setPrevIndex(currentIndex);
+    setCurrentIndex((prevIdx) => (prevIdx + 1) % totalItems);
+  }, [currentIndex, totalItems]);
+
   useEffect(() => {
-    if (isPaused || isLoading) return;
+    if (isPaused || isLoading || totalItems === 0) return;
 
     intervalRef.current = setInterval(() => {
       goToNext();
     }, 10000);
 
     return () => clearInterval(intervalRef.current);
-  }, [currentIndex, isPaused, isLoading, items, contentType]);
+  }, [isPaused, isLoading, totalItems, goToNext]);
 
-  const itemKey = `${contentType}-home`;
   if (isLoading || !items[itemKey] || items[itemKey].length === 0) return null;
 
-  const totalItems = items[itemKey].length;
   const currentItem = items[itemKey][currentIndex] || {};
 
   // Generate an array of next three indices
@@ -69,12 +76,7 @@ const Banner = ({ contentType }) => {
 
   const goToPrevious = () => {
     setPrevIndex(currentIndex);
-    setCurrentIndex((prevIndex) => (prevIndex - 1 + totalItems) % totalItems);
-  };
-
-  const goToNext = () => {
-    setPrevIndex(currentIndex);
-    setCurrentIndex((prevIndex) => (prevIndex + 1) % totalItems);
+    setCurrentIndex((prevIdx) => (prevIdx - 1 + totalItems) % totalItems);
   };
 
   const getImageUrl = (item) => {

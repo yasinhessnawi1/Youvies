@@ -3,6 +3,7 @@ import React, {
   useEffect,
   useRef,
   useState,
+  useMemo,
 } from 'react';
 import { searchItems } from '../api/ItemsApi';
 import { useAuth } from '../contexts/AuthContext';
@@ -19,17 +20,7 @@ const SearchBar = ({ activeTab }) => {
   const [isSearching, setIsSearching] = useState(false);
   const dropdownRef = useRef(null);
 
-
-  const handleInputChange = (e) => {
-    const query = e.target.value;
-    //handleWordCompletion(query);
-    setSearchQuery(query);
-    debouncedFetchSuggestions(query);
-  };
-
-
-
-  const fetchSuggestions = async (query) => {
+  const fetchSuggestions = useCallback(async (query) => {
     if (!user || !query) return;
 
     setIsSearching(true);
@@ -40,12 +31,19 @@ const SearchBar = ({ activeTab }) => {
       console.error('Error searching items:', error);
     }
     setIsSearching(false);
-  };
+  }, [user, activeTab]);
 
-  const debouncedFetchSuggestions = useCallback(
-    debounce(fetchSuggestions, 1500),
-    [],
+  // Create memoized debounced function
+  const debouncedFetchSuggestions = useMemo(
+    () => debounce((query) => fetchSuggestions(query), 1500),
+    [fetchSuggestions]
   );
+
+  const handleInputChange = (e) => {
+    const query = e.target.value;
+    setSearchQuery(query);
+    debouncedFetchSuggestions(query);
+  };
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') {

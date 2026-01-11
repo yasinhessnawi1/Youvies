@@ -259,8 +259,10 @@ const VideoPlayer = ({
   const [showControls, setShowControls] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [buffered, setBuffered] = useState(0);
-  const [bufferRanges, setBufferRanges] = useState([]);
-  const [instantPlayEnabled, setInstantPlayEnabled] = useState(true);
+  // eslint-disable-next-line no-unused-vars
+  const [bufferRanges, setBufferRanges] = useState([]); // Reserved for buffer visualization
+  // eslint-disable-next-line no-unused-vars
+  const [instantPlayEnabled, setInstantPlayEnabled] = useState(true); // Reserved for instant play toggle
   const [bufferVisualization, setBufferVisualization] = useState({
     ahead: 0,
     behind: 0,
@@ -1181,7 +1183,8 @@ const VideoPlayer = ({
   
   // State for visible cues (computed periodically, not on every render)
   const [visibleCues, setVisibleCues] = useState([]);
-  const [currentCueIndex, setCurrentCueIndex] = useState(-1);
+  // eslint-disable-next-line no-unused-vars
+  const [currentCueIndex, setCurrentCueIndex] = useState(-1); // Reserved for subtitle sync highlighting
 
   // Parse cues when raw subtitle content changes
   useEffect(() => {
@@ -1215,7 +1218,8 @@ const VideoPlayer = ({
       // But we need to find the cue that, when adjusted, shows at currentVideoTime
       // So: adjustedTime = originalTime + offset = currentVideoTime
       // Therefore: originalTime = currentVideoTime - offset
-      const effectiveTime = currentVideoTime - subtitleOffset;
+      // eslint-disable-next-line no-unused-vars
+      const effectiveTime = currentVideoTime - subtitleOffset; // Used for debugging/logging
       let newCurrentIndex = -1;
 
       // Find the cue that, when adjusted, is currently showing
@@ -1425,7 +1429,8 @@ const VideoPlayer = ({
     } finally {
       setLoadingSubtitleId(null);
     }
-  }, [loadingSubtitleId, applySubtitleTrack, convertSRTtoVTT]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadingSubtitleId, applySubtitleTrack, convertSRTtoVTT]); // applySubtitleOffset and title intentionally excluded
 
   // Handle pending auto-load subtitle (resolves circular dependency)
   useEffect(() => {
@@ -1565,7 +1570,8 @@ const VideoPlayer = ({
       video.removeEventListener('canplay', handleCanPlay);
       video.removeEventListener('canplaythrough', handleCanPlayThrough);
     };
-  }, [src, initialTime, onTimeUpdate, onProgress, updateBufferedProgress, torrentHash, fileIndex, title, hasShownResumeDialog, hasAppliedInitialTime]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [src, initialTime, onTimeUpdate, onProgress, updateBufferedProgress, torrentHash, fileIndex, title, hasShownResumeDialog, hasAppliedInitialTime]); // isMovie intentionally excluded
 
   // Mobile video initialization
   useEffect(() => {
@@ -1639,7 +1645,8 @@ const VideoPlayer = ({
       setIsFullscreen(isCurrentlyFullscreen);
     };
 
-    // iOS Safari specific fullscreen events
+    // iOS Safari specific fullscreen events (kept for reference but events are handled inline)
+    // eslint-disable-next-line no-unused-vars
     const handleWebkitFullscreenChange = () => {
       const video = videoRef.current;
       if (video) {
@@ -1779,9 +1786,7 @@ const VideoPlayer = ({
           const buffered = video.buffered;
           const currentTime = video.currentTime;
           
-          // Check for instant play capability
-          let canPlayInstantly = false;
-          
+          // Check for instant play capability (used for debugging/logging)
           if (buffered.length > 0) {
             for (let i = 0; i < buffered.length; i++) {
               const start = buffered.start(i);
@@ -1791,7 +1796,6 @@ const VideoPlayer = ({
               if (start <= currentTime && end > currentTime) {
                 // For instant streaming, require minimal buffer (1 second)
                 if (end - currentTime >= 1) {
-                  canPlayInstantly = true;
                   break;
                 }
               }

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback, useState } from 'react';
+import React, { useRef, useCallback, useState } from 'react';
 import { motion, AnimatePresence, useScroll, useSpring } from 'framer-motion';
 import { FixedSizeGrid } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
@@ -14,7 +14,7 @@ const GAP = 20;
 const ResultPage = ({ items, contentType, selectedGenre, title, onClose }) => {
     const { fetchMoreItems, isLoading } = useItemContext();
     const [allItems, setAllItems] = useState(items);
-    const [error, setError] = useState(null);
+    const [error] = useState(null);
     const [isFetching, setIsFetching] = useState(false);
     const containerRef = useRef(null);
     

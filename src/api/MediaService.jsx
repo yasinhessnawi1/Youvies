@@ -1,5 +1,5 @@
 // mediaService.js
-import { handleApiErrors, TMDB_API_KEY, TMDB_BASE_URL } from './apiHelpers';
+import { TMDB_API_KEY, TMDB_BASE_URL } from './apiHelpers';
 
 // Helper function to handle API requests
 const fetchFromTmdb = async (endpoint, params = {}, show = false) => {

@@ -105,7 +105,7 @@ export const TorrentProvider = ({ children }) => {
     
     let cleaned = title
       // Remove anything in brackets or parentheses
-      .replace(/[\[\(].*?[\]\)]/g, '')
+      .replace(/[[(].*?[\])]/g, '')
       // Remove subtitle after dash (e.g., "-Arise from the Shadow-")
       .replace(/\s*-[^-]+?-\s*/g, ' ')
       // Remove trailing dash followed by subtitle (e.g., "- Subtitle Here")
@@ -278,7 +278,6 @@ export const TorrentProvider = ({ children }) => {
         // Anime typically don't use seasons like TV shows
         // Use more specific episode format to avoid batch results: "Title 001" or "Title Episode 1"
         const episodeStr = episode ? String(episode).padStart(3, '0') : '';
-        const episodeAlt = episode ? `Episode ${episode}` : '';
         // Try the padded number format first, as it's more common for anime torrents
         return episodeStr ? `${title} ${episodeStr}` : title;
       } else {

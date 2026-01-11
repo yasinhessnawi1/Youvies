@@ -6,7 +6,6 @@ import {
 } from 'react-icons/fa';
 import { useAuth } from '../contexts/AuthContext';
 import '../styles/components/ItemCard.css';
-import { getTitle } from '../utils/helper';
 import { Link } from 'react-router-dom';
 
 const ItemCard = React.memo(({ item }) => {
@@ -59,6 +58,7 @@ const ItemCard = React.memo(({ item }) => {
     item.type,
     item.title,
     item.image,
+    item.cover,
   ]);
 
   // Fallback gradient for missing images
