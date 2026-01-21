@@ -381,6 +381,19 @@ app.get('/api/iptv/proxy-external/*', async (req, res) => {
 
     // Handle streaming response
     if (isStreamingResource) {
+      // Check if this is an IPTV stream that returned an error
+      if (response.status >= 400 && (targetUrl.includes('tvsystem.my') || targetUrl.includes('tvappmanager.my'))) {
+        console.log(`[IPTV External Proxy] IPTV stream returned ${response.status}, returning error M3U8`);
+        res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+        if (response.status === 404) {
+          return res.status(200).send('#EXTM3U\n#EXTINF:-1,Stream Unavailable\n');
+        } else if (response.status === 503) {
+          return res.status(200).send('#EXTM3U\n#EXTINF:-1,Service Temporarily Unavailable\n');
+        } else {
+          return res.status(200).send('#EXTM3U\n#EXTINF:-1,Stream Error\n');
+        }
+      }
+
       response.data.pipe(res);
       response.data.on('error', (err) => {
         console.error('[IPTV External Proxy] Stream error:', err.message);
