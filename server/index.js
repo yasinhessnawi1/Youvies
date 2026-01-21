@@ -309,13 +309,20 @@ app.get('/api/iptv/status', (req, res) => {
 
 // IPTV External Resource Proxy - Proxy HTTP resources through HTTPS to avoid mixed content
 app.get('/api/iptv/proxy-external/*', async (req, res) => {
+  // Extract the target URL from the path
+  const urlPath = req.path.replace('/api/iptv/proxy-external/', '');
+  const targetUrl = decodeURIComponent(urlPath);
+
   try {
-    // Extract the target URL from the path
-    const urlPath = req.path.replace('/api/iptv/proxy-external/', '');
-    const targetUrl = decodeURIComponent(urlPath);
 
     console.log('[IPTV External Proxy] Requesting:', targetUrl.substring(0, 100) + '...');
 
+    // Determine if this is a streaming resource (M3U8, video, etc.)
+    const isStreamingResource = /\.(m3u8|mp4|webm|mkv|avi|ts|mts|mpg|mpeg)$/i.test(targetUrl) ||
+                                targetUrl.includes('/live/') ||
+                                targetUrl.includes('/stream');
+
+    // Special handling for IPTV streams - these often use dynamic CDN URLs that may not resolve
     // Validate the URL is actually HTTP
     if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
       console.log('[IPTV External Proxy] Invalid URL protocol:', targetUrl);
@@ -326,16 +333,6 @@ app.get('/api/iptv/proxy-external/*', async (req, res) => {
     if (!targetUrl.startsWith('http://')) {
       return res.status(400).json({ error: 'Only HTTP URLs are supported' });
     }
-
-    // Determine if this is a streaming resource (M3U8, video, etc.)
-    const isStreamingResource = /\.(m3u8|mp4|webm|mkv|avi|ts|mts|mpg|mpeg)$/i.test(targetUrl) ||
-                                targetUrl.includes('/live/') ||
-                                targetUrl.includes('/stream');
-
-    // Special handling for IPTV streams - these often use dynamic CDN URLs that may not resolve
-    const isIPTVStream = targetUrl.includes('tvsystem.my') ||
-                        targetUrl.includes('tvappmanager.my') ||
-                        (targetUrl.includes('/live/') && targetUrl.includes('.m3u8'));
 
     // Fetch the resource with improved error handling
     const response = await axios({
@@ -398,7 +395,7 @@ app.get('/api/iptv/proxy-external/*', async (req, res) => {
   } catch (error) {
     console.error('[IPTV External Proxy] Error:', error.message);
 
-    // Provide fallback content for non-critical resources only
+    // Provide fallback content for non-critical resources
     const urlPath = targetUrl.toLowerCase();
     const isImage = /\.(png|jpg|jpeg|gif|svg|ico|webp)$/i.test(urlPath);
     const isScript = /\.(js|css)$/i.test(urlPath);
@@ -423,7 +420,7 @@ app.get('/api/iptv/proxy-external/*', async (req, res) => {
 
     // For IPTV streams and other critical resources, return appropriate HTTP errors
     if (!res.headersSent) {
-      if (isIPTVStream) {
+      if (targetUrl.includes('tvsystem.my') || targetUrl.includes('tvappmanager.my')) {
         // For IPTV streams, return HTTP status codes that Video.js can understand
         if (error.code === 'ENOTFOUND') {
           console.log('[IPTV External Proxy] IPTV stream DNS resolution failed - stream may be offline');
@@ -473,38 +470,7 @@ app.get('/api/iptv/proxy-external/*', async (req, res) => {
     }
   }
 
-  } catch (error) {
-    console.error('[IPTV External Proxy] Error:', error.message);
-
-    // Provide more specific error handling
-    if (error.code === 'ENOTFOUND') {
-      console.log('[IPTV External Proxy] DNS resolution failed - resource may be unavailable');
-      return res.status(404).json({
-        error: 'Resource not found',
-        message: 'The requested external resource could not be accessed. It may be temporarily unavailable or no longer exists.'
-      });
-    } else if (error.code === 'ECONNREFUSED') {
-      console.log('[IPTV External Proxy] Connection refused - server may be down');
-      return res.status(503).json({
-        error: 'Service unavailable',
-        message: 'The external server refused the connection. Please try again later.'
-      });
-    } else if (error.code === 'ETIMEDOUT') {
-      console.log('[IPTV External Proxy] Request timed out');
-      return res.status(504).json({
-        error: 'Request timeout',
-        message: 'The request to the external resource timed out. Please try again later.'
-      });
-    }
-
-    // For other errors, return a generic error
-    res.status(500).json({
-      error: 'Failed to proxy resource',
-      message: error.message || 'An unexpected error occurred while fetching the resource'
-    });
-  }
 });
-
 // IPTV Proxy Route - Handle all IPTV requests
 app.all('/api/iptv/*', async (req, res) => {
   try {
@@ -672,6 +638,7 @@ async function proxyAuthenticatedRequest(req, res) {
 
         try {
           // Select the playlist
+          // eslint-disable-next-line no-unused-vars
           const selectResponse = await axiosInstance.get(
             `http://webtv.iptvsmarters.com/switchuser.php?id=${playlistId}`,
             {
@@ -896,7 +863,7 @@ async function proxyAuthenticatedRequest(req, res) {
             XMLHttpRequest.prototype.open = function(method, url, ...args) {
               if (typeof url === 'string' && url.startsWith('http://') && !url.includes('/api/iptv/')) {
                 // Only proxy external HTTP URLs, not already proxied ones or internal API calls
-                const proxyUrl = 'https://${req.get('host')}/api/iptv/proxy-external/' + encodeURIComponent(url);
+                const proxyUrl = 'https://' + req.get('host') + '/api/iptv/proxy-external/' + encodeURIComponent(url);
                 console.log('[IPTV Proxy] Redirecting XMLHttpRequest:', url, '->', proxyUrl);
                 url = proxyUrl;
               }
@@ -911,7 +878,7 @@ async function proxyAuthenticatedRequest(req, res) {
               let url = typeof input === 'string' ? input : input.url || input.href;
               if (typeof url === 'string' && url.startsWith('http://') && !url.includes('/api/iptv/')) {
                 // Only proxy external HTTP URLs, not already proxied ones or internal API calls
-                const proxyUrl = 'https://${req.get('host')}/api/iptv/proxy-external/' + encodeURIComponent(url);
+                const proxyUrl = 'https://' + req.get('host') + '/api/iptv/proxy-external/' + encodeURIComponent(url);
                 console.log('[IPTV Proxy] Redirecting fetch:', url, '->', proxyUrl);
                 if (typeof input === 'string') {
                   input = proxyUrl;
