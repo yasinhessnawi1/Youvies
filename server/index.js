@@ -388,6 +388,48 @@ app.get('/api/iptv/proxy-external/*', async (req, res) => {
         return res.status(200).send('#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:10\n#EXT-X-MEDIA-SEQUENCE:0\n#EXT-X-ENDLIST\n');
       }
 
+      // Special handling for M3U8 playlists - rewrite HTTP URLs to go through proxy
+      if (targetUrl.includes('.m3u8') || contentType.includes('mpegurl')) {
+        console.log('[IPTV External Proxy] Processing M3U8 playlist, checking for HTTP URLs to proxy');
+
+        // Collect the entire M3U8 content
+        let m3u8Content = '';
+        response.data.setEncoding('utf8');
+        response.data.on('data', (chunk) => {
+          m3u8Content += chunk;
+        });
+
+        response.data.on('end', () => {
+          // Count HTTP URLs in the M3U8
+          const httpUrls = m3u8Content.match(/http:\/\/[^#\n]+/g) || [];
+          console.log('[IPTV External Proxy] Found', httpUrls.length, 'HTTP URLs in M3U8');
+
+          // Rewrite HTTP URLs to go through the proxy
+          if (httpUrls.length > 0) {
+            httpUrls.forEach(url => {
+              const proxyUrl = 'https://' + req.get('host') + '/api/iptv/proxy-external/' + encodeURIComponent(url);
+              m3u8Content = m3u8Content.replace(url, proxyUrl);
+              console.log('[IPTV External Proxy] Rewrote M3U8 URL:', url.substring(0, 80) + '...');
+            });
+            console.log('[IPTV External Proxy] Rewrote', httpUrls.length, 'URLs in M3U8 playlist');
+          }
+
+          // Send the rewritten M3U8 content
+          res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+          res.setHeader('Cache-Control', 'no-cache');
+          res.status(200).send(m3u8Content);
+        });
+
+        response.data.on('error', (err) => {
+          console.error('[IPTV External Proxy] Error reading M3U8:', err.message);
+          if (!res.headersSent) {
+            res.status(500).json({ error: 'Failed to process M3U8 playlist' });
+          }
+        });
+
+        return; // Don't pipe the stream, we handled it manually
+      }
+
       response.data.pipe(res);
       response.data.on('error', (err) => {
         console.error('[IPTV External Proxy] Stream error:', err.message);
