@@ -438,19 +438,19 @@ app.get('/api/iptv/proxy-external/*', async (req, res) => {
         if (error.code === 'ENOTFOUND') {
           console.log('[IPTV External Proxy] IPTV stream DNS resolution failed - stream may be offline');
           res.setHeader('Content-Type', 'application/vnd.apple.mpegurl'); // M3U8 content type
-          return res.status(404).send('#EXTM3U\n#EXTINF:-1,Stream Unavailable\n');
+          return res.status(200).send('#EXTM3U\n#EXTINF:-1,Stream Unavailable\n');
         } else if (error.code === 'ECONNREFUSED') {
           console.log('[IPTV External Proxy] IPTV stream connection refused - server may be down');
           res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
-          return res.status(503).send('#EXTM3U\n#EXTINF:-1,Service Temporarily Unavailable\n');
+          return res.status(200).send('#EXTM3U\n#EXTINF:-1,Service Temporarily Unavailable\n');
         } else if (error.code === 'ETIMEDOUT') {
           console.log('[IPTV External Proxy] IPTV stream request timed out');
           res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
-          return res.status(504).send('#EXTM3U\n#EXTINF:-1,Stream Timeout\n');
+          return res.status(200).send('#EXTM3U\n#EXTINF:-1,Stream Timeout\n');
         } else {
           console.log('[IPTV External Proxy] IPTV stream error:', error.code);
           res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
-          return res.status(500).send('#EXTM3U\n#EXTINF:-1,Stream Error\n');
+          return res.status(200).send('#EXTM3U\n#EXTINF:-1,Stream Error\n');
         }
       } else {
         // For other resources, return JSON error responses
