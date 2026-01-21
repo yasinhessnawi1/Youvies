@@ -400,14 +400,22 @@ app.get('/api/iptv/proxy-external/*', async (req, res) => {
         });
 
         response.data.on('end', () => {
-          // Count HTTP/HTTPS URLs in the M3U8
+          // Count HTTP/HTTPS URLs and relative URLs in the M3U8
           const httpUrls = m3u8Content.match(/https?:\/\/[^#\n]+/g) || [];
-          console.log('[IPTV External Proxy] Found', httpUrls.length, 'HTTP/HTTPS URLs in M3U8');
+          const relativeUrls = m3u8Content.match(/^(?!#)[^\n]+$/gm)?.filter(line =>
+            line.trim() && !line.includes('://') && line.includes('.')
+          ) || [];
 
-          // Debug: show sample M3U8 content
-          if (httpUrls.length === 0) {
-            const lines = m3u8Content.split('\n').slice(0, 10);
-            console.log('[IPTV External Proxy] Sample M3U8 content:', lines);
+          console.log('[IPTV External Proxy] Found', httpUrls.length, 'HTTP/HTTPS URLs and', relativeUrls.length, 'relative URLs in M3U8');
+
+          // Debug: show full M3U8 content
+          if (httpUrls.length === 0 && relativeUrls.length === 0) {
+            console.log('[IPTV External Proxy] Full M3U8 content:', JSON.stringify(m3u8Content));
+            const lines = m3u8Content.split('\n');
+            console.log('[IPTV External Proxy] M3U8 lines:', lines.length, 'lines');
+            lines.slice(0, 10).forEach((line, i) => {
+              console.log(`[IPTV External Proxy] Line ${i}: "${line}"`);
+            });
           }
 
           // Rewrite HTTP/HTTPS URLs to go through the proxy
@@ -420,7 +428,22 @@ app.get('/api/iptv/proxy-external/*', async (req, res) => {
                 console.log('[IPTV External Proxy] Rewrote M3U8 URL:', url.substring(0, 80) + '...');
               }
             });
-            console.log('[IPTV External Proxy] Rewrote URLs in M3U8 playlist');
+            console.log('[IPTV External Proxy] Rewrote HTTP URLs in M3U8 playlist');
+          }
+
+          // Rewrite relative URLs to go through the proxy (convert to full URLs first)
+          if (relativeUrls.length > 0) {
+            relativeUrls.forEach(relativeUrl => {
+              // Convert relative URL to full URL based on the M3U8 source
+              const baseUrl = targetUrl.substring(0, targetUrl.lastIndexOf('/') + 1);
+              const fullUrl = baseUrl + relativeUrl.trim();
+              const proxyUrl = 'https://' + req.get('host') + '/api/iptv/proxy-external/' + encodeURIComponent(fullUrl);
+
+              // Replace the relative URL in the content
+              m3u8Content = m3u8Content.replace(new RegExp(relativeUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), proxyUrl);
+              console.log('[IPTV External Proxy] Rewrote relative M3U8 URL:', relativeUrl, '->', fullUrl.substring(0, 80) + '...');
+            });
+            console.log('[IPTV External Proxy] Rewrote relative URLs in M3U8 playlist');
           }
 
           // Send the rewritten M3U8 content
