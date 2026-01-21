@@ -314,7 +314,7 @@ app.get('/api/iptv/proxy-external/*', async (req, res) => {
     const urlPath = req.path.replace('/api/iptv/proxy-external/', '');
     const targetUrl = decodeURIComponent(urlPath);
 
-    console.log('[IPTV External Proxy] Requesting:', targetUrl);
+    console.log('[IPTV External Proxy] Requesting:', targetUrl.substring(0, 100) + '...');
 
     // Only allow HTTP URLs for security
     if (!targetUrl.startsWith('http://')) {
@@ -586,6 +586,7 @@ async function proxyAuthenticatedRequest(req, res) {
     }
 
     let html = response.data;
+    console.log('[IPTV Proxy] Original HTML length:', html.length);
 
     // Rewrite URLs to go through our proxy
     const proxyBaseUrl = req.protocol + '://' + req.get('host') + '/api/iptv';
@@ -600,28 +601,51 @@ async function proxyAuthenticatedRequest(req, res) {
     // Rewrite src attributes for scripts, images, etc.
     html = html.replace(/src="\/([^"]+)"/g, `src="${proxyBaseUrl}/$1"`);
 
+    // Count HTTP URLs before rewriting
+    const httpUrlCount = (html.match(/http:\/\/[^"'\s]+/g) || []).length;
+    console.log('[IPTV Proxy] Found', httpUrlCount, 'HTTP URLs in HTML');
+
     // Rewrite external HTTP URLs to go through HTTPS proxy to avoid mixed content
     // This handles CDN URLs, external scripts, stylesheets, etc.
+    let rewriteCount = 0;
     html = html.replace(/src="http:\/\/([^"]+)"/g, (match, url) => {
+      rewriteCount++;
       return `src="${externalProxyBaseUrl}/${encodeURIComponent('http://' + url)}"`;
     });
+    console.log('[IPTV Proxy] Rewrote', rewriteCount, 'src HTTP URLs');
 
     // Also handle HTTP URLs in other attributes that load resources
+    rewriteCount = 0;
     html = html.replace(/href="http:\/\/([^"]+)"/g, (match, url) => {
+      rewriteCount++;
       return `href="${externalProxyBaseUrl}/${encodeURIComponent('http://' + url)}"`;
     });
+    console.log('[IPTV Proxy] Rewrote', rewriteCount, 'href HTTP URLs');
 
     // Handle video stream URLs in JavaScript variables and attributes
     // This handles M3U8 playlists and other video sources
+    rewriteCount = 0;
     html = html.replace(/http:\/\/tvsystem\.my([^"'\s]+)/g, (match, path) => {
+      rewriteCount++;
       return `${externalProxyBaseUrl}/${encodeURIComponent('http://tvsystem.my' + path)}`;
     });
+    console.log('[IPTV Proxy] Rewrote', rewriteCount, 'tvsystem.my URLs');
 
     // Handle other common IPTV stream URLs
+    rewriteCount = 0;
     html = html.replace(/http:\/\/([^.]+\.)?iptvsmarters\.com([^"'\s]+)/g, (match, subdomain, path) => {
+      rewriteCount++;
       const domain = subdomain ? subdomain + 'iptvsmarters.com' : 'iptvsmarters.com';
       return `${externalProxyBaseUrl}/${encodeURIComponent('http://' + domain + path)}`;
     });
+    console.log('[IPTV Proxy] Rewrote', rewriteCount, 'iptvsmarters.com URLs');
+
+    // Final check
+    const remainingHttpUrls = (html.match(/http:\/\/[^"'\s]+/g) || []);
+    console.log('[IPTV Proxy] Remaining HTTP URLs:', remainingHttpUrls.length);
+    if (remainingHttpUrls.length > 0) {
+      console.log('[IPTV Proxy] Sample remaining URLs:', remainingHttpUrls.slice(0, 3));
+    }
 
     // If this is the add playlist page, check if playlist exists before auto-filling
     if (html.includes('id="input-login"') && html.includes('id="add_user"')) {
