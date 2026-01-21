@@ -395,10 +395,10 @@ app.all('/api/iptv/*', async (req, res) => {
     console.log('[IPTV Proxy] Request:', req.method, req.path);
 
     // Check if this is a request for static resources (CSS, JS, images)
-    const isStaticResource = /\.(css|js|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)$/i.test(req.path);
+    const isStaticResource = /\.(css|js|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|m3u8|ts|mp4)$/i.test(req.path);
 
     if (isStaticResource) {
-      // For static resources, proxy directly to the IPTV server without session check
+      // For static resources and video streams, proxy directly to the IPTV server without session check
       return await proxyStaticResource(req, res);
     }
 
@@ -410,18 +410,12 @@ app.all('/api/iptv/*', async (req, res) => {
       const loginSuccess = await performServerSideLogin();
 
       if (!loginSuccess) {
-        return res.status(500).send(`
-          <html>
-          <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
-          <h2>IPTV Login Failed</h2>
-          <p>Unable to establish connection to IPTV service.</p>
-          <p>Please check your credentials in the server configuration.</p>
-          </body>
-          </html>
-        `);
+        console.log('[IPTV Proxy] ⚠️ Login failed, but allowing request to proceed for debugging...');
+        // Don't fail completely - allow the request to proceed without session
+        // This might work for some IPTV servers that don't require authentication
+      } else {
+        console.log('[IPTV Proxy] ✅ Session established, proceeding with proxy...');
       }
-
-      console.log('[IPTV Proxy] ✅ Session established, proceeding with proxy...');
     }
 
     // We have a session, proxy the request with cookies
