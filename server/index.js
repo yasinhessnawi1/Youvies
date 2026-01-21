@@ -3,6 +3,9 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const WebTorrent = require('webtorrent');
+const axios = require('axios');
+const { CookieJar } = require('tough-cookie');
+const { wrapper: cookieJarWrapper } = require('axios-cookiejar-support');
 
 // Environment Configuration
 const config = {
@@ -15,6 +18,12 @@ const config = {
   },
   isDevelopment: process.env.NODE_ENV !== 'production',
   isCloud: process.env.DIGITAL_OCEAN === 'true',
+  iptv: {
+    username: process.env.IPTV_USERNAME || '',
+    password: process.env.IPTV_PASSWORD || '',
+    serverUrl: process.env.IPTV_SERVER_URL || '',
+    playlistName: process.env.IPTV_PLAYLIST_NAME || 'tv'
+  }
 };
 
 const app = express();
@@ -230,6 +239,434 @@ const universalTorrentResolver = (identifier) => {
   return null;
 };
 
+// Establish a basic session with the IPTV WebTV portal
+async function performServerSideLogin() {
+  try {
+    console.log('[IPTV] Establishing session with WebTV portal...');
+
+    // Create a session with cookies
+    const jar = new CookieJar();
+    const axiosInstance = cookieJarWrapper(axios.create({ jar }));
+
+    // Simply access the portal homepage to get session cookies
+    await axiosInstance.get('http://webtv.iptvsmarters.com/', {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      },
+      timeout: 10000
+    });
+
+    // Get cookies from the homepage visit
+    const cookies = await jar.getCookies('http://webtv.iptvsmarters.com');
+
+    // Store session
+    const sessionData = {
+      cookies: cookies.map(c => c.toString()),
+      timestamp: Date.now(),
+      jar: jar,
+      playlistId: null // Will be set after user adds playlist via form
+    };
+
+    global.iptvSession = sessionData;
+    console.log('[IPTV] ✅ Session established with', cookies.length, 'cookies');
+    return true;
+
+  } catch (error) {
+    console.error('[IPTV] ❌ Error:', error.message);
+    console.error('[IPTV] Stack:', error.stack);
+    return false;
+  }
+}
+
+// IPTV Login Route - Handles login programmatically
+app.post('/api/iptv/login', async (req, res) => {
+  try {
+    const success = await performServerSideLogin();
+
+    if (success) {
+      return res.json({ success: true, message: 'Login successful' });
+    } else {
+      return res.status(401).json({ error: 'Login failed' });
+    }
+  } catch (error) {
+    console.error('[IPTV Login] Error:', error.message);
+    return res.status(500).json({
+      error: 'Login failed',
+      details: error.message
+    });
+  }
+});
+
+// IPTV Login Status - Check if we're logged in
+app.get('/api/iptv/status', (req, res) => {
+  const hasSession = !!(global.iptvSession && (Date.now() - global.iptvSession.timestamp) < 3600000);
+  res.json({
+    loggedIn: hasSession,
+    sessionAge: hasSession ? Date.now() - global.iptvSession.timestamp : null,
+    hasCredentials: !!(config.iptv.username && config.iptv.password && config.iptv.serverUrl)
+  });
+});
+
+// IPTV Proxy Route - Handle all IPTV requests
+app.all('/api/iptv/*', async (req, res) => {
+  try {
+    // Skip status and login endpoints
+    if (req.path === '/api/iptv/status' || req.path === '/api/iptv/login') {
+      return; // Let other handlers take care of this
+    }
+
+    console.log('[IPTV Proxy] Request:', req.method, req.path);
+
+    // Check if this is a request for static resources (CSS, JS, images)
+    const isStaticResource = /\.(css|js|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)$/i.test(req.path);
+
+    if (isStaticResource) {
+      // For static resources, proxy directly to the IPTV server without session check
+      return await proxyStaticResource(req, res);
+    }
+
+    // For HTML pages and other requests, check if we have a valid session
+    if (!global.iptvSession || (Date.now() - global.iptvSession.timestamp) > 3600000) {
+      console.log('[IPTV Proxy] No valid session, establishing login...');
+
+      // Perform server-side login
+      const loginSuccess = await performServerSideLogin();
+
+      if (!loginSuccess) {
+        return res.status(500).send(`
+          <html>
+          <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
+          <h2>IPTV Login Failed</h2>
+          <p>Unable to establish connection to IPTV service.</p>
+          <p>Please check your credentials in the server configuration.</p>
+          </body>
+          </html>
+        `);
+      }
+
+      console.log('[IPTV Proxy] ✅ Session established, proceeding with proxy...');
+    }
+
+    // We have a session, proxy the request with cookies
+    await proxyAuthenticatedRequest(req, res);
+
+  } catch (error) {
+    console.error('❌ IPTV Proxy Error:', error.message);
+    res.status(500).send(`
+      <html>
+      <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
+      <h2>Error</h2>
+      <p>${error.message}</p>
+      </body>
+      </html>
+    `);
+  }
+});
+
+// Proxy static resources (CSS, JS, images) directly without session
+async function proxyStaticResource(req, res) {
+  try {
+    // Extract the path after /api/iptv/
+    let pathPart = req.path.replace('/api/iptv/', '');
+    if (!pathPart.startsWith('/')) {
+      pathPart = '/' + pathPart;
+    }
+
+    const targetUrl = 'http://webtv.iptvsmarters.com' + pathPart;
+    console.log('[IPTV Static] Proxying static resource:', targetUrl);
+
+    const response = await axios({
+      method: 'GET',
+      url: targetUrl,
+      responseType: 'arraybuffer',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      },
+      timeout: 10000
+    });
+
+    // Forward the content type
+    if (response.headers['content-type']) {
+      res.setHeader('Content-Type', response.headers['content-type']);
+    }
+
+    // Allow CORS for static resources
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.send(response.data);
+
+  } catch (error) {
+    console.error('[IPTV Static] Error:', error.message);
+    res.status(404).send('Resource not found');
+  }
+}
+
+// Proxy authenticated requests with session cookies
+async function proxyAuthenticatedRequest(req, res) {
+  try {
+    // Create axios instance with stored cookies
+    const jar = new CookieJar();
+    if (global.iptvSession && global.iptvSession.cookies) {
+      for (const cookieStr of global.iptvSession.cookies) {
+        try {
+          jar.setCookieSync(cookieStr, 'http://webtv.iptvsmarters.com');
+        } catch (err) {
+          console.warn('[IPTV Proxy] Failed to set cookie:', err.message);
+        }
+      }
+    }
+
+    const axiosInstance = cookieJarWrapper(axios.create({ jar }));
+
+    // Build the target URL
+    let pathPart = req.path.replace('/api/iptv/', '');
+
+    // Remove 'proxy' prefix if it exists
+    if (pathPart.startsWith('proxy')) {
+      pathPart = pathPart.replace(/^proxy\/?/, '');
+    }
+
+    // Build target URL based on the requested path
+    let targetUrl = 'http://webtv.iptvsmarters.com';
+
+    // Special handling for main proxy route - go to add playlist page if no playlist is set
+    if (!pathPart || pathPart === '' || pathPart === '/') {
+      // If we don't have a playlist ID in session, go to the add playlist page
+      if (!global.iptvSession?.playlistId) {
+        targetUrl += '/index.php?adduser';
+      } else {
+        targetUrl += '/dashboard.php';
+      }
+    }
+    else {
+      if (!pathPart.startsWith('/')) {
+        pathPart = '/' + pathPart;
+      }
+      targetUrl += pathPart;
+    }
+
+    // Add query parameters
+    if (req.url.includes('?')) {
+      const queryString = req.url.substring(req.url.indexOf('?'));
+      targetUrl += queryString;
+    }
+
+    console.log('[IPTV Proxy] Forwarding to:', targetUrl);
+
+    // Forward the request without timeout (let it take as long as needed)
+    const response = await axiosInstance({
+      method: req.method,
+      url: targetUrl,
+      data: req.method !== 'GET' && req.method !== 'HEAD' ? req.body : undefined,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        ...(req.headers['content-type'] && { 'Content-Type': req.headers['content-type'] })
+      },
+      maxRedirects: 5,
+      timeout: 0 // No timeout - wait as long as needed
+    });
+
+    // If we're on the playlist selection page, try to auto-select
+    // Check if response is HTML (string) before using .includes()
+    const isHtmlResponse = typeof response.data === 'string';
+    if (isHtmlResponse && response.data.includes('Choose Your Playlist')) {
+      console.log('[IPTV Proxy] On playlist selection page, attempting auto-select...');
+
+      // Try to extract playlist ID and auto-select
+      const playlistIdMatch = response.data.match(/switchuser\.php\?id=(\d+)/);
+
+      if (playlistIdMatch && global.iptvSession) {
+        const playlistId = playlistIdMatch[1];
+        console.log('[IPTV Proxy] Found playlist ID:', playlistId, '- selecting it...');
+
+        try {
+          // Select the playlist
+          const selectResponse = await axiosInstance.get(
+            `http://webtv.iptvsmarters.com/switchuser.php?id=${playlistId}`,
+            {
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Referer': 'http://webtv.iptvsmarters.com/index.php'
+              },
+              maxRedirects: 5,
+              timeout: 15000
+            }
+          );
+
+          console.log('[IPTV Proxy] Playlist selected, redirecting to dashboard...');
+
+          // Update session with playlist ID
+          global.iptvSession.playlistId = playlistId;
+
+          // Redirect to dashboard
+          return res.redirect('/api/iptv/dashboard.php');
+        } catch (selectError) {
+          console.error('[IPTV Proxy] Failed to select playlist:', selectError.message);
+        }
+      }
+
+      // If we can't auto-select, show the playlist selection page
+      console.log('[IPTV Proxy] Could not auto-select playlist, showing selection page');
+    }
+
+    // If response is JSON (like from API endpoints), send it as-is
+    if (typeof response.data === 'object') {
+      res.setHeader('Content-Type', 'application/json');
+      return res.json(response.data);
+    }
+
+    let html = response.data;
+
+    // Rewrite URLs to go through our proxy
+    const proxyBaseUrl = req.protocol + '://' + req.get('host') + '/api/iptv';
+
+    // Rewrite relative URLs in href attributes
+    html = html.replace(/href="\/([^"]+)"/g, `href="${proxyBaseUrl}/$1"`);
+
+    // Rewrite form actions
+    html = html.replace(/action="\/([^"]+)"/g, `action="${proxyBaseUrl}/$1"`);
+
+    // Rewrite src attributes for scripts, images, etc.
+    html = html.replace(/src="\/([^"]+)"/g, `src="${proxyBaseUrl}/$1"`);
+
+    // If this is the add playlist page, check if playlist exists before auto-filling
+    if (html.includes('id="input-login"') && html.includes('id="add_user"')) {
+      const autoFillScript = `
+        <script>
+          // Check if playlist already exists, if so redirect to dashboard
+          (function() {
+            console.log('[IPTV Auto-fill] Checking for existing playlist...');
+
+            // Check localStorage for existing playlists
+            const listUser = localStorage.getItem('listUser');
+            const playlistName = '${config.iptv.playlistName || 'tv'}';
+
+            if (listUser) {
+              try {
+                const playlists = JSON.parse(listUser);
+                console.log('[IPTV Auto-fill] Found playlists in localStorage:', playlists);
+
+                // Check if our playlist already exists
+                let playlistExists = false;
+                if (Array.isArray(playlists)) {
+                  playlistExists = playlists.some(function(p) {
+                    return p && p[playlistName];
+                  });
+                }
+
+                if (playlistExists) {
+                  console.log('[IPTV Auto-fill] Playlist "' + playlistName + '" already exists, redirecting to switchuser...');
+                  window.location.href = '/api/iptv/switchuser.php';
+                  return;
+                }
+              } catch (e) {
+                console.error('[IPTV Auto-fill] Error parsing localStorage:', e);
+              }
+            }
+
+            console.log('[IPTV Auto-fill] No existing playlist found, auto-filling form...');
+
+            function fillAndSubmit() {
+              const loginInput = document.getElementById('input-login');
+              const passInput = document.getElementById('input-pass');
+              const portalInput = document.getElementById('input-portal');
+              const nameInput = document.getElementById('input-anyName');
+              const addButton = document.getElementById('add_user');
+
+              if (loginInput && passInput && portalInput && nameInput && addButton) {
+                console.log('[IPTV Auto-fill] Filling form...');
+
+                nameInput.value = playlistName;
+                loginInput.value = '${config.iptv.username}';
+                passInput.value = '${config.iptv.password}';
+                portalInput.value = '${config.iptv.serverUrl}';
+
+                // Wait a moment then click the button
+                setTimeout(function() {
+                  console.log('[IPTV Auto-fill] Submitting form...');
+                  addButton.click();
+                }, 1000);
+              } else {
+                console.log('[IPTV Auto-fill] Form not ready, retrying...');
+                setTimeout(fillAndSubmit, 500);
+              }
+            }
+
+            // Wait for page to be fully loaded
+            if (document.readyState === 'complete') {
+              setTimeout(fillAndSubmit, 1000);
+            } else {
+              window.addEventListener('load', function() {
+                setTimeout(fillAndSubmit, 1000);
+              });
+            }
+          })();
+        </script>
+      `;
+      html = html.replace('</body>', autoFillScript + '</body>');
+      console.log('[IPTV Proxy] Injected auto-fill script with playlist detection');
+    }
+
+    // Inject localStorage data if we have playlist data
+    if (global.iptvPlaylistData && html.includes('</head>')) {
+      const localStorageScript = `
+        <script>
+          // Populate localStorage with playlist data
+          try {
+            const playlistData = ${JSON.stringify([global.iptvPlaylistData])};
+            localStorage.setItem('listUser', JSON.stringify(playlistData));
+            console.log('[IPTV] Playlist data injected into localStorage');
+          } catch (e) {
+            console.error('[IPTV] Failed to inject playlist data:', e);
+          }
+        </script>
+      `;
+      html = html.replace('</head>', localStorageScript + '</head>');
+      console.log('[IPTV Proxy] Injected localStorage data');
+    }
+
+    // Set headers to allow iframe embedding
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('X-Frame-Options', 'ALLOWALL');
+    res.setHeader('Content-Security-Policy', 'frame-ancestors *');
+
+    console.log('[IPTV Proxy] ✅ Served authenticated page');
+    res.send(html);
+
+  } catch (error) {
+    console.error('[IPTV Proxy] ❌ Error:', error.message);
+
+    // Only send error response if headers haven't been sent yet
+    if (!res.headersSent) {
+      res.status(500).send(`
+        <html>
+        <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
+        <h2>Proxy Error</h2>
+        <p>${error.message}</p>
+        </body>
+        </html>
+      `);
+    }
+  }
+}
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  const memUsage = process.memoryUsage();
+  res.json({
+    status: 'ok',
+    uptime: process.uptime(),
+    memory: {
+      rss: `${(memUsage.rss / 1024 / 1024).toFixed(2)} MB`,
+      heapUsed: `${(memUsage.heapUsed / 1024 / 1024).toFixed(2)} MB`,
+      heapTotal: `${(memUsage.heapTotal / 1024 / 1024).toFixed(2)} MB`
+    },
+    torrents: {
+      active: Object.keys(torrents).length
+    },
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
 // Import route modules
 const authRoutes = require('./routes/auth');
 const tmdbRoutes = require('./routes/tmdb');
@@ -255,24 +692,6 @@ app.use('/api/torrents/stream', (req, res, next) => {
   req.universalTorrentResolver = universalTorrentResolver;
   next();
 }, streamingRoutes);
-
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-  const memUsage = process.memoryUsage();
-  res.json({
-    status: 'ok',
-    uptime: process.uptime(),
-    memory: {
-      rss: `${(memUsage.rss / 1024 / 1024).toFixed(2)} MB`,
-      heapUsed: `${(memUsage.heapUsed / 1024 / 1024).toFixed(2)} MB`,
-      heapTotal: `${(memUsage.heapTotal / 1024 / 1024).toFixed(2)} MB`
-    },
-    torrents: {
-      active: Object.keys(torrents).length
-    },
-    environment: process.env.NODE_ENV || 'development'
-  });
-});
 
 // Serve frontend static files in production (only if dist exists - for monolithic deploy)
 const fs = require('fs');

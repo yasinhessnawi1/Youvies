@@ -79,10 +79,12 @@ const Header = ({ onSearchClick }) => {
             onClick={() => document.scrollingElement.scrollTop}
           />
           <nav  className='nav-links'>
-            {['home', 'movies', 'shows', 'anime', 'random'].map((tab) =>
+            {['home', 'movies', 'shows', 'anime', 'iptv', 'random'].map((tab) =>
               renderNavLink(
                 tab,
-                tab === 'random' ? 'Random background picker' : `Go to ${tab} ${tab === 'home' ? 'page' : 'only section'}`,
+                tab === 'random' ? 'Random background picker' :
+                tab === 'iptv' ? 'IPTV Channels and Streams' :
+                `Go to ${tab} ${tab === 'home' ? 'page' : 'only section'}`,
               ),
             )}
           </nav>
@@ -90,7 +92,7 @@ const Header = ({ onSearchClick }) => {
             <FaChevronDown size={24} onClick={toggleMobileNav} />
             {mobileNavOpen && (
               <div className='mobile-nav-menu' ref={dropdownRef}>
-                {['home', 'movies', 'shows', 'anime', 'random'].map(renderMobileNavItem)}
+                {['home', 'movies', 'shows', 'anime', 'iptv', 'random'].map(renderMobileNavItem)}
               </div>
             )}
           </div>

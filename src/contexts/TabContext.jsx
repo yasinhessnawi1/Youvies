@@ -2,7 +2,7 @@ import React, { createContext, useState, useEffect } from 'react';
 
 export const TabContext = createContext();
 
-const VALID_TABS = ['home', 'movies', 'shows', 'anime', 'random'];
+const VALID_TABS = ['home', 'movies', 'shows', 'anime', 'iptv', 'random'];
 
 export const TabProvider = ({ children }) => {
   // Initialize from URL hash or localStorage, default to 'home'

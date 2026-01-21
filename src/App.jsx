@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
 import HomePage from './pages/HomePage';
 import RandomPage from './pages/RandomPage';
+import IptvPage from './pages/IptvPage';
 import { AuthProvider } from './contexts/AuthContext';
 import { UserProvider } from './contexts/UserContext';
 import { TorrentProvider } from './contexts/TorrentContext';
@@ -25,19 +26,20 @@ function App() {
                   <LoadingProvider>
                     <TabProvider>
                       <Routes>
-                      <Route path='/login' element={<LoginPage />} />
-                      <Route
-                        path='/info/:category/:mediaId'
-                        element={<InfoPage />}
-                      />
-                      <Route path='/home' element={<HomePage />} />
-                      <Route path='/movies' element={<HomePage />} />
-                      <Route path='/shows' element={<HomePage />} />
-                      <Route path='/anime' element={<HomePage />} />
-                      <Route path='/random' element={<RandomPage />} />
-                      <Route path='/' element={<LoginPage />} />
-                      <Route path='*' element={<LoginPage />} />
-                    </Routes>
+                          <Route path='/login' element={<LoginPage />} />
+                          <Route
+                            path='/info/:category/:mediaId'
+                            element={<InfoPage />}
+                          />
+                          <Route path='/home' element={<HomePage />} />
+                          <Route path='/movies' element={<HomePage />} />
+                          <Route path='/shows' element={<HomePage />} />
+                          <Route path='/anime' element={<HomePage />} />
+                          <Route path='/iptv' element={<IptvPage />} />
+                          <Route path='/random' element={<RandomPage />} />
+                          <Route path='/' element={<LoginPage />} />
+                          <Route path='*' element={<LoginPage />} />
+                        </Routes>
                     </TabProvider>
                   </LoadingProvider>
                 </ItemProvider>
