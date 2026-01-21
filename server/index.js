@@ -307,6 +307,83 @@ app.get('/api/iptv/status', (req, res) => {
   });
 });
 
+// IPTV External Resource Proxy - Proxy HTTP resources through HTTPS to avoid mixed content
+app.get('/api/iptv/proxy-external/*', async (req, res) => {
+  try {
+    // Extract the target URL from the path
+    const urlPath = req.path.replace('/api/iptv/proxy-external/', '');
+    const targetUrl = decodeURIComponent(urlPath);
+
+    console.log('[IPTV External Proxy] Requesting:', targetUrl);
+
+    // Only allow HTTP URLs for security
+    if (!targetUrl.startsWith('http://')) {
+      return res.status(400).json({ error: 'Only HTTP URLs are supported' });
+    }
+
+    // Determine if this is a streaming resource (M3U8, video, etc.)
+    const isStreamingResource = /\.(m3u8|mp4|webm|mkv|avi|ts|mts|mpg|mpeg)$/i.test(targetUrl) ||
+                                targetUrl.includes('/live/') ||
+                                targetUrl.includes('/stream');
+
+    // Fetch the resource
+    const response = await axios({
+      method: 'GET',
+      url: targetUrl,
+      responseType: isStreamingResource ? 'stream' : 'arraybuffer',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Range': req.headers.range // Forward range requests for video seeking
+      },
+      timeout: isStreamingResource ? 60000 : 30000 // Longer timeout for streams
+    });
+
+    // Set appropriate headers
+    const contentType = response.headers['content-type'] || 'application/octet-stream';
+    res.setHeader('Content-Type', contentType);
+
+    // Forward range and content headers for streaming
+    if (response.headers['content-range']) {
+      res.setHeader('Content-Range', response.headers['content-range']);
+    }
+    if (response.headers['accept-ranges']) {
+      res.setHeader('Accept-Ranges', response.headers['accept-ranges']);
+    }
+    if (response.headers['content-length']) {
+      res.setHeader('Content-Length', response.headers['content-length']);
+    }
+
+    // Add CORS headers
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', '*');
+
+    // Cache static resources but not streaming content
+    if (!isStreamingResource && (contentType.startsWith('image/') || contentType.includes('font') || contentType.includes('javascript') || contentType.includes('css'))) {
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+    } else {
+      res.setHeader('Cache-Control', 'no-cache');
+    }
+
+    // Handle streaming response
+    if (isStreamingResource) {
+      response.data.pipe(res);
+      response.data.on('error', (err) => {
+        console.error('[IPTV External Proxy] Stream error:', err.message);
+        if (!res.headersSent) {
+          res.status(500).json({ error: 'Stream error' });
+        }
+      });
+    } else {
+      res.status(response.status).send(response.data);
+    }
+
+  } catch (error) {
+    console.error('[IPTV External Proxy] Error:', error.message);
+    res.status(500).json({ error: 'Failed to proxy resource', message: error.message });
+  }
+});
+
 // IPTV Proxy Route - Handle all IPTV requests
 app.all('/api/iptv/*', async (req, res) => {
   try {
@@ -518,6 +595,7 @@ async function proxyAuthenticatedRequest(req, res) {
 
     // Rewrite URLs to go through our proxy
     const proxyBaseUrl = req.protocol + '://' + req.get('host') + '/api/iptv';
+    const externalProxyBaseUrl = req.protocol + '://' + req.get('host') + '/api/iptv/proxy-external';
 
     // Rewrite relative URLs in href attributes
     html = html.replace(/href="\/([^"]+)"/g, `href="${proxyBaseUrl}/$1"`);
@@ -527,6 +605,29 @@ async function proxyAuthenticatedRequest(req, res) {
 
     // Rewrite src attributes for scripts, images, etc.
     html = html.replace(/src="\/([^"]+)"/g, `src="${proxyBaseUrl}/$1"`);
+
+    // Rewrite external HTTP URLs to go through HTTPS proxy to avoid mixed content
+    // This handles CDN URLs, external scripts, stylesheets, etc.
+    html = html.replace(/src="http:\/\/([^"]+)"/g, (match, url) => {
+      return `src="${externalProxyBaseUrl}/${encodeURIComponent('http://' + url)}"`;
+    });
+
+    // Also handle HTTP URLs in other attributes that load resources
+    html = html.replace(/href="http:\/\/([^"]+)"/g, (match, url) => {
+      return `href="${externalProxyBaseUrl}/${encodeURIComponent('http://' + url)}"`;
+    });
+
+    // Handle video stream URLs in JavaScript variables and attributes
+    // This handles M3U8 playlists and other video sources
+    html = html.replace(/http:\/\/tvsystem\.my([^"'\s]+)/g, (match, path) => {
+      return `${externalProxyBaseUrl}/${encodeURIComponent('http://tvsystem.my' + path)}`;
+    });
+
+    // Handle other common IPTV stream URLs
+    html = html.replace(/http:\/\/([^.]+\.)?iptvsmarters\.com([^"'\s]+)/g, (match, subdomain, path) => {
+      const domain = subdomain ? subdomain + 'iptvsmarters.com' : 'iptvsmarters.com';
+      return `${externalProxyBaseUrl}/${encodeURIComponent('http://' + domain + path)}`;
+    });
 
     // If this is the add playlist page, check if playlist exists before auto-filling
     if (html.includes('id="input-login"') && html.includes('id="add_user"')) {
@@ -622,6 +723,47 @@ async function proxyAuthenticatedRequest(req, res) {
       `;
       html = html.replace('</head>', localStorageScript + '</head>');
       console.log('[IPTV Proxy] Injected localStorage data');
+    }
+
+    // Inject script to handle dynamic video source loading
+    if (html.includes('</body>')) {
+      const dynamicProxyScript = `
+        <script>
+          // Override XMLHttpRequest to proxy HTTP requests through HTTPS
+          (function() {
+            const originalOpen = XMLHttpRequest.prototype.open;
+            XMLHttpRequest.prototype.open = function(method, url, ...args) {
+              if (typeof url === 'string' && url.startsWith('http://')) {
+                // Proxy HTTP URLs through our HTTPS proxy
+                const proxyUrl = '${req.protocol}://${req.get('host')}/api/iptv/proxy-external/' + encodeURIComponent(url);
+                console.log('[IPTV Proxy] Redirecting XMLHttpRequest:', url, '->', proxyUrl);
+                url = proxyUrl;
+              }
+              return originalOpen.call(this, method, url, ...args);
+            };
+          })();
+
+          // Override fetch to proxy HTTP requests through HTTPS
+          (function() {
+            const originalFetch = window.fetch;
+            window.fetch = function(input, init) {
+              let url = typeof input === 'string' ? input : input.url || input.href;
+              if (typeof url === 'string' && url.startsWith('http://')) {
+                const proxyUrl = '${req.protocol}://${req.get('host')}/api/iptv/proxy-external/' + encodeURIComponent(url);
+                console.log('[IPTV Proxy] Redirecting fetch:', url, '->', proxyUrl);
+                if (typeof input === 'string') {
+                  input = proxyUrl;
+                } else {
+                  input = new Request(proxyUrl, input);
+                }
+              }
+              return originalFetch.call(this, input, init);
+            };
+          })();
+        </script>
+      `;
+      html = html.replace('</body>', dynamicProxyScript + '</body>');
+      console.log('[IPTV Proxy] Injected dynamic proxy script');
     }
 
     // Set headers to allow iframe embedding
