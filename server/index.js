@@ -400,18 +400,27 @@ app.get('/api/iptv/proxy-external/*', async (req, res) => {
         });
 
         response.data.on('end', () => {
-          // Count HTTP URLs in the M3U8
-          const httpUrls = m3u8Content.match(/http:\/\/[^#\n]+/g) || [];
-          console.log('[IPTV External Proxy] Found', httpUrls.length, 'HTTP URLs in M3U8');
+          // Count HTTP/HTTPS URLs in the M3U8
+          const httpUrls = m3u8Content.match(/https?:\/\/[^#\n]+/g) || [];
+          console.log('[IPTV External Proxy] Found', httpUrls.length, 'HTTP/HTTPS URLs in M3U8');
 
-          // Rewrite HTTP URLs to go through the proxy
+          // Debug: show sample M3U8 content
+          if (httpUrls.length === 0) {
+            const lines = m3u8Content.split('\n').slice(0, 10);
+            console.log('[IPTV External Proxy] Sample M3U8 content:', lines);
+          }
+
+          // Rewrite HTTP/HTTPS URLs to go through the proxy
           if (httpUrls.length > 0) {
             httpUrls.forEach(url => {
-              const proxyUrl = 'https://' + req.get('host') + '/api/iptv/proxy-external/' + encodeURIComponent(url);
-              m3u8Content = m3u8Content.replace(url, proxyUrl);
-              console.log('[IPTV External Proxy] Rewrote M3U8 URL:', url.substring(0, 80) + '...');
+              // Only proxy URLs that are from the problematic domains
+              if (url.includes('tvappmanager.my') || url.includes('tvsystem.my')) {
+                const proxyUrl = 'https://' + req.get('host') + '/api/iptv/proxy-external/' + encodeURIComponent(url);
+                m3u8Content = m3u8Content.replace(url, proxyUrl);
+                console.log('[IPTV External Proxy] Rewrote M3U8 URL:', url.substring(0, 80) + '...');
+              }
             });
-            console.log('[IPTV External Proxy] Rewrote', httpUrls.length, 'URLs in M3U8 playlist');
+            console.log('[IPTV External Proxy] Rewrote URLs in M3U8 playlist');
           }
 
           // Send the rewritten M3U8 content
