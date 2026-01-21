@@ -316,6 +316,12 @@ app.get('/api/iptv/proxy-external/*', async (req, res) => {
 
     console.log('[IPTV External Proxy] Requesting:', targetUrl.substring(0, 100) + '...');
 
+    // Validate the URL is actually HTTP
+    if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+      console.log('[IPTV External Proxy] Invalid URL protocol:', targetUrl);
+      return res.status(400).json({ error: 'Invalid URL protocol' });
+    }
+
     // Only allow HTTP URLs for security
     if (!targetUrl.startsWith('http://')) {
       return res.status(400).json({ error: 'Only HTTP URLs are supported' });
@@ -326,16 +332,27 @@ app.get('/api/iptv/proxy-external/*', async (req, res) => {
                                 targetUrl.includes('/live/') ||
                                 targetUrl.includes('/stream');
 
-    // Fetch the resource
+    // Special handling for IPTV streams - these often use dynamic CDN URLs that may not resolve
+    const isIPTVStream = targetUrl.includes('tvsystem.my') ||
+                        targetUrl.includes('tvappmanager.my') ||
+                        (targetUrl.includes('/live/') && targetUrl.includes('.m3u8'));
+
+    // Fetch the resource with improved error handling
     const response = await axios({
       method: 'GET',
       url: targetUrl,
       responseType: isStreamingResource ? 'stream' : 'arraybuffer',
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Range': req.headers.range // Forward range requests for video seeking
+        'Range': req.headers.range, // Forward range requests for video seeking
+        'Accept': '*/*',
+        'Accept-Encoding': 'identity' // Avoid compression issues
       },
-      timeout: isStreamingResource ? 60000 : 30000 // Longer timeout for streams
+      timeout: isStreamingResource ? 45000 : 20000, // Shorter timeouts for better UX
+      maxRedirects: 5,
+      validateStatus: function (status) {
+        return status >= 200 && status < 400; // Accept 2xx and 3xx
+      }
     });
 
     // Set appropriate headers
@@ -380,7 +397,111 @@ app.get('/api/iptv/proxy-external/*', async (req, res) => {
 
   } catch (error) {
     console.error('[IPTV External Proxy] Error:', error.message);
-    res.status(500).json({ error: 'Failed to proxy resource', message: error.message });
+
+    // Provide fallback content for non-critical resources only
+    const urlPath = targetUrl.toLowerCase();
+    const isImage = /\.(png|jpg|jpeg|gif|svg|ico|webp)$/i.test(urlPath);
+    const isScript = /\.(js|css)$/i.test(urlPath);
+    const isFont = /\.(woff|woff2|ttf|eot)$/i.test(urlPath);
+
+    if ((isImage || isFont) && !res.headersSent) {
+      // Return a 1x1 transparent pixel for missing images
+      console.log('[IPTV External Proxy] Serving placeholder for missing image/font');
+      res.setHeader('Content-Type', isFont ? 'application/octet-stream' : 'image/gif');
+      res.setHeader('Cache-Control', 'public, max-age=300'); // Cache for 5 minutes
+      // 1x1 transparent GIF
+      const transparentGif = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64');
+      return res.status(200).send(transparentGif);
+    } else if (isScript && !res.headersSent) {
+      // Return empty content for missing scripts/styles to prevent errors
+      console.log('[IPTV External Proxy] Serving empty content for missing script/style');
+      const contentType = urlPath.endsWith('.css') ? 'text/css' : 'application/javascript';
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Cache-Control', 'public, max-age=300');
+      return res.status(200).send('/* Resource unavailable */');
+    }
+
+    // For IPTV streams and other critical resources, return appropriate HTTP errors
+    if (!res.headersSent) {
+      if (isIPTVStream) {
+        // For IPTV streams, return HTTP status codes that Video.js can understand
+        if (error.code === 'ENOTFOUND') {
+          console.log('[IPTV External Proxy] IPTV stream DNS resolution failed - stream may be offline');
+          res.setHeader('Content-Type', 'application/vnd.apple.mpegurl'); // M3U8 content type
+          return res.status(404).send('#EXTM3U\n#EXTINF:-1,Stream Unavailable\n');
+        } else if (error.code === 'ECONNREFUSED') {
+          console.log('[IPTV External Proxy] IPTV stream connection refused - server may be down');
+          res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+          return res.status(503).send('#EXTM3U\n#EXTINF:-1,Service Temporarily Unavailable\n');
+        } else if (error.code === 'ETIMEDOUT') {
+          console.log('[IPTV External Proxy] IPTV stream request timed out');
+          res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+          return res.status(504).send('#EXTM3U\n#EXTINF:-1,Stream Timeout\n');
+        } else {
+          console.log('[IPTV External Proxy] IPTV stream error:', error.code);
+          res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+          return res.status(500).send('#EXTM3U\n#EXTINF:-1,Stream Error\n');
+        }
+      } else {
+        // For other resources, return JSON error responses
+        if (error.code === 'ENOTFOUND') {
+          console.log('[IPTV External Proxy] DNS resolution failed - resource may be unavailable');
+          return res.status(404).json({
+            error: 'Resource not found',
+            message: 'The requested external resource could not be accessed. It may be temporarily unavailable or no longer exists.'
+          });
+        } else if (error.code === 'ECONNREFUSED') {
+          console.log('[IPTV External Proxy] Connection refused - server may be down');
+          return res.status(503).json({
+            error: 'Service unavailable',
+            message: 'The external server refused the connection. Please try again later.'
+          });
+        } else if (error.code === 'ETIMEDOUT') {
+          console.log('[IPTV External Proxy] Request timed out');
+          return res.status(504).json({
+            error: 'Request timeout',
+            message: 'The request to the external resource timed out. Please try again later.'
+          });
+        }
+
+        // For other errors, return a generic error
+        res.status(500).json({
+          error: 'Failed to proxy resource',
+          message: error.message || 'An unexpected error occurred while fetching the resource'
+        });
+      }
+    }
+  }
+
+  } catch (error) {
+    console.error('[IPTV External Proxy] Error:', error.message);
+
+    // Provide more specific error handling
+    if (error.code === 'ENOTFOUND') {
+      console.log('[IPTV External Proxy] DNS resolution failed - resource may be unavailable');
+      return res.status(404).json({
+        error: 'Resource not found',
+        message: 'The requested external resource could not be accessed. It may be temporarily unavailable or no longer exists.'
+      });
+    } else if (error.code === 'ECONNREFUSED') {
+      console.log('[IPTV External Proxy] Connection refused - server may be down');
+      return res.status(503).json({
+        error: 'Service unavailable',
+        message: 'The external server refused the connection. Please try again later.'
+      });
+    } else if (error.code === 'ETIMEDOUT') {
+      console.log('[IPTV External Proxy] Request timed out');
+      return res.status(504).json({
+        error: 'Request timeout',
+        message: 'The request to the external resource timed out. Please try again later.'
+      });
+    }
+
+    // For other errors, return a generic error
+    res.status(500).json({
+      error: 'Failed to proxy resource',
+      message: error.message || 'An unexpected error occurred while fetching the resource'
+    });
   }
 });
 
