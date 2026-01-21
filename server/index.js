@@ -781,7 +781,7 @@ async function proxyAuthenticatedRequest(req, res) {
 
     // Rewrite URLs to go through our proxy (always use HTTPS for security)
     const proxyBaseUrl = 'https://' + req.get('host') + '/api/iptv';
-    const externalProxyBaseUrl = 'https://' + req.get('host') + '/api/iptv/proxy-external';
+    const externalProxyBaseUrl = req.protocol + '://' + req.get('host') + '/api/iptv/proxy-external';
 
     // Rewrite relative URLs in href attributes
     html = html.replace(/href="\/([^"]+)"/g, `href="${proxyBaseUrl}/$1"`);
@@ -960,8 +960,10 @@ async function proxyAuthenticatedRequest(req, res) {
     if (html.includes('</body>')) {
       const protocol = req.protocol;
       const host = req.get('host');
+      console.log('[IPTV Proxy] Injecting script with protocol:', protocol, 'host:', host);
       const dynamicProxyScript = `
         <script>
+          console.log('[IPTV Proxy] Client script loaded with protocol:', '${protocol}', 'host:', '${host}');
           // Override XMLHttpRequest to proxy HTTP requests through the server
           (function() {
             const originalOpen = XMLHttpRequest.prototype.open;
