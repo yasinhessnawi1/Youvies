@@ -588,9 +588,9 @@ async function proxyAuthenticatedRequest(req, res) {
     let html = response.data;
     console.log('[IPTV Proxy] Original HTML length:', html.length);
 
-    // Rewrite URLs to go through our proxy
-    const proxyBaseUrl = req.protocol + '://' + req.get('host') + '/api/iptv';
-    const externalProxyBaseUrl = req.protocol + '://' + req.get('host') + '/api/iptv/proxy-external';
+    // Rewrite URLs to go through our proxy (always use HTTPS for security)
+    const proxyBaseUrl = 'https://' + req.get('host') + '/api/iptv';
+    const externalProxyBaseUrl = 'https://' + req.get('host') + '/api/iptv/proxy-external';
 
     // Rewrite relative URLs in href attributes
     html = html.replace(/href="\/([^"]+)"/g, `href="${proxyBaseUrl}/$1"`);
@@ -631,10 +631,11 @@ async function proxyAuthenticatedRequest(req, res) {
     console.log('[IPTV Proxy] Rewrote', rewriteCount, 'href HTTP URLs');
 
     // Handle HTTP URLs in other contexts (like JavaScript variables, data attributes, etc.)
+    // Be more careful to avoid already-proxied URLs
     rewriteCount = 0;
-    html = html.replace(/http:\/\/[^"'\s<>&]+/g, (match) => {
-      // Skip if it's already a proxied URL or contains our proxy domain
-      if (match.includes('/api/iptv/') || match.includes('youvies-server.fly.dev')) {
+    html = html.replace(/http:\/\/(?!youvies-server\.fly\.dev)[^"'\s<>&]+/g, (match) => {
+      // Skip if it's already a proxied URL pattern
+      if (match.includes('/api/iptv/') || match.includes('proxy-external')) {
         return match;
       }
       rewriteCount++;
@@ -774,7 +775,7 @@ async function proxyAuthenticatedRequest(req, res) {
             XMLHttpRequest.prototype.open = function(method, url, ...args) {
               if (typeof url === 'string' && url.startsWith('http://') && !url.includes('/api/iptv/')) {
                 // Only proxy external HTTP URLs, not already proxied ones or internal API calls
-                const proxyUrl = '${req.protocol}://${req.get('host')}/api/iptv/proxy-external/' + encodeURIComponent(url);
+                const proxyUrl = 'https://${req.get('host')}/api/iptv/proxy-external/' + encodeURIComponent(url);
                 console.log('[IPTV Proxy] Redirecting XMLHttpRequest:', url, '->', proxyUrl);
                 url = proxyUrl;
               }
@@ -789,7 +790,7 @@ async function proxyAuthenticatedRequest(req, res) {
               let url = typeof input === 'string' ? input : input.url || input.href;
               if (typeof url === 'string' && url.startsWith('http://') && !url.includes('/api/iptv/')) {
                 // Only proxy external HTTP URLs, not already proxied ones or internal API calls
-                const proxyUrl = '${req.protocol}://${req.get('host')}/api/iptv/proxy-external/' + encodeURIComponent(url);
+                const proxyUrl = 'https://${req.get('host')}/api/iptv/proxy-external/' + encodeURIComponent(url);
                 console.log('[IPTV Proxy] Redirecting fetch:', url, '->', proxyUrl);
                 if (typeof input === 'string') {
                   input = proxyUrl;
