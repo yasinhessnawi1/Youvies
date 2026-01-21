@@ -390,7 +390,9 @@ app.get('/api/iptv/proxy-external/*', async (req, res) => {
 
       // Special handling for M3U8 playlists - rewrite HTTP URLs to go through proxy
       if (targetUrl.includes('.m3u8') || contentType.includes('mpegurl')) {
-        console.log('[IPTV External Proxy] Processing M3U8 playlist, checking for HTTP URLs to proxy');
+        console.log('[IPTV External Proxy] Processing M3U8 playlist from:', targetUrl);
+        console.log('[IPTV External Proxy] Response status:', response.status);
+        console.log('[IPTV External Proxy] Response headers:', JSON.stringify(response.headers, null, 2));
 
         // Collect the entire M3U8 content
         let m3u8Content = '';
@@ -408,14 +410,34 @@ app.get('/api/iptv/proxy-external/*', async (req, res) => {
 
           console.log('[IPTV External Proxy] Found', httpUrls.length, 'HTTP/HTTPS URLs and', relativeUrls.length, 'relative URLs in M3U8');
 
-          // Debug: show full M3U8 content
-          if (httpUrls.length === 0 && relativeUrls.length === 0) {
+          // Debug: show M3U8 content analysis
+          console.log('[IPTV External Proxy] M3U8 content length:', m3u8Content.length, 'characters');
+          const lines = m3u8Content.split('\n').filter(line => line.trim());
+          console.log('[IPTV External Proxy] M3U8 non-empty lines:', lines.length);
+
+          // Show all lines if content is short, otherwise show sample
+          if (m3u8Content.length < 500) {
             console.log('[IPTV External Proxy] Full M3U8 content:', JSON.stringify(m3u8Content));
-            const lines = m3u8Content.split('\n');
-            console.log('[IPTV External Proxy] M3U8 lines:', lines.length, 'lines');
-            lines.slice(0, 10).forEach((line, i) => {
+            lines.forEach((line, i) => {
               console.log(`[IPTV External Proxy] Line ${i}: "${line}"`);
             });
+          } else {
+            console.log('[IPTV External Proxy] Sample M3U8 content:', JSON.stringify(m3u8Content.substring(0, 200) + '...'));
+            lines.slice(0, 5).forEach((line, i) => {
+              console.log(`[IPTV External Proxy] Line ${i}: "${line}"`);
+            });
+          }
+
+          // Check if M3U8 is empty or just whitespace
+          if (!m3u8Content.trim()) {
+            console.log('[IPTV External Proxy] M3U8 is empty or whitespace only!');
+            console.log('[IPTV External Proxy] This explains why streams fail - the playlist is empty');
+
+            // Return a valid but empty M3U8 playlist
+            const emptyM3U8 = '#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:10\n#EXT-X-MEDIA-SEQUENCE:0\n#EXT-X-ENDLIST\n';
+            res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+            res.setHeader('Cache-Control', 'no-cache');
+            return res.status(200).send(emptyM3U8);
           }
 
           // Rewrite HTTP/HTTPS URLs to go through the proxy
