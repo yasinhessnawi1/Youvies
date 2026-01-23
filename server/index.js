@@ -334,21 +334,52 @@ app.get('/api/iptv/proxy-external/*', async (req, res) => {
       return res.status(400).json({ error: 'Only HTTP URLs are supported' });
     }
 
-    // Fetch the resource with improved error handling
-    const response = await axios({
+    // Create axios instance with stored cookies if available
+    const jar = new CookieJar();
+    if (global.iptvSession && global.iptvSession.cookies) {
+      for (const cookieStr of global.iptvSession.cookies) {
+        try {
+          // Set cookies for both webtv.iptvsmarters.com and tvsystem.my
+          jar.setCookieSync(cookieStr, 'http://webtv.iptvsmarters.com');
+          jar.setCookieSync(cookieStr, 'http://tvsystem.my');
+        } catch (err) {
+          console.warn('[IPTV External Proxy] Failed to set cookie:', err.message);
+        }
+      }
+    }
+
+    const axiosInstance = cookieJarWrapper(axios.create({ jar }));
+
+    // Extract host from target URL for setting Referer/Origin headers
+    const urlHostMatch = targetUrl.match(/^(https?:\/\/[^\/]+)/);
+    const urlHost = urlHostMatch ? urlHostMatch[1] : null;
+    
+    // Build headers with Referer/Origin for IPTV CDN compatibility
+    const requestHeaders = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Range': req.headers.range, // Forward range requests for video seeking
+      'Accept': '*/*',
+      'Accept-Encoding': 'identity' // Avoid compression issues
+    };
+    
+    // Add Referer and Origin headers for IPTV streams (required by many CDNs)
+    if (urlHost && (targetUrl.includes('tvsystem.my') || targetUrl.includes('tvappmanager.my'))) {
+      requestHeaders['Referer'] = urlHost + '/';
+      requestHeaders['Origin'] = urlHost;
+      console.log('[IPTV External Proxy] Adding Referer:', requestHeaders['Referer']);
+    }
+
+    // Fetch the resource with improved error handling and cookies
+    const response = await axiosInstance({
       method: 'GET',
       url: targetUrl,
       responseType: isStreamingResource ? 'stream' : 'arraybuffer',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Range': req.headers.range, // Forward range requests for video seeking
-        'Accept': '*/*',
-        'Accept-Encoding': 'identity' // Avoid compression issues
-      },
+      headers: requestHeaders,
       timeout: isStreamingResource ? 45000 : 20000, // Shorter timeouts for better UX
       maxRedirects: 5,
       validateStatus: function (status) {
-        return status >= 200 && status < 400; // Accept 2xx and 3xx
+        // Accept 2xx, 3xx, and 404 for streaming (handle 404 gracefully)
+        return status >= 200 && status < 400 || (isStreamingResource && status === 404);
       }
     });
 
@@ -381,7 +412,21 @@ app.get('/api/iptv/proxy-external/*', async (req, res) => {
 
     // Handle streaming response
     if (isStreamingResource) {
-      // Check if this is an IPTV stream that returned an error
+      // Check if this is an IPTV stream that returned 404
+      if (response.status === 404 && (targetUrl.includes('tvsystem.my') || targetUrl.includes('tvappmanager.my'))) {
+        console.log(`[IPTV External Proxy] IPTV stream segment returned 404 - segment may have expired`);
+        
+        // For M3U8 playlists, return empty playlist
+        if (targetUrl.includes('.m3u8') || contentType.includes('mpegurl')) {
+          res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+          return res.status(200).send('#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:10\n#EXT-X-MEDIA-SEQUENCE:0\n#EXT-X-ENDLIST\n');
+        }
+        
+        // For segment files (ts, etc), return 404 so player can retry or skip
+        return res.status(404).send('Segment expired or unavailable');
+      }
+      
+      // Check for other errors
       if (response.status >= 400 && (targetUrl.includes('tvsystem.my') || targetUrl.includes('tvappmanager.my'))) {
         console.log(`[IPTV External Proxy] IPTV stream returned ${response.status}, returning empty M3U8`);
         res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
@@ -390,7 +435,12 @@ app.get('/api/iptv/proxy-external/*', async (req, res) => {
 
       // Special handling for M3U8 playlists - rewrite HTTP URLs to go through proxy
       if (targetUrl.includes('.m3u8') || contentType.includes('mpegurl')) {
+        // Get the FINAL URL after any redirects (axios follows redirects automatically)
+        // This is critical because the M3U8 may redirect to a different CDN host
+        const finalUrl = response.request?.res?.responseUrl || response.config?.url || targetUrl;
+        
         console.log('[IPTV External Proxy] Processing M3U8 playlist from:', targetUrl);
+        console.log('[IPTV External Proxy] Final URL after redirects:', finalUrl);
         console.log('[IPTV External Proxy] Response status:', response.status);
         console.log('[IPTV External Proxy] Response headers:', JSON.stringify(response.headers, null, 2));
 
@@ -404,11 +454,15 @@ app.get('/api/iptv/proxy-external/*', async (req, res) => {
         response.data.on('end', () => {
           // Count HTTP/HTTPS URLs and relative URLs in the M3U8
           const httpUrls = m3u8Content.match(/https?:\/\/[^#\n]+/g) || [];
-          const relativeUrls = m3u8Content.match(/^(?!#)[^\n]+$/gm)?.filter(line =>
-            line.trim() && !line.includes('://') && line.includes('.')
-          ) || [];
+          const allLines = m3u8Content.match(/^(?!#)[^\n]+$/gm) || [];
+          const relativeUrls = allLines.filter(line =>
+            line.trim() && !line.includes('://') && line.startsWith('/') && line.length > 10
+          );
 
           console.log('[IPTV External Proxy] Found', httpUrls.length, 'HTTP/HTTPS URLs and', relativeUrls.length, 'relative URLs in M3U8');
+          if (relativeUrls.length > 0) {
+            console.log('[IPTV External Proxy] Sample relative URLs:', relativeUrls.slice(0, 3));
+          }
 
           // Debug: show M3U8 content analysis
           console.log('[IPTV External Proxy] M3U8 content length:', m3u8Content.length, 'characters');
@@ -456,14 +510,19 @@ app.get('/api/iptv/proxy-external/*', async (req, res) => {
           // Rewrite relative URLs to go through the proxy (convert to full URLs first)
           if (relativeUrls.length > 0) {
             relativeUrls.forEach(relativeUrl => {
-              // Convert relative URL to full URL based on the M3U8 source
-              const baseUrl = targetUrl.substring(0, targetUrl.lastIndexOf('/') + 1);
-              const fullUrl = baseUrl + relativeUrl.trim();
+              // For M3U8 playlists, relative URLs starting with / are absolute paths from server root
+              // Extract protocol and host from the FINAL M3U8 URL (after redirects)
+              const protocolMatch = finalUrl.match(/^(https?:)\/\//);
+              const protocol = protocolMatch ? protocolMatch[1] : 'http:';
+
+              const hostMatch = finalUrl.match(/^https?:\/\/([^\/]+)/);
+              const host = hostMatch ? hostMatch[1] : 'tvsystem.my:80';
+
+              const fullUrl = `${protocol}//${host}${relativeUrl.trim()}`;
               const proxyUrl = req.protocol + '://' + req.get('host') + '/api/iptv/proxy-external/' + encodeURIComponent(fullUrl);
 
               // Replace the relative URL in the content
               m3u8Content = m3u8Content.replace(new RegExp(relativeUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), proxyUrl);
-              console.log('[IPTV External Proxy] Rewrote relative M3U8 URL:', relativeUrl, '->', fullUrl.substring(0, 80) + '...');
             });
             console.log('[IPTV External Proxy] Rewrote relative URLs in M3U8 playlist');
           }
