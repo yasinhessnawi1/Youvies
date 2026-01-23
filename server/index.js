@@ -381,19 +381,40 @@ app.get('/api/iptv/proxy-external/*', async (req, res) => {
       console.log('[IPTV External Proxy] Adding Referer:', requestHeaders['Referer']);
     }
 
-    // Fetch the resource with improved error handling and cookies
-    const response = await axiosInstance({
-      method: 'GET',
-      url: targetUrl,
-      responseType: isStreamingResource ? 'stream' : 'arraybuffer',
-      headers: requestHeaders,
-      timeout: isStreamingResource ? 45000 : 20000, // Shorter timeouts for better UX
-      maxRedirects: 5,
-      validateStatus: function (status) {
-        // Accept 2xx, 3xx, and 404 for streaming (handle 404 gracefully)
-        return status >= 200 && status < 400 || (isStreamingResource && status === 404);
+    // Fetch the resource with improved error handling, cookies, and retries for DNS errors
+    let response;
+    let retryCount = 0;
+    const maxRetries = 2;
+    
+    while (retryCount <= maxRetries) {
+      try {
+        response = await axiosInstance({
+          method: 'GET',
+          url: targetUrl,
+          responseType: isStreamingResource ? 'stream' : 'arraybuffer',
+          headers: requestHeaders,
+          timeout: isStreamingResource ? 45000 : 20000, // Shorter timeouts for better UX
+          maxRedirects: 5,
+          validateStatus: function (status) {
+            // Accept 2xx, 3xx, and 404 for streaming (handle 404 gracefully)
+            return status >= 200 && status < 400 || (isStreamingResource && status === 404);
+          }
+        });
+        break; // Success!
+      } catch (error) {
+        const isDnsError = error.code === 'ENOTFOUND' || error.code === 'EAI_AGAIN';
+        const isTimeout = error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT';
+        
+        if ((isDnsError || isTimeout) && retryCount < maxRetries) {
+          retryCount++;
+          const delay = 1000 * retryCount;
+          console.log(`[IPTV External Proxy] ${error.code} for ${targetUrl.substring(0, 50)}, retrying in ${delay}ms (${retryCount}/${maxRetries})...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+        throw error;
       }
-    });
+    }
 
     // Set appropriate headers
     const contentType = response.headers['content-type'] || 'application/octet-stream';
@@ -701,11 +722,20 @@ async function proxyStaticResource(req, res) {
   try {
     // Extract the path after /api/iptv/
     let pathPart = req.path.replace('/api/iptv/', '');
-    if (!pathPart.startsWith('/')) {
-      pathPart = '/' + pathPart;
+    
+    // Handle protocol-relative URLs (//example.com) that might have been incorrectly rewritten
+    if (pathPart.startsWith('/')) {
+      pathPart = pathPart.replace(/^\/+/, '/'); // Collapse multiple slashes
+    }
+    
+    if (pathPart.startsWith('/http')) {
+      // This is likely an absolute URL that got misrouted
+      const targetUrl = pathPart.substring(1);
+      console.log('[IPTV Static] Redirecting misrouted absolute URL:', targetUrl);
+      return res.redirect(`/api/iptv/proxy-external/${encodeURIComponent(targetUrl)}`);
     }
 
-    const targetUrl = 'http://webtv.iptvsmarters.com' + pathPart;
+    const targetUrl = 'http://webtv.iptvsmarters.com' + (pathPart.startsWith('/') ? pathPart : '/' + pathPart);
     console.log('[IPTV Static] Proxying static resource:', targetUrl);
 
     const response = await axios({
@@ -856,14 +886,29 @@ async function proxyAuthenticatedRequest(req, res) {
     const proxyBaseUrl = protocol + '://' + req.get('host') + '/api/iptv';
     const externalProxyBaseUrl = protocol + '://' + req.get('host') + '/api/iptv/proxy-external';
 
-    // Rewrite relative URLs in href attributes
-    html = html.replace(/href="\/([^"]+)"/g, `href="${proxyBaseUrl}/$1"`);
+    // Rewrite relative URLs in href attributes (avoiding protocol-relative //)
+    html = html.replace(/href="\/(?!\/)([^"]+)"/g, `href="${proxyBaseUrl}/$1"`);
 
     // Rewrite form actions
-    html = html.replace(/action="\/([^"]+)"/g, `action="${proxyBaseUrl}/$1"`);
+    html = html.replace(/action="\/(?!\/)([^"]+)"/g, `action="${proxyBaseUrl}/$1"`);
 
     // Rewrite src attributes for scripts, images, etc.
-    html = html.replace(/src="\/([^"]+)"/g, `src="${proxyBaseUrl}/$1"`);
+    html = html.replace(/src="\/(?!\/)([^"]+)"/g, `src="${proxyBaseUrl}/$1"`);
+
+    // Handle protocol-relative URLs (//) - convert to proxied URLs if the domain is IPTV related, or just make them absolute HTTPS
+    html = html.replace(/src="\/\/([^"]+)"/g, (match, url) => {
+      if (url.includes('iptvsmarters.com') || url.includes('tvsystem.my')) {
+        return `src="${externalProxyBaseUrl}/${encodeURIComponent('http://' + url)}"`;
+      }
+      return `src="https://${url}"`; // Default to HTTPS for external resources like CDNs
+    });
+    
+    html = html.replace(/href="\/\/([^"]+)"/g, (match, url) => {
+      if (url.includes('iptvsmarters.com') || url.includes('tvsystem.my')) {
+        return `href="${externalProxyBaseUrl}/${encodeURIComponent('http://' + url)}"`;
+      }
+      return `href="https://${url}"`;
+    });
 
     // Count HTTP URLs before rewriting
     const httpUrlCount = (html.match(/http:\/\/[^"'\s]+/g) || []).length;
