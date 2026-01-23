@@ -5,7 +5,90 @@ const path = require('path');
 const WebTorrent = require('webtorrent');
 const axios = require('axios');
 const { CookieJar } = require('tough-cookie');
-const { wrapper: cookieJarWrapper } = require('axios-cookiejar-support');
+const dns = require('dns');
+const http = require('http');
+const https = require('https');
+const { Resolver } = dns.promises;
+
+// Custom DNS Resolver with public fallback (8.8.8.8)
+const dnsResolver = new Resolver();
+dnsResolver.setServers(['8.8.8.8', '1.1.1.1']);
+
+// Custom lookup function that tries system DNS first, then falls back to public DNS
+async function customDnsLookup(hostname, options, callback) {
+  // Handle case where options is omitted
+  if (typeof options === 'function') {
+    callback = options;
+    options = {};
+  }
+
+  // Try system DNS first
+  dns.lookup(hostname, options, (err, address, family) => {
+    if (!err) return callback(null, address, family);
+
+    if (err.code === 'ENOTFOUND' || err.code === 'EAI_AGAIN') {
+      console.log(`[DNS] System lookup failed for ${hostname}, trying public fallback...`);
+      dnsResolver.resolve4(hostname).then(addresses => {
+        if (addresses && addresses.length > 0) {
+          console.log(`[DNS] Public fallback resolved ${hostname} to ${addresses[0]}`);
+          callback(null, addresses[0], 4);
+        } else {
+          callback(err);
+        }
+      }).catch(publicErr => {
+        console.warn(`[DNS] Public fallback also failed for ${hostname}:`, publicErr.message);
+        callback(err); // Return original error
+      });
+    } else {
+      callback(err);
+    }
+  });
+}
+
+// Global agents with custom DNS lookup
+const httpAgent = new http.Agent({ lookup: customDnsLookup, keepAlive: true });
+const httpsAgent = new https.Agent({ lookup: customDnsLookup, keepAlive: true });
+
+// Helper to get cookies for a URL from global session
+function getCookiesHeader(url) {
+  if (!global.iptvSession || !global.iptvSession.cookies) return '';
+  
+  const jar = new CookieJar();
+  global.iptvSession.cookies.forEach(cookieStr => {
+    try {
+      jar.setCookieSync(cookieStr, url);
+    } catch (e) {
+      // Ignore invalid cookies for this URL
+    }
+  });
+  
+  return jar.getCookieStringSync(url);
+}
+
+// Helper to extract and store cookies from a response
+function storeCookiesFromResponse(response, url) {
+  const setCookie = response.headers['set-cookie'];
+  if (!setCookie) return;
+
+  if (!global.iptvSession) {
+    global.iptvSession = { cookies: [], timestamp: Date.now() };
+  }
+
+  const jar = new CookieJar();
+  // Load existing cookies
+  global.iptvSession.cookies.forEach(c => jar.setCookieSync(c, url));
+  
+  // Add new cookies
+  if (Array.isArray(setCookie)) {
+    setCookie.forEach(c => jar.setCookieSync(c, url));
+  } else {
+    jar.setCookieSync(setCookie, url);
+  }
+
+  // Store back as strings
+  global.iptvSession.cookies = jar.getSetCookieStringsSync(url);
+  global.iptvSession.timestamp = Date.now();
+}
 
 // Environment Configuration
 const config = {
@@ -256,20 +339,18 @@ async function performServerSideLogin() {
   try {
     console.log('[IPTV] Establishing session with WebTV portal...');
 
-    // Create a session with cookies
-    const jar = new CookieJar();
-    const axiosInstance = cookieJarWrapper(axios.create({ jar }));
-
     // Simply access the portal homepage to get session cookies
-    await axiosInstance.get('http://webtv.iptvsmarters.com/', {
+    const response = await axios.get('http://webtv.iptvsmarters.com/', {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       },
-      timeout: 10000
+      timeout: 10000,
+      httpAgent,
+      httpsAgent
     });
 
-    // Get cookies from the homepage visit
-    const cookies = await jar.getCookies('http://webtv.iptvsmarters.com');
+    // Store cookies from response
+    storeCookiesFromResponse(response, 'http://webtv.iptvsmarters.com');
 
     // Store session
     const sessionData = {
@@ -346,28 +427,6 @@ app.get('/api/iptv/proxy-external/*', async (req, res) => {
       return res.status(400).json({ error: 'Only HTTP/HTTPS URLs are supported' });
     }
 
-    // Create axios instance with stored cookies if available
-    const jar = new CookieJar();
-    if (global.iptvSession && global.iptvSession.cookies) {
-      for (const cookieStr of global.iptvSession.cookies) {
-        try {
-          // Set cookies for both webtv.iptvsmarters.com and tvsystem.my (and their HTTPS versions)
-          jar.setCookieSync(cookieStr, 'http://webtv.iptvsmarters.com');
-          jar.setCookieSync(cookieStr, 'https://webtv.iptvsmarters.com');
-          jar.setCookieSync(cookieStr, 'http://tvsystem.my');
-          jar.setCookieSync(cookieStr, 'https://tvsystem.my');
-        } catch (err) {
-          console.warn('[IPTV External Proxy] Failed to set cookie:', err.message);
-        }
-      }
-    }
-
-    const axiosInstance = cookieJarWrapper(axios.create({ jar }));
-
-    // Extract host from target URL for setting Referer/Origin headers
-    const urlHostMatch = targetUrl.match(/^(https?:\/\/[^\/]+)/);
-    const urlHost = urlHostMatch ? urlHostMatch[1] : null;
-    
     // Build headers with Referer/Origin for IPTV CDN compatibility
     const requestHeaders = {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -375,7 +434,17 @@ app.get('/api/iptv/proxy-external/*', async (req, res) => {
       'Accept': '*/*',
       'Accept-Encoding': 'identity' // Avoid compression issues
     };
-    
+
+    // Inject cookies manually
+    const cookieHeader = getCookiesHeader(targetUrl);
+    if (cookieHeader) {
+      requestHeaders['Cookie'] = cookieHeader;
+    }
+
+    // Extract host from target URL for setting Referer/Origin headers
+    const urlHostMatch = targetUrl.match(/^(https?:\/\/[^\/]+)/);
+    const urlHost = urlHostMatch ? urlHostMatch[1] : null;
+
     // Add Referer and Origin headers for IPTV streams (required by many CDNs)
     if (urlHost && (targetUrl.includes('tvsystem.my') || targetUrl.includes('tvappmanager.my'))) {
       requestHeaders['Referer'] = urlHost + '/';
@@ -390,18 +459,24 @@ app.get('/api/iptv/proxy-external/*', async (req, res) => {
     
     while (retryCount <= maxRetries) {
       try {
-        response = await axiosInstance({
+        response = await axios({
           method: 'GET',
           url: targetUrl,
           responseType: isStreamingResource ? 'stream' : 'arraybuffer',
           headers: requestHeaders,
           timeout: isStreamingResource ? 45000 : 20000, // Shorter timeouts for better UX
           maxRedirects: 5,
+          httpAgent,
+          httpsAgent,
           validateStatus: function (status) {
             // Accept 2xx, 3xx, and 404 for streaming (handle 404 gracefully)
             return status >= 200 && status < 400 || (isStreamingResource && status === 404);
           }
         });
+        
+        // Store cookies from response for future requests
+        storeCookiesFromResponse(response, targetUrl);
+        
         break; // Success!
       } catch (error) {
         const isDnsError = error.code === 'ENOTFOUND' || error.code === 'EAI_AGAIN';
@@ -485,6 +560,11 @@ app.get('/api/iptv/proxy-external/*', async (req, res) => {
         response.data.on('data', (chunk) => {
           m3u8Content += chunk;
         });
+
+        // If the upstream actually returned content-length: 0 or empty body via stream
+        if (response.headers['content-length'] === '0') {
+          console.log('[IPTV External Proxy] Upstream returned Content-Length: 0 for M3U8');
+        }
 
         response.data.on('end', () => {
           // Count HTTP/HTTPS URLs and relative URLs in the M3U8
@@ -747,7 +827,9 @@ async function proxyStaticResource(req, res) {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
       },
-      timeout: 10000
+      timeout: 10000,
+      httpAgent,
+      httpsAgent
     });
 
     // Forward the content type
@@ -768,19 +850,15 @@ async function proxyStaticResource(req, res) {
 // Proxy authenticated requests with session cookies
 async function proxyAuthenticatedRequest(req, res) {
   try {
-    // Create axios instance with stored cookies
-    const jar = new CookieJar();
-    if (global.iptvSession && global.iptvSession.cookies) {
-      for (const cookieStr of global.iptvSession.cookies) {
-        try {
-          jar.setCookieSync(cookieStr, 'http://webtv.iptvsmarters.com');
-        } catch (err) {
-          console.warn('[IPTV Proxy] Failed to set cookie:', err.message);
-        }
-      }
-    }
-
-    const axiosInstance = cookieJarWrapper(axios.create({ jar }));
+    // Build basic request configuration
+    const axiosConfig = {
+      httpAgent,
+      httpsAgent,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      },
+      maxRedirects: 5
+    };
 
     // Build the target URL
     let pathPart = req.path.replace('/api/iptv/', '');
@@ -818,17 +896,21 @@ async function proxyAuthenticatedRequest(req, res) {
     console.log('[IPTV Proxy] Forwarding to:', targetUrl);
 
     // Forward the request without timeout (let it take as long as needed)
-    const response = await axiosInstance({
+    const response = await axios({
+      ...axiosConfig,
       method: req.method,
       url: targetUrl,
       data: req.method !== 'GET' && req.method !== 'HEAD' ? req.body : undefined,
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        ...axiosConfig.headers,
+        'Cookie': getCookiesHeader(targetUrl),
         ...(req.headers['content-type'] && { 'Content-Type': req.headers['content-type'] })
       },
-      maxRedirects: 5,
       timeout: 0 // No timeout - wait as long as needed
     });
+
+    // Store any new cookies from the response
+    storeCookiesFromResponse(response, targetUrl);
 
     // If we're on the playlist selection page, try to auto-select
     // Check if response is HTML (string) before using .includes()
@@ -846,17 +928,22 @@ async function proxyAuthenticatedRequest(req, res) {
         try {
           // Select the playlist
           // eslint-disable-next-line no-unused-vars
-          const selectResponse = await axiosInstance.get(
-            `http://webtv.iptvsmarters.com/switchuser.php?id=${playlistId}`,
+          const selectUrl = `http://webtv.iptvsmarters.com/switchuser.php?id=${playlistId}`;
+          const selectResponse = await axios.get(
+            selectUrl,
             {
+              ...axiosConfig,
               headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                ...axiosConfig.headers,
+                'Cookie': getCookiesHeader(selectUrl),
                 'Referer': 'http://webtv.iptvsmarters.com/index.php'
               },
-              maxRedirects: 5,
               timeout: 15000
             }
           );
+
+          // Store any new cookies
+          storeCookiesFromResponse(selectResponse, selectUrl);
 
           console.log('[IPTV Proxy] Playlist selected, redirecting to dashboard...');
 
