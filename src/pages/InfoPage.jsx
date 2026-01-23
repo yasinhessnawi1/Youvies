@@ -22,14 +22,15 @@ import progressService from '../services/progressService';
 import { Calendar, Play, Film, Tv, Globe, Users, TrendingUp, DollarSign, Building2, MapPin, Languages, CalendarDays, Clock3, BarChart3, ExternalLink, Eye, Link as LinkIcon, Home, CheckCircle, XCircle, Info } from 'lucide-react';
 import { fetchTvSeasonDetails } from '../api/MediaService';
 import { fetchAnimeEpisodes } from '../api/AnimeShowApi';
+import { TMDB_API_KEY } from '../api/apiHelpers';
 
 const InfoPage = () => {
   const { activeTab: contextActiveTab } = React.useContext(TabContext);
   const { isLoading, setIsLoading } = useLoading();
-  const { videoPlayerState } = useContext(VideoPlayerContext);
+  const { videoPlayerState, switchProvider } = useContext(VideoPlayerContext);
   const { category, mediaId } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { fetchMediaInfo, itemsCache } = useItemContext();
+  const { fetchMediaInfo, itemsCache, setItemsCache } = useItemContext();
   const [selectedSeason, setSelectedSeason] = useState(null);
   const [selectedEpisode, setSelectedEpisode] = useState(null);
   const [itemInfo, setItemInfo] = useState(null);
@@ -192,6 +193,51 @@ const InfoPage = () => {
         if (!fetchedItem) {
           setError(`Sorry, this ${category.slice(0, -1)} is not available. It may have been removed from our database.`);
           return;
+        }
+
+        // FALLBACK: Fetch MyAnimeList ID if missing for anime (needed for VidLink provider)
+        if (category === 'anime') {
+          const title = getTitle(fetchedItem);
+          
+          // MyAnimeList ID Fallback
+          if (!fetchedItem.malId) {
+            try {
+              console.log(`🔍 MAL ID missing for ${title}, fetching from Jikan fallback...`);
+              const malResponse = await fetch(`https://api.jikan.moe/v4/anime?q=${encodeURIComponent(title)}&limit=1`);
+              const malData = await malResponse.json();
+              if (malData.data && malData.data.length > 0) {
+                fetchedItem.malId = malData.data[0].mal_id;
+                console.log('✅ Found MAL ID via fallback:', fetchedItem.malId);
+              }
+            } catch (err) {
+              console.error('❌ Error in MAL ID fallback fetch:', err);
+            }
+          }
+          
+          // TMDB ID Fallback (needed for RiveStream provider)
+          if (!fetchedItem.tmdbId) {
+            try {
+              console.log(`🔍 TMDB ID missing for anime ${title}, fetching from TMDB search...`);
+              // Use TMDB search for TV shows (most anime are treated as TV on TMDB)
+              const tmdbSearchResponse = await fetch(`https://api.themoviedb.org/3/search/tv?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(title)}`);
+              const tmdbSearchData = await tmdbSearchResponse.json();
+              if (tmdbSearchData.results && tmdbSearchData.results.length > 0) {
+                fetchedItem.tmdbId = tmdbSearchData.results[0].id;
+                console.log('✅ Found TMDB ID for anime via fallback:', fetchedItem.tmdbId);
+              }
+            } catch (err) {
+              console.error('❌ Error in TMDB ID fallback fetch:', err);
+            }
+          }
+
+          // Update itemsCache if any IDs were found
+          if (fetchedItem.malId || fetchedItem.tmdbId) {
+            const cacheKey = `${category}-${mediaId}`;
+            setItemsCache(prev => ({
+              ...prev,
+              [cacheKey]: { ...fetchedItem }
+            }));
+          }
         }
 
         setItemInfo(fetchedItem);
@@ -662,51 +708,62 @@ const InfoPage = () => {
   };
 
   const constructVideoUrl = (provider, season = 1, episode = 1) => {
-    const id = itemInfo?.id;
+    const id = itemInfo?.id; // AniList ID for anime, TMDB ID for movies/shows
     if (!id) return '';
 
+    // Standardize TMDB ID usage:
+    // For anime, use fetched tmdbId (fallback to id which is anilist id if search failed).
+    // For movies/shows, id is already the TMDB ID.
+    const tmdbId = itemInfo.type === 'anime' ? (itemInfo.tmdbId || id) : id;
+
     switch (provider) {
-      case 'NontonGo':
-        return itemInfo.type === 'shows'
-          ? `https://NontonGo.win/embed/tv/${id}/${season}/${episode}`
-          : `https://NontonGo.win/embed/movie/${id}`;
-      case 'smashy':
-        return itemInfo.type === 'shows'
-          ? `https://player.smashy.stream/tv/${id}?s=${season}&e=${episode}&remove=watchWithFriends|addSubtitles|search|episodes&playerList=F|SU|J|NM|SY|FV|O|I|ST|U|E|SO|D|DM|RD|H|CA|M|K|G&subLang=English`
-          : `https://player.smashy.stream/movie/${id}?remove=watchWithFriends|addSubtitles|search|episodes&playerList=F|SU|J|NM|SY|FV|O|I|ST|U|E|SO|D|DM|RD|H|CA|M|K|G&subLang=English`;
-      case 'SuperEmbed':
-        return itemInfo.type === 'shows'
-          ? `https://moviesapi.club/tv/${id}-${season}-${episode}`
-          : `https://moviesapi.club/movie/${id}`;
-      case 'Vidsrc' :
-        if (itemInfo.type === 'shows') {
-          return `https://embed.su/embed/tv/${id}/${season}/${episode}`;
+      case 'VidRock':
+        if (itemInfo.type === 'shows' || itemInfo.type === 'anime') {
+          return `https://vidrock.net/tv/${tmdbId}/${season}/${episode}`;
         } else {
-          return `https://embed.su/embed/movie/${id}`;
+          const imdbId = itemInfo.imdb_id || itemInfo.external_ids?.imdb_id;
+          return `https://vidrock.net/movie/${imdbId || id}`;
         }
-      case 'Anime':
+      case 'VidLink':
         if (itemInfo.type === 'anime') {
-          return `https://vidsrc.cc/v2/embed/anime/ani${id}/${episode}/sub?autoPlay=true&&autoSkipIntro=true`;
+          const malId = itemInfo.malId || itemInfo.id; // Support both, prefer malId
+          const subOrDub = itemInfo.subOrDub || 'sub';
+          return `https://vidlink.pro/anime/${malId}/${episode}/${subOrDub}?fallback=true`;
         } else if (itemInfo.type === 'shows') {
-          return `https://vidsrc.cc/v2/embed/tv/${id}/${season}/${episode}?autoPlay=true`;
+          return `https://vidlink.pro/tv/${id}/${season}/${episode}`;
         } else {
-          return `https://vidsrc.cc/v2/embed/movie/${id}?autoPlay=true`;
+          return `https://vidlink.pro/movie/${id}`;
+        }
+      case 'NontonGo':
+        return (itemInfo.type === 'shows' || itemInfo.type === 'anime')
+          ? `https://NontonGo.win/embed/tv/${tmdbId}/${season}/${episode}`
+          : `https://NontonGo.win/embed/movie/${tmdbId}`;
+      case 'smashy':
+        return (itemInfo.type === 'shows' || itemInfo.type === 'anime')
+          ? `https://player.smashy.stream/tv/${tmdbId}?s=${season}&e=${episode}&remove=watchWithFriends|addSubtitles|search|episodes&playerList=F|SU|J|NM|SY|FV|O|I|ST|U|E|SO|D|DM|RD|H|CA|M|K|G&subLang=English`
+          : `https://player.smashy.stream/movie/${tmdbId}?remove=watchWithFriends|addSubtitles|search|episodes&playerList=F|SU|J|NM|SY|FV|O|I|ST|U|E|SO|D|DM|RD|H|CA|M|K|G&subLang=English`;
+      case 'SuperEmbed':
+        return (itemInfo.type === 'shows' || itemInfo.type === 'anime')
+          ? `https://moviesapi.club/tv/${tmdbId}-${season}-${episode}`
+          : `https://moviesapi.club/movie/${tmdbId}`;
+      case 'Vidsrc' :
+        if (itemInfo.type === 'shows' || itemInfo.type === 'anime') {
+          return `https://vidsrc.cc/v3/embed/tv/${tmdbId}/${season}/${episode}?autoPlay=true`;
+        } else {
+          return `https://vidsrc.cc/v3/embed/movie/${tmdbId}?autoPlay=true`;
         }
 
-      case '2embed':
-        if (itemInfo.type === 'shows') {
-          return `https://www.2embed.cc/embedtv/${id}&s=${season}&e=${episode}`;
-        } else if (itemInfo.type === 'anime') {
-          let title =
-            itemInfo.title.userPreferred ||
-            itemInfo.title.english ||
-            itemInfo.title.romaji ||
-            itemInfo.title.native ||
-            'Unknown Title';
-          title = title.replace(/ /g, '-').toLowerCase();
-          return `https://2anime.xyz/embed/${title}-episode-${episode}`;
+      case 'VidZee':
+        if (itemInfo.type === 'shows' || itemInfo.type === 'anime') {
+          return `https://player.vidzee.wtf/v2/embed/tv/${tmdbId}/${season}/${episode}`;
         } else {
-          return `https://www.2embed.cc/embed/${id}`;
+          return `https://player.vidzee.wtf/v2/embed/movie/${tmdbId}`;
+        }
+      case 'RiveStream':
+        if (itemInfo.type === 'shows' || itemInfo.type === 'anime') {
+          return `https://rivestream.org/embed?type=tv&id=${tmdbId}&season=${season}&episode=${episode}`;
+        } else {
+          return `https://rivestream.org/embed?type=movie&id=${tmdbId}`;
         }
       default:
         return '';
@@ -1597,14 +1654,66 @@ const InfoPage = () => {
                     onSourceChange={handleSourceChange}
                   />
                 ) : (
-                  <iframe
-                    src={videoSrc}
-                    title={`Video player for ${title}`}
-                    allowFullScreen
-                    className="modal-iframe"
-                    frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  />
+                  <div className="iframe-player-container">
+                    <iframe
+                      src={videoSrc}
+                      title={`Video player for ${title}`}
+                      allowFullScreen
+                      className="modal-iframe"
+                      frameBorder="0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    />
+                    <div className='player-buttons'>
+                      <button
+                        className={`player-button ${videoPlayerState.provider === 'RiveStream' ? 'active' : ''}`}
+                        onClick={() => switchProvider('RiveStream')}
+                      >
+                        Low
+                      </button>
+                      <button
+                        className={`player-button ${videoPlayerState.provider === 'NontonGo' ? 'active' : ''}`}
+                        onClick={() => switchProvider('NontonGo')}
+                      >
+                        Low
+                      </button>
+                      <button
+                        className={`player-button ${videoPlayerState.provider === 'VidZee' ? 'active' : ''}`}
+                        onClick={() => switchProvider('VidZee')}
+                      >
+                        Medium
+                      </button>
+                      <button
+                        className={`player-button ${videoPlayerState.provider === 'smashy' ? 'active' : ''}`}
+                        onClick={() => switchProvider('smashy')}
+                      >
+                        Medium
+                      </button>
+                      <button
+                        className={`player-button ${videoPlayerState.provider === 'VidRock' ? 'active' : ''}`}
+                        onClick={() => switchProvider('VidRock')}
+                      >
+                        Good
+                      </button>
+                      <button
+                        className={`player-button ${videoPlayerState.provider === 'Vidsrc' ? 'active' : ''}`}
+                        onClick={() => switchProvider('Vidsrc')}
+                      >
+                        Good
+                      </button>
+                      <button
+                        className={`player-button ${videoPlayerState.provider === 'VidLink' ? 'active' : ''}`}
+                        onClick={() => switchProvider('VidLink')}
+                      >
+                        Best
+                      </button>
+                      <button
+                        className={`player-button ${videoPlayerState.provider === 'SuperEmbed' ? 'active' : ''}`}
+                        onClick={() => switchProvider('SuperEmbed')}
+                      >
+                        Best
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
               

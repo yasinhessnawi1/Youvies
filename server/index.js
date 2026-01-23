@@ -369,16 +369,12 @@ async function performServerSideLogin() {
     // Store cookies from response
     storeCookiesFromResponse(response, 'http://webtv.iptvsmarters.com');
 
-    // Store session
-    const sessionData = {
-      cookies: cookies.map(c => c.toString()),
-      timestamp: Date.now(),
-      jar: jar,
-      playlistId: null // Will be set after user adds playlist via form
-    };
+    // Ensure session properties are initialized if they don't exist
+    if (global.iptvSession) {
+      if (global.iptvSession.playlistId === undefined) global.iptvSession.playlistId = null;
+    }
 
-    global.iptvSession = sessionData;
-    console.log('[IPTV] ✅ Session established with', cookies.length, 'cookies');
+    console.log('[IPTV] ✅ Session established with', global.iptvSession?.cookies?.length || 0, 'cookies');
     return true;
 
   } catch (error) {
@@ -932,20 +928,22 @@ async function proxyAuthenticatedRequest(req, res) {
     // If we're on the playlist selection page, try to auto-select
     // Check if response is HTML (string) before using .includes()
     const isHtmlResponse = typeof response.data === 'string';
-    if (isHtmlResponse && response.data.includes('Choose Your Playlist')) {
+    if (isHtmlResponse && (response.data.includes('Choose Your Playlist') || response.data.includes('switch-user-box') || response.data.includes('user-box'))) {
       console.log('[IPTV Proxy] On playlist selection page, attempting auto-select...');
 
-      // Try to extract playlist ID and auto-select
-      const playlistIdMatch = response.data.match(/switchuser\.php\?id=(\d+)/);
+      // Try to extract playlist ID and auto-select - more flexible regex
+      const playlistIdMatch = response.data.match(/switchuser\.php\?id=(\d+)/i) || 
+                               response.data.match(/id=['"](\d+)['"][^>]*class=['"][^'"]*(?:user-box|switch-user-box)/i);
 
       if (playlistIdMatch && global.iptvSession) {
         const playlistId = playlistIdMatch[1];
-        console.log('[IPTV Proxy] Found playlist ID:', playlistId, '- selecting it...');
+        console.log('[IPTV Proxy] Found playlist ID via regex:', playlistId, '- selecting it...');
 
         try {
           // Select the playlist
-          // eslint-disable-next-line no-unused-vars
-          const selectUrl = `http://webtv.iptvsmarters.com/switchuser.php?id=${playlistId}`;
+          const selectUrl = `http://webtv.iptvsmarters.com/switchuser.php?id=${playlistId}&action=select`;
+          console.log('[IPTV Proxy] Requesting selection URL:', selectUrl);
+          
           const selectResponse = await axios.get(
             selectUrl,
             {
@@ -953,7 +951,7 @@ async function proxyAuthenticatedRequest(req, res) {
               headers: {
                 ...axiosConfig.headers,
                 'Cookie': getCookiesHeader(selectUrl),
-                'Referer': 'http://webtv.iptvsmarters.com/index.php'
+                'Referer': 'http://webtv.iptvsmarters.com/switchuser.php'
               },
               timeout: 15000
             }
@@ -962,7 +960,7 @@ async function proxyAuthenticatedRequest(req, res) {
           // Store any new cookies
           storeCookiesFromResponse(selectResponse, selectUrl);
 
-          console.log('[IPTV Proxy] Playlist selected, redirecting to dashboard...');
+          console.log('[IPTV Proxy] Playlist selected server-side, redirecting to dashboard...');
 
           // Update session with playlist ID
           global.iptvSession.playlistId = playlistId;
@@ -970,16 +968,16 @@ async function proxyAuthenticatedRequest(req, res) {
           // Redirect to dashboard
           return res.redirect('/api/iptv/dashboard.php');
         } catch (selectError) {
-          console.error('[IPTV Proxy] Failed to select playlist:', selectError.message);
+          console.error('[IPTV Proxy] Failed to select playlist server-side:', selectError.message);
         }
       }
 
-      // If we can't auto-select, show the playlist selection page
-      console.log('[IPTV Proxy] Could not auto-select playlist, showing selection page');
+      // If we can't auto-select server-side, we'll rely on the injected script below
+      console.log('[IPTV Proxy] Could not auto-select playlist server-side, relying on client script');
     }
 
     // If response is JSON (like from API endpoints), send it as-is
-    if (typeof response.data === 'object') {
+    if (typeof response.data === 'object' && !isHtmlResponse) {
       res.setHeader('Content-Type', 'application/json');
       return res.json(response.data);
     }
@@ -1050,12 +1048,11 @@ async function proxyAuthenticatedRequest(req, res) {
     const currentHost = req.get('host');
     rewriteCount = 0;
     html = html.replace(new RegExp(`http://(?!${currentHost.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})[^"'\\s<>&]+`, 'g'), (match) => {
-      // Skip if it's already a proxied URL pattern
-      if (match.includes('/api/iptv/') || match.includes('proxy-external')) {
+      // Skip if it's already a proxied URL pattern or absolute localhost
+      if (match.includes('/api/iptv/') || match.includes('proxy-external') || match.includes('localhost:3000')) {
         return match;
       }
       rewriteCount++;
-      console.log('[IPTV Proxy] Rewriting general HTTP URL:', match.substring(0, 80) + '...');
       return `${externalProxyBaseUrl}/${encodeURIComponent(match)}`;
     });
     console.log('[IPTV Proxy] Rewrote', rewriteCount, 'general HTTP URLs');
@@ -1083,6 +1080,95 @@ async function proxyAuthenticatedRequest(req, res) {
     console.log('[IPTV Proxy] Remaining HTTP URLs after rewriting:', remainingHttpUrls.length);
     if (remainingHttpUrls.length > 0) {
       console.log('[IPTV Proxy] Sample remaining HTTP URLs:', remainingHttpUrls.slice(0, 5));
+    }
+
+    // If this is the playlist selection page, inject automation script
+    if (html.includes('Choose Your Playlist') || html.includes('switchuser.php') || html.includes('switch-user-box') || html.includes('userlist')) {
+      const playlistAutomationScript = `
+        <script>
+          (function() {
+            console.log('[IPTV Automation] Aggressive script active');
+            let attempts = 0;
+            const maxAttempts = 60; // 30 seconds
+            
+            function autoSelect() {
+              attempts++;
+              const playlistName = '${config.iptv.playlistName}';
+              
+              // 1. Broad search for any element containing the playlist name
+              const potentialElements = document.querySelectorAll('.anyName, .userlistshowname, .userlistcardleft, span, div, b, strong');
+              let targetElement = null;
+              
+              if (attempts % 5 === 0) {
+                console.log('[IPTV Automation] Attempt ' + attempts + ': Searching for "' + playlistName + '" among ' + potentialElements.length + ' elements');
+              }
+              
+              for (const el of potentialElements) {
+                // Only consider elements with no children (leaf nodes) or specific classes
+                if (el.children.length === 0 || el.classList.contains('anyName')) {
+                  const text = el.textContent.trim().toLowerCase();
+                  if (text === playlistName.toLowerCase()) {
+                    targetElement = el;
+                    console.log('[IPTV Automation] MATCH found: "' + text + '" in <' + el.tagName + ' class="' + el.className + '">');
+                    break;
+                  }
+                }
+              }
+              
+              // 2. If profile text found, find the LOAD button in its vicinity
+              if (targetElement) {
+                // Search up for a container, then down for the button
+                let container = targetElement.closest('.listBanner, .userlist, .getUserList, .user-box, .switch-user-box, div[class*="card"]');
+                if (!container) container = targetElement.parentElement.parentElement;
+                
+                const loadBtn = container.querySelector('.loginfromlist, .getList, .login_link_0, button[class*="login"], [class*="load"]');
+                
+                if (loadBtn) {
+                  console.log('[IPTV Automation] Found LOAD button. Triggering click...');
+                  // Click both for good measure
+                  targetElement.click();
+                  
+                  // Use a small delay for the "selection" to register if needed
+                  setTimeout(() => {
+                    loadBtn.click();
+                    // Force events
+                    ['mousedown', 'mouseup', 'click'].forEach(type => {
+                      loadBtn.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window }));
+                    });
+                    console.log('[IPTV Automation] Click sequence completed.');
+                  }, 200);
+                  return;
+                } else {
+                  if (attempts % 5 === 0) {
+                    console.log('[IPTV Automation] Profile found but no LOAD button in same container. Container class: ' + (container ? container.className : 'NONE'));
+                  }
+                }
+              }
+              
+              // 3. Last Resort Fallback: If it's been a while and there's only one LOAD button, just use it
+              const allLoadBtns = document.querySelectorAll('.loginfromlist, .getList, .login_link_0');
+              if (allLoadBtns.length === 1 && attempts > 10) {
+                console.log('[IPTV Automation] Fallback: Clicking the only available LOAD button.');
+                allLoadBtns[0].click();
+                allLoadBtns[0].dispatchEvent(new MouseEvent('click', { bubbles: true }));
+                return;
+              }
+              
+              if (attempts < maxAttempts) {
+                setTimeout(autoSelect, 500);
+              } else {
+                console.log('[IPTV Automation] Timed out.');
+              }
+            }
+            
+            // Start immediately and also on load
+            autoSelect();
+            window.addEventListener('load', autoSelect);
+          })();
+        </script>
+      `;
+      html = html.replace('</body>', playlistAutomationScript + '</body>');
+      console.log('[IPTV Proxy] Injected aggressive playlist automation script');
     }
 
     // If this is the add playlist page, check if playlist exists before auto-filling

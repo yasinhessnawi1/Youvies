@@ -9,7 +9,7 @@ export const VideoPlayerProvider = ({ children }) => {
     isVisible: false,
     tmdbId: null,
     type: null,
-    provider: 'Anime', // default provider
+    provider: localStorage.getItem('favoriteProvider') || 'VidLink', 
     season: 1, // default season
     episode: 1, // default episode
   });
@@ -28,7 +28,7 @@ export const VideoPlayerProvider = ({ children }) => {
       isVisible: true,
       tmdbId,
       type,
-      provider:  'Anime' , // default provider when showing player
+      provider: localStorage.getItem('favoriteProvider') || 'VidLink',
       season,
       episode,
     });
@@ -39,7 +39,7 @@ export const VideoPlayerProvider = ({ children }) => {
       isVisible: false,
       type: null,
       tmdbId: null,
-      provider: 'Anime',
+      provider: localStorage.getItem('favoriteProvider') || 'VidLink',
       season: 1,
       episode: 1,
     });
@@ -51,6 +51,7 @@ export const VideoPlayerProvider = ({ children }) => {
     season = videoPlayerState.season,
     episode = videoPlayerState.episode,
   ) => {
+    localStorage.setItem('favoriteProvider', provider);
     setVideoPlayerState((prevState) => ({
       ...prevState,
       provider,
