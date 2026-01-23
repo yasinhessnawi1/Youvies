@@ -35,7 +35,7 @@ function App() {
                           <Route path='/movies' element={<HomePage />} />
                           <Route path='/shows' element={<HomePage />} />
                           <Route path='/anime' element={<HomePage />} />
-                          <Route path='/iptv' element={<IptvPage />} />
+                          <Route path='/TV' element={<IptvPage />} />
                           <Route path='/random' element={<RandomPage />} />
                           <Route path='/' element={<LoginPage />} />
                           <Route path='*' element={<LoginPage />} />

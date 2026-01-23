@@ -16,6 +16,15 @@ const IptvPage = () => {
   const [showInstruction, setShowInstruction] = useState(true);
   const [loginStatus, setLoginStatus] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showBrowserWarning, setShowBrowserWarning] = useState(false);
+
+  // Detect Safari
+  useEffect(() => {
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    if (isSafari) {
+      setShowBrowserWarning(true);
+    }
+  }, []);
 
 
   // Check IPTV login status on mount
@@ -80,6 +89,23 @@ const IptvPage = () => {
           <h1>IPTV Player</h1>
           <p>Stream live TV channels and video-on-demand content</p>
         </div>
+
+        {showBrowserWarning && (
+          <div className="browser-warning-banner">
+            <div className="warning-icon">⚠️</div>
+            <div className="warning-text">
+              <strong>Browser Compatibility:</strong> Some live channels may experience instability on Safari (Apple Video Player). 
+              For the best experience, <strong>Google Chrome</strong> or <strong>Brave Browser</strong> is recommended.
+            </div>
+            <button 
+              className="warning-close" 
+              onClick={() => setShowBrowserWarning(false)}
+              aria-label="Close warning"
+            >
+              &times;
+            </button>
+          </div>
+        )}
 
         <div className="iptv-player-container">
           {isLoading && (
