@@ -341,9 +341,9 @@ app.get('/api/iptv/proxy-external/*', async (req, res) => {
       return res.status(400).json({ error: 'Invalid URL protocol' });
     }
 
-    // Only allow HTTP URLs for security
-    if (!targetUrl.startsWith('http://')) {
-      return res.status(400).json({ error: 'Only HTTP URLs are supported' });
+    // Only allow HTTP/HTTPS URLs for security
+    if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+      return res.status(400).json({ error: 'Only HTTP/HTTPS URLs are supported' });
     }
 
     // Create axios instance with stored cookies if available
@@ -351,9 +351,11 @@ app.get('/api/iptv/proxy-external/*', async (req, res) => {
     if (global.iptvSession && global.iptvSession.cookies) {
       for (const cookieStr of global.iptvSession.cookies) {
         try {
-          // Set cookies for both webtv.iptvsmarters.com and tvsystem.my
+          // Set cookies for both webtv.iptvsmarters.com and tvsystem.my (and their HTTPS versions)
           jar.setCookieSync(cookieStr, 'http://webtv.iptvsmarters.com');
+          jar.setCookieSync(cookieStr, 'https://webtv.iptvsmarters.com');
           jar.setCookieSync(cookieStr, 'http://tvsystem.my');
+          jar.setCookieSync(cookieStr, 'https://tvsystem.my');
         } catch (err) {
           console.warn('[IPTV External Proxy] Failed to set cookie:', err.message);
         }
@@ -941,8 +943,9 @@ async function proxyAuthenticatedRequest(req, res) {
 
     // Handle HTTP URLs in other contexts (like JavaScript variables, data attributes, etc.)
     // Be more careful to avoid already-proxied URLs
+    const currentHost = req.get('host');
     rewriteCount = 0;
-    html = html.replace(/http:\/\/(?!youvies-server\.fly\.dev)[^"'\s<>&]+/g, (match) => {
+    html = html.replace(new RegExp(`http://(?!${currentHost.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})[^"'\\s<>&]+`, 'g'), (match) => {
       // Skip if it's already a proxied URL pattern
       if (match.includes('/api/iptv/') || match.includes('proxy-external')) {
         return match;
