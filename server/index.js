@@ -28,16 +28,33 @@ async function customDnsLookup(hostname, options, callback) {
 
     if (err.code === 'ENOTFOUND' || err.code === 'EAI_AGAIN') {
       console.log(`[DNS] System lookup failed for ${hostname}, trying public fallback...`);
-      dnsResolver.resolve4(hostname).then(addresses => {
+      
+      // Determine which resolve version to use based on family
+      // If family is 0 (both), we prefer IPv4 for compatibility
+      const useIPv6 = options.family === 6;
+      const resolvePromise = useIPv6 ? dnsResolver.resolve6(hostname) : dnsResolver.resolve4(hostname);
+
+      resolvePromise.then(addresses => {
         if (addresses && addresses.length > 0) {
           console.log(`[DNS] Public fallback resolved ${hostname} to ${addresses[0]}`);
-          callback(null, addresses[0], 4);
+          
+          if (options.all) {
+            // Return array of objects for options.all
+            const results = addresses.map(addr => ({ 
+              address: addr, 
+              family: useIPv6 ? 6 : 4 
+            }));
+            callback(null, results);
+          } else {
+            // Return single address and family
+            callback(null, addresses[0], useIPv6 ? 6 : 4);
+          }
         } else {
           callback(err);
         }
       }).catch(publicErr => {
         console.warn(`[DNS] Public fallback also failed for ${hostname}:`, publicErr.message);
-        callback(err); // Return original error
+        callback(err); // Return original system error
       });
     } else {
       callback(err);
