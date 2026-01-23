@@ -28,6 +28,18 @@ const config = {
 
 const app = express();
 
+// Trust reverse proxy (needed for Fly.dev and other load balancers to detect HTTPS)
+app.set('trust proxy', true);
+
+// Helper to get effective protocol (forces HTTPS in production or if client is HTTPS)
+const getEffectiveProtocol = (req) => {
+  // If we're in production or the client URL is HTTPS, default to https
+  if (!config.isDevelopment || config.client.url.startsWith('https://')) {
+    return 'https';
+  }
+  return req.protocol;
+};
+
 // Performance monitoring middleware
 app.use((req, res, next) => {
   if (!req.path.startsWith('/api/')) return next();
@@ -497,9 +509,9 @@ app.get('/api/iptv/proxy-external/*', async (req, res) => {
           // Rewrite HTTP/HTTPS URLs to go through the proxy
           if (httpUrls.length > 0) {
             httpUrls.forEach(url => {
-              // Only proxy URLs that are from the problematic domains
               if (url.includes('tvappmanager.my') || url.includes('tvsystem.my')) {
-                const proxyUrl = req.protocol + '://' + req.get('host') + '/api/iptv/proxy-external/' + encodeURIComponent(url);
+                const protocol = getEffectiveProtocol(req);
+                const proxyUrl = protocol + '://' + req.get('host') + '/api/iptv/proxy-external/' + encodeURIComponent(url);
                 m3u8Content = m3u8Content.replace(url, proxyUrl);
                 console.log('[IPTV External Proxy] Rewrote M3U8 URL:', url.substring(0, 80) + '...');
               }
@@ -513,13 +525,14 @@ app.get('/api/iptv/proxy-external/*', async (req, res) => {
               // For M3U8 playlists, relative URLs starting with / are absolute paths from server root
               // Extract protocol and host from the FINAL M3U8 URL (after redirects)
               const protocolMatch = finalUrl.match(/^(https?:)\/\//);
-              const protocol = protocolMatch ? protocolMatch[1] : 'http:';
+              const upstreamProtocol = protocolMatch ? protocolMatch[1] : 'http:';
 
               const hostMatch = finalUrl.match(/^https?:\/\/([^\/]+)/);
               const host = hostMatch ? hostMatch[1] : 'tvsystem.my:80';
 
-              const fullUrl = `${protocol}//${host}${relativeUrl.trim()}`;
-              const proxyUrl = req.protocol + '://' + req.get('host') + '/api/iptv/proxy-external/' + encodeURIComponent(fullUrl);
+              const proxyProtocol = getEffectiveProtocol(req);
+              const fullUrl = `${upstreamProtocol}//${host}${relativeUrl.trim()}`;
+              const proxyUrl = proxyProtocol + '://' + req.get('host') + '/api/iptv/proxy-external/' + encodeURIComponent(fullUrl);
 
               // Replace the relative URL in the content
               m3u8Content = m3u8Content.replace(new RegExp(relativeUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), proxyUrl);
@@ -839,8 +852,9 @@ async function proxyAuthenticatedRequest(req, res) {
     console.log('[IPTV Proxy] Original HTML length:', html.length);
 
     // Rewrite URLs to go through our proxy (always use HTTPS for security)
-    const proxyBaseUrl = 'https://' + req.get('host') + '/api/iptv';
-    const externalProxyBaseUrl = req.protocol + '://' + req.get('host') + '/api/iptv/proxy-external';
+    const protocol = getEffectiveProtocol(req);
+    const proxyBaseUrl = protocol + '://' + req.get('host') + '/api/iptv';
+    const externalProxyBaseUrl = protocol + '://' + req.get('host') + '/api/iptv/proxy-external';
 
     // Rewrite relative URLs in href attributes
     html = html.replace(/href="\/([^"]+)"/g, `href="${proxyBaseUrl}/$1"`);
@@ -1017,7 +1031,7 @@ async function proxyAuthenticatedRequest(req, res) {
 
     // Inject script to handle dynamic video source loading
     if (html.includes('</body>')) {
-      const protocol = req.protocol;
+      const protocol = getEffectiveProtocol(req);
       const host = req.get('host');
       console.log('[IPTV Proxy] Injecting script with protocol:', protocol, 'host:', host);
       const dynamicProxyScript = `
