@@ -211,7 +211,10 @@ const VideoPlayer = ({
   // NEW: Video source selection props
   alternativeSources = [],  // List of alternative torrents
   onSourceChange = null,    // Callback when user selects different source
-  currentSourceName = null  // Display name of current source
+  currentSourceName = null,  // Display name of current source
+  // NEW: Auto Next props
+  onNextEpisode = null,
+  hasNextEpisode = false
 }) => {
   // Get user context for subtitle preferences
   const userContext = useContext(UserContext);
@@ -305,6 +308,28 @@ const VideoPlayer = ({
   const [showTorrentStats, setShowTorrentStats] = useState(false); // Closed by default
   const [isSeeking, setIsSeeking] = useState(false);
   const [isWaitingForTorrent, setIsWaitingForTorrent] = useState(false);
+  
+  // Auto Next functionality
+  const [autoNextEnabled, setAutoNextEnabled] = useState(() => {
+    try {
+      return localStorage.getItem('autoNextEnabled') !== 'false'; // Default to true
+    } catch {
+      return true;
+    }
+  });
+  const [showNextOverlay, setShowNextOverlay] = useState(false);
+  const [nextCountdown, setNextCountdown] = useState(10);
+  const countdownIntervalRef = useRef(null);
+  const hasTriggeredNextRef = useRef(false);
+  
+  // Track autoNextEnabled changes to update localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('autoNextEnabled', autoNextEnabled);
+    } catch (e) {
+      console.warn('Failed to save autoNextEnabled to localStorage:', e);
+    }
+  }, [autoNextEnabled]);
 
   // Check if there's enough buffer at the current playback position
   const checkBufferAvailability = useCallback(() => {
@@ -1475,6 +1500,15 @@ const VideoPlayer = ({
     const video = videoRef.current;
     if (!video) return;
 
+    // Reset auto-next states on source change
+    hasTriggeredNextRef.current = false;
+    setShowNextOverlay(false);
+    setNextCountdown(10);
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
+      countdownIntervalRef.current = null;
+    }
+
     console.log('🎬 VideoPlayer: useEffect triggered');
     console.log('   - src:', src);
     console.log('   - torrentHash:', torrentHash);
@@ -1515,6 +1549,51 @@ const VideoPlayer = ({
       updateBufferedProgress();
       onTimeUpdate?.(newTime);
       
+      const timeRemaining = video.duration - newTime;
+
+      // Auto-next logic: show overlay when nearing end
+      if (video.duration > 0 && hasNextEpisode && !hasTriggeredNextRef.current) {
+        // Show overlay if less than 60s remaining
+        if (timeRemaining > 0 && timeRemaining <= 60) {
+          if (!showNextOverlay) setShowNextOverlay(true);
+          
+          // Start countdown if within 15s and auto-next is enabled
+          if (timeRemaining <= 15 && autoNextEnabled && !countdownIntervalRef.current) {
+            console.log('⏳ Starting auto-next countdown');
+            setNextCountdown(10);
+            
+            countdownIntervalRef.current = setInterval(() => {
+              setNextCountdown(prev => {
+                if (prev <= 1) {
+                  // Countdown finished
+                  if (countdownIntervalRef.current) {
+                    clearInterval(countdownIntervalRef.current);
+                    countdownIntervalRef.current = null;
+                  }
+                  
+                  if (onNextEpisode && !hasTriggeredNextRef.current) {
+                    console.log('⏭️ Auto-playing next episode from countdown');
+                    hasTriggeredNextRef.current = true;
+                    onNextEpisode();
+                  }
+                  return 0;
+                }
+                return prev - 1;
+              });
+            }, 1000);
+          }
+        } else {
+          // Hide overlay if we seek back
+          if (showNextOverlay) setShowNextOverlay(false);
+          // Stop countdown if we seek back
+          if (countdownIntervalRef.current) {
+            clearInterval(countdownIntervalRef.current);
+            countdownIntervalRef.current = null;
+            setNextCountdown(10);
+          }
+        }
+      }
+      
       // Save progress every 5 seconds
       if (torrentHash && fileIndex !== null && video.duration > 0) {
         const now = Date.now();
@@ -1522,6 +1601,20 @@ const VideoPlayer = ({
           progressService.saveProgress(torrentHash, fileIndex, newTime, video.duration, title);
           video.progressSaveTimer = now;
         }
+      }
+    };
+
+    const handleEnded = () => {
+      console.log('🏁 Video ended');
+      // Only auto-advance on ended if we haven't already triggered it via countdown
+      if (hasNextEpisode && autoNextEnabled && onNextEpisode && !hasTriggeredNextRef.current) {
+        console.log('⏭️ Auto-playing next episode from ended event');
+        hasTriggeredNextRef.current = true;
+        if (countdownIntervalRef.current) {
+          clearInterval(countdownIntervalRef.current);
+          countdownIntervalRef.current = null;
+        }
+        onNextEpisode();
       }
     };
 
@@ -1561,6 +1654,7 @@ const VideoPlayer = ({
     video.addEventListener('waiting', handleWaiting);
     video.addEventListener('canplay', handleCanPlay);
     video.addEventListener('canplaythrough', handleCanPlayThrough);
+    video.addEventListener('ended', handleEnded);
 
     return () => {
       video.removeEventListener('loadedmetadata', handleLoadedMetadata);
@@ -1569,9 +1663,16 @@ const VideoPlayer = ({
       video.removeEventListener('waiting', handleWaiting);
       video.removeEventListener('canplay', handleCanPlay);
       video.removeEventListener('canplaythrough', handleCanPlayThrough);
+      video.removeEventListener('ended', handleEnded);
+      
+      // Clear countdown on unmount/source change
+      if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current);
+        countdownIntervalRef.current = null;
+      }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [src, initialTime, onTimeUpdate, onProgress, updateBufferedProgress, torrentHash, fileIndex, title, hasShownResumeDialog, hasAppliedInitialTime]); // isMovie intentionally excluded
+  }, [src, initialTime, onTimeUpdate, onProgress, updateBufferedProgress, torrentHash, fileIndex, title, hasShownResumeDialog, hasAppliedInitialTime, autoNextEnabled, hasNextEpisode, onNextEpisode]); // isMovie intentionally excluded
 
   // Mobile video initialization
   useEffect(() => {
@@ -2297,6 +2398,55 @@ const VideoPlayer = ({
         </button>
       )}
 
+      {/* Next Episode Overlay */}
+      {showNextOverlay && hasNextEpisode && (
+        <div className={`next-episode-overlay ${showControls ? 'controls-visible' : ''}`}>
+          <div className="next-overlay-content">
+            <div className="next-overlay-header">
+              <span>Next Episode</span>
+              <button 
+                className="next-overlay-close" 
+                onClick={() => setShowNextOverlay(false)}
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className="next-overlay-body">
+              <div className="next-overlay-info">
+                <span className="next-overlay-title">{title}</span>
+                <span className="next-overlay-subtitle">Starting soon</span>
+              </div>
+              <button 
+                className="next-overlay-button"
+                onClick={() => {
+                  if (onNextEpisode) onNextEpisode();
+                }}
+              >
+                {autoNextEnabled && nextCountdown < 10 && nextCountdown > 0 ? (
+                  <>
+                    <span>Next in {nextCountdown}s</span>
+                    <SkipForward size={18} fill="currentColor" />
+                  </>
+                ) : (
+                  <>
+                    <span>Play Next</span>
+                    <SkipForward size={18} fill="currentColor" />
+                  </>
+                )}
+              </button>
+            </div>
+            {autoNextEnabled && nextCountdown > 0 && (
+              <div className="next-overlay-progress-bar">
+                <div 
+                  className="next-overlay-progress-fill" 
+                  style={{ width: `${(nextCountdown / 10) * 100}%` }}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className={`video-controls ${showControls ? 'visible' : 'hidden'}`}>
         <div className="controls-background" />
         
@@ -2811,6 +2961,19 @@ const VideoPlayer = ({
               
               {showSettings && (
                 <div className="settings-dropdown">
+                  <div className="settings-section">
+                    <div className="settings-toggle-row">
+                      <span className="section-title">Auto-play next</span>
+                      <button 
+                        className={`toggle-switch ${autoNextEnabled ? 'on' : 'off'}`}
+                        onClick={() => setAutoNextEnabled(!autoNextEnabled)}
+                        title={autoNextEnabled ? 'On' : 'Off'}
+                      >
+                        <div className="toggle-thumb" />
+                      </button>
+                    </div>
+                  </div>
+
                   <div className="settings-section">
                     <span className="section-title">Playback Speed</span>
                     <div className="settings-options">

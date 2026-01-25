@@ -1878,3 +1878,198 @@
     max-width: 150px;
   }
 }
+
+/* Next Episode Overlay */
+.next-episode-overlay {
+  position: absolute;
+  bottom: 100px;
+  right: 30px;
+  width: 320px;
+  background: rgba(20, 20, 20, 0.85);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  z-index: 100;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: slideInRight 0.5s ease-out;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+.next-episode-overlay.controls-visible {
+  bottom: 150px;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.next-overlay-content {
+  padding: 16px;
+  position: relative;
+}
+
+.next-overlay-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.next-overlay-header span {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #4CAF50;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.next-overlay-close {
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.next-overlay-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.next-overlay-body {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.next-overlay-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.next-overlay-title {
+  font-weight: 600;
+  font-size: 1rem;
+  color: white;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.next-overlay-subtitle {
+  font-size: 0.85rem;
+  color: #aaa;
+  margin-top: 2px;
+}
+
+.next-overlay-button {
+  background: #4CAF50;
+  border: none;
+  color: white;
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.next-overlay-button:hover {
+  background: #45a049;
+  transform: scale(1.05);
+}
+
+.next-overlay-button:active {
+  transform: scale(0.95);
+}
+
+.next-overlay-progress-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.next-overlay-progress-fill {
+  height: 100%;
+  background: #4CAF50;
+  transition: width 1s linear;
+}
+
+/* Settings Toggle Switch */
+.settings-toggle-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+}
+
+.toggle-switch {
+  width: 44px;
+  height: 24px;
+  background: #333;
+  border-radius: 12px;
+  position: relative;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  padding: 0;
+}
+
+.toggle-switch.on {
+  background: #4CAF50;
+}
+
+.toggle-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  background: white;
+  border-radius: 50%;
+  transition: transform 0.3s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-switch.on .toggle-thumb {
+  transform: translateX(20px);
+}
+
+@media (max-width: 768px) {
+  .next-episode-overlay {
+    width: calc(100% - 40px);
+    right: 20px;
+    left: 20px;
+    bottom: 80px;
+  }
+  
+  .next-episode-overlay.controls-visible {
+    bottom: 120px;
+  }
+}

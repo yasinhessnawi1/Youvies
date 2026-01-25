@@ -1,23 +1,16 @@
 import React from 'react';
-import './../styles/components/Button.css';
-import { useNavigate } from 'react-router-dom'; // Ensure you create this file and add the styles below
+import { HoverButton } from '@/components/ui/hover-button';
+import { useNavigate } from 'react-router-dom';
 
-const Button = ({ text, onClick, title, id = '', category }) => {
+const Button = ({ text, onClick, title, id = '', category, ...props }) => {
   const navigate = useNavigate();
-  if (text.toString().toLowerCase().includes('info')) {
+  if (text && text.toString().toLowerCase().includes('info')) {
     onClick = () => navigate(`/info/${category}/${id}`);
   }
   return (
-    <button type='button' className='btn' onClick={onClick} title={title}>
-      <strong>{text}</strong>
-      <div id='container-stars'>
-        <div id='stars'></div>
-      </div>
-      <div id='glow'>
-        <div className='circle'></div>
-        <div className='circle'></div>
-      </div>
-    </button>
+    <HoverButton onClick={onClick} title={title} {...props}>
+      {text}
+    </HoverButton>
   );
 };
 

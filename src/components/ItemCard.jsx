@@ -89,7 +89,6 @@ const ItemCard = React.memo(({ item }) => {
                 color={index < rating / 2 ? 'gold' : 'grey'}
               />
             ))}
-            {rating}
           </div>
         </div>
       </div>

@@ -49,6 +49,7 @@ const InfoPage = () => {
     switchToAlternativeSource
   } = useTorrent();
   const [torrentStreamUrl, setTorrentStreamUrl] = useState(null);
+  const [isProvidersExpanded, setIsProvidersExpanded] = useState(false);
   const [usingTorrent, setUsingTorrent] = useState(false);
   const [showVideoModal, setShowVideoModal] = useState(false);
   const [videoPlayerProgress, setVideoPlayerProgress] = useState(0);
@@ -606,7 +607,7 @@ const InfoPage = () => {
     handleEpisodeChange({ episode_number: 1 });
   };
 
-  const handleEpisodeChange = async (episode, openVideoModal = false) => {
+  const handleEpisodeChange = async (episode, openVideoModal = false, seasonOverride = null) => {
     setSelectedEpisode(episode);
 
     // Guard against undefined itemInfo
@@ -615,12 +616,14 @@ const InfoPage = () => {
       return;
     }
 
+    const currentSeason = seasonOverride || selectedSeason;
+
     try {
       await addWatchedItem({
         tmdbId: itemInfo.id,
         mediaType: itemInfo.type,
         title: getTitle(itemInfo),
-        season: selectedSeason?.season_number || 1,
+        season: currentSeason?.season_number || 1,
         episode: episode.episode_number,
         posterPath: itemInfo.poster_path || itemInfo.image,
         rating: itemInfo.vote_average || itemInfo.rating
@@ -641,6 +644,43 @@ const InfoPage = () => {
       setShowVideoModal(true);
     }
   };
+
+  const handleNextEpisode = useCallback(() => {
+    if (!itemInfo || itemInfo.type === 'movies' || !selectedEpisode) return;
+
+    // Find the next episode in the current season
+    const currentEpisodeNum = selectedEpisode.episode_number;
+    const nextEpisode = episodesWithThumbnails.find(ep => ep.episode_number === currentEpisodeNum + 1);
+
+    if (nextEpisode) {
+      console.log('⏭️ Found next episode in current season:', nextEpisode.episode_number);
+      handleEpisodeChange(nextEpisode, true);
+    } else {
+      // Check if there's a next season
+      if (itemInfo.type === 'shows' && itemInfo.seasons && selectedSeason) {
+        const currentSeasonNum = selectedSeason.season_number;
+        const nextSeason = itemInfo.seasons.find(s => s.season_number === currentSeasonNum + 1);
+        
+        if (nextSeason) {
+          console.log('⏭️ Found next season:', nextSeason.season_number);
+          handleSeasonChange(nextSeason);
+          // handleSeasonChange calls handleEpisodeChange({ episode_number: 1 }) which defaults to false
+          // We want it to open the modal, so we manually call it with true and pass the new season
+          handleEpisodeChange({ episode_number: 1 }, true, nextSeason);
+        } else {
+          console.log('🏁 No more episodes or seasons found');
+          setShowVideoModal(false);
+        }
+      } else if (itemInfo.type === 'anime' && itemInfo.totalEpisodes > currentEpisodeNum) {
+        // For anime, just increment episode (usually seasons are handled as separate entries or continuous)
+        console.log('⏭️ Incrementing anime episode');
+        handleEpisodeChange({ episode_number: currentEpisodeNum + 1 }, true);
+      } else {
+        console.log('🏁 Reached end of series');
+        setShowVideoModal(false);
+      }
+    }
+  }, [itemInfo, selectedEpisode, episodesWithThumbnails, selectedSeason, handleEpisodeChange, handleSeasonChange]);
 
   const handleWatchFromBeginning = async () => {
     if (!itemInfo) return;
@@ -719,51 +759,59 @@ const InfoPage = () => {
     switch (provider) {
       case 'VidRock':
         if (itemInfo.type === 'shows' || itemInfo.type === 'anime') {
-          return `https://vidrock.net/tv/${tmdbId}/${season}/${episode}`;
+          return `https://vidrock.net/tv/${tmdbId}/${season}/${episode}?autoplay=true&autonext=true&theme=00ff00`;
         } else {
           const imdbId = itemInfo.imdb_id || itemInfo.external_ids?.imdb_id;
-          return `https://vidrock.net/movie/${imdbId || id}`;
+          return `https://vidrock.net/movie/${imdbId || id}?autoplay=true&autonext=true&theme=00ff00`;
         }
       case 'VidLink':
         if (itemInfo.type === 'anime') {
           const malId = itemInfo.malId || itemInfo.id; // Support both, prefer malId
           const subOrDub = itemInfo.subOrDub || 'sub';
-          return `https://vidlink.pro/anime/${malId}/${episode}/${subOrDub}?fallback=true`;
+          return `https://vidlink.pro/anime/${malId}/${episode}/${subOrDub}?fallback=true&autoplay=true&nextbutton=true`;
         } else if (itemInfo.type === 'shows') {
-          return `https://vidlink.pro/tv/${id}/${season}/${episode}`;
+          return `https://vidlink.pro/tv/${id}/${season}/${episode}?autoplay=true&nextbutton=true`;
         } else {
-          return `https://vidlink.pro/movie/${id}`;
+          return `https://vidlink.pro/movie/${id}?autoplay=true&nextbutton=true`;
         }
       case 'NontonGo':
         return (itemInfo.type === 'shows' || itemInfo.type === 'anime')
-          ? `https://NontonGo.win/embed/tv/${tmdbId}/${season}/${episode}`
-          : `https://NontonGo.win/embed/movie/${tmdbId}`;
-      case 'smashy':
-        return (itemInfo.type === 'shows' || itemInfo.type === 'anime')
-          ? `https://player.smashy.stream/tv/${tmdbId}?s=${season}&e=${episode}&remove=watchWithFriends|addSubtitles|search|episodes&playerList=F|SU|J|NM|SY|FV|O|I|ST|U|E|SO|D|DM|RD|H|CA|M|K|G&subLang=English`
-          : `https://player.smashy.stream/movie/${tmdbId}?remove=watchWithFriends|addSubtitles|search|episodes&playerList=F|SU|J|NM|SY|FV|O|I|ST|U|E|SO|D|DM|RD|H|CA|M|K|G&subLang=English`;
+          ? `https://NontonGo.win/embed/tv/${tmdbId}/${season}/${episode}?autoplay=true&autonext=true&nextbutton=true`
+          : `https://NontonGo.win/embed/movie/${tmdbId}?autoplay=true&autonext=true&nextbutton=true`;
       case 'SuperEmbed':
         return (itemInfo.type === 'shows' || itemInfo.type === 'anime')
-          ? `https://moviesapi.club/tv/${tmdbId}-${season}-${episode}`
-          : `https://moviesapi.club/movie/${tmdbId}`;
+          ? `https://moviesapi.club/tv/${tmdbId}-${season}-${episode}?autoplay=true&autonext=true&nextbutton=true`
+          : `https://moviesapi.club/movie/${tmdbId}?autoplay=true&autonext=true&nextbutton=true`;
       case 'Vidsrc' :
         if (itemInfo.type === 'shows' || itemInfo.type === 'anime') {
-          return `https://vidsrc.cc/v3/embed/tv/${tmdbId}/${season}/${episode}?autoPlay=true`;
+          return `https://vidsrc.cc/v3/embed/tv/${tmdbId}/${season}/${episode}?autoPlay=true&autonext=true&autonextbutton=true`;
         } else {
-          return `https://vidsrc.cc/v3/embed/movie/${tmdbId}?autoPlay=true`;
+          return `https://vidsrc.cc/v3/embed/movie/${tmdbId}?autoPlay=true&autonext=true&autonextbutton=true`;
         }
 
       case 'VidZee':
         if (itemInfo.type === 'shows' || itemInfo.type === 'anime') {
-          return `https://player.vidzee.wtf/v2/embed/tv/${tmdbId}/${season}/${episode}`;
+          return `https://player.vidzee.wtf/v2/embed/tv/${tmdbId}/${season}/${episode}?autoplay=true&autonext=true&nextbutton=true`;
         } else {
-          return `https://player.vidzee.wtf/v2/embed/movie/${tmdbId}`;
+          return `https://player.vidzee.wtf/v2/embed/movie/${tmdbId}?autoplay=true&autonext=true&nextbutton=true`;
         }
       case 'RiveStream':
         if (itemInfo.type === 'shows' || itemInfo.type === 'anime') {
           return `https://rivestream.org/embed?type=tv&id=${tmdbId}&season=${season}&episode=${episode}`;
         } else {
           return `https://rivestream.org/embed?type=movie&id=${tmdbId}`;
+        }
+      case 'RiveTorrent':
+        if (itemInfo.type === 'shows' || itemInfo.type === 'anime') {
+          return `https://rivestream.org/embed/torrent?type=tv&id=${tmdbId}&season=${season}&episode=${episode}`;
+        } else {
+          return `https://rivestream.org/embed/torrent?type=movie&id=${tmdbId}`;
+        }
+      case 'RiveAggregator':
+        if (itemInfo.type === 'shows' || itemInfo.type === 'anime') {
+          return `https://rivestream.org/embed/agg?type=tv&id=${tmdbId}&season=${season}&episode=${episode}`;
+        } else {
+          return `https://rivestream.org/embed/agg?type=movie&id=${tmdbId}`;
         }
       default:
         return '';
@@ -1652,6 +1700,13 @@ const InfoPage = () => {
                     alternativeSources={alternativeTorrents}
                     currentSourceName={currentSourceName}
                     onSourceChange={handleSourceChange}
+                    // NEW: Auto Next
+                    onNextEpisode={handleNextEpisode}
+                    hasNextEpisode={itemInfo?.type !== 'movies' && (
+                      episodesWithThumbnails.some(ep => ep.episode_number === (selectedEpisode?.episode_number || 0) + 1) || 
+                      (itemInfo?.type === 'shows' && itemInfo?.seasons?.some(s => s.season_number === (selectedSeason?.season_number || 0) + 1)) ||
+                      (itemInfo?.type === 'anime' && (itemInfo?.totalEpisodes || 0) > (selectedEpisode?.episode_number || 0))
+                    )}
                   />
                 ) : (
                   <div className="iframe-player-container">
@@ -1663,55 +1718,72 @@ const InfoPage = () => {
                       frameBorder="0"
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     />
-                    <div className='player-buttons'>
-                      <button
-                        className={`player-button ${videoPlayerState.provider === 'RiveStream' ? 'active' : ''}`}
-                        onClick={() => switchProvider('RiveStream')}
+                    <div className={`player-buttons-wrapper ${isProvidersExpanded ? 'expanded' : 'collapsed'}`}>
+                      <button 
+                        className="providers-toggle"
+                        onClick={() => setIsProvidersExpanded(!isProvidersExpanded)}
+                        title={isProvidersExpanded ? "Hide Providers" : "Show Providers"}
                       >
-                        Low
+                        <div className="dot"></div>
+                        <div className="dot"></div>
+                        <div className="dot"></div>
                       </button>
-                      <button
-                        className={`player-button ${videoPlayerState.provider === 'NontonGo' ? 'active' : ''}`}
-                        onClick={() => switchProvider('NontonGo')}
-                      >
-                        Low
-                      </button>
-                      <button
-                        className={`player-button ${videoPlayerState.provider === 'VidZee' ? 'active' : ''}`}
-                        onClick={() => switchProvider('VidZee')}
-                      >
-                        Medium
-                      </button>
-                      <button
-                        className={`player-button ${videoPlayerState.provider === 'smashy' ? 'active' : ''}`}
-                        onClick={() => switchProvider('smashy')}
-                      >
-                        Medium
-                      </button>
-                      <button
-                        className={`player-button ${videoPlayerState.provider === 'VidRock' ? 'active' : ''}`}
-                        onClick={() => switchProvider('VidRock')}
-                      >
-                        Good
-                      </button>
-                      <button
-                        className={`player-button ${videoPlayerState.provider === 'Vidsrc' ? 'active' : ''}`}
-                        onClick={() => switchProvider('Vidsrc')}
-                      >
-                        Good
-                      </button>
-                      <button
-                        className={`player-button ${videoPlayerState.provider === 'VidLink' ? 'active' : ''}`}
-                        onClick={() => switchProvider('VidLink')}
-                      >
-                        Best
-                      </button>
-                      <button
-                        className={`player-button ${videoPlayerState.provider === 'SuperEmbed' ? 'active' : ''}`}
-                        onClick={() => switchProvider('SuperEmbed')}
-                      >
-                        Best
-                      </button>
+                      <div className='player-buttons'>
+                        <button
+                          className={`player-button ${videoPlayerState.provider === 'RiveStream' ? 'active' : ''}`}
+                          onClick={() => switchProvider('RiveStream')}
+                        >
+                          Low + Auto Next
+                        </button>
+                        <button
+                          className={`player-button ${videoPlayerState.provider === 'RiveTorrent' ? 'active' : ''}`}
+                          onClick={() => switchProvider('RiveTorrent')}
+                        >
+                          Low + Low Ads
+                        </button>
+                        <button
+                          className={`player-button ${videoPlayerState.provider === 'RiveAggregator' ? 'active' : ''}`}
+                          onClick={() => switchProvider('RiveAggregator')}
+                        >
+                          Low + Many Ads
+                        </button>
+                        <button
+                          className={`player-button ${videoPlayerState.provider === 'SuperEmbed' ? 'active' : ''}`}
+                          onClick={() => switchProvider('SuperEmbed')}
+                        >
+                          Medium
+                        </button>
+                        <button
+                          className={`player-button ${videoPlayerState.provider === 'NontonGo' ? 'active' : ''}`}
+                          onClick={() => switchProvider('NontonGo')}
+                        >
+                          Works Everytime
+                        </button>
+                        <button
+                          className={`player-button ${videoPlayerState.provider === 'VidZee' ? 'active' : ''}`}
+                          onClick={() => switchProvider('VidZee')}
+                        >
+                          Good
+                        </button>
+                        <button
+                          className={`player-button ${videoPlayerState.provider === 'VidRock' ? 'active' : ''}`}
+                          onClick={() => switchProvider('VidRock')}
+                        >
+                         Good + Auto Next
+                        </button>
+                        <button
+                          className={`player-button ${videoPlayerState.provider === 'Vidsrc' ? 'active' : ''}`}
+                          onClick={() => switchProvider('Vidsrc')}
+                        >
+                          Good ++
+                        </button>
+                        <button
+                          className={`player-button ${videoPlayerState.provider === 'VidLink' ? 'active' : ''}`}
+                          onClick={() => switchProvider('VidLink')}
+                        >
+                          Best + Auto Next
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}

@@ -1104,42 +1104,117 @@
 }
 
 /* Server Switch Buttons Container */
-.player-buttons {
-  position: absolute; /* Position absolute relative to the video player */
-  top: 10px; /* Adjust as needed */
-  right: 10px; /* Adjust as needed */
+.player-buttons-wrapper {
+  position: absolute;
+  top: 20px;
+  right: 20px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  z-index: 10;
-}
-.player-buttons-left {
-  position: absolute; /* Position absolute relative to the video player */
-  top: 10px; /* Adjust as needed */
-  left: 45%; /* Adjust as needed */
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  z-index: 10;
+  align-items: center;
+  z-index: 1000;
+  padding: 15px;
+  border-radius: 30px;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  max-height: 95%;
+  overflow: hidden;
+  width: 180px;
 }
 
-/* Individual Server Switch Button */
-.player-button {
-  width: 50px;
-  height: 50px;
+.player-buttons-wrapper.collapsed {
+  height: 60px;
+  width: 60px;
+  padding: 10px;
   border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.player-buttons-wrapper.expanded {
+  height: auto;
+  min-height: 100px;
+}
+
+.player-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 20px;
+  transition: opacity 0.3s ease, transform 0.4s ease;
+  width: 100%;
+}
+
+.collapsed .player-buttons {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-20px) scale(0.9);
+}
+
+.expanded .player-buttons {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* Dots Toggle Button */
+.providers-toggle {
+  width: 40px;
+  height: 40px;
+  background: transparent;
   border: none;
-  background: rgba(255, 255, 255, 0.2);
-  color: #fff;
-  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
   cursor: pointer;
-  transition:
-    transform 0.3s,
-    background-color 0.3s;
+  transition: transform 0.3s ease;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.providers-toggle:hover {
+  transform: scale(1.1);
+}
+
+.providers-toggle .dot {
+  width: 6px;
+  height: 6px;
+  background-color: #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+  transition: all 0.3s ease;
+}
+
+.expanded .providers-toggle .dot:nth-child(2) {
+  opacity: 0.5;
+}
+
+.expanded .providers-toggle {
+  transform: rotate(90deg);
+}
+
+.player-button {
+  width: 100%;
+  height: 45px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+  text-align: center;
+  padding: 0 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 /* Bubble Effect */
