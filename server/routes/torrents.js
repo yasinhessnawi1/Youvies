@@ -599,7 +599,7 @@ function detectContentType(query) {
   // Anime indicators
   if (lowerQuery.match(/\b(anime|dubbed|subbed)\b/) ||
       lowerQuery.match(/\bepisode \d+\b/) ||
-      lowerQuery.match(/\b(s\d{1,2}e\d{1,3})\b/) ||
+
       lowerQuery.match(/\b(one piece|naruto|attack on titan|demon slayer|dragon ball|my hero academia|fullmetal alchemist|death note|bleach|pokemon|digimon|yu-gi-oh|beyblade|sonic|spongebob|rick and morty|bojack horseman|family guy|the simpsons|south park|american dad|king of the hill|aqua teen hunger force)\b/)) {
     return 'anime';
   }
