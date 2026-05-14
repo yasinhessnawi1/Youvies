@@ -92,32 +92,32 @@ export const ItemProvider = ({ children }) => {
   );
 
   const fetchAllItems = useCallback(async () => {
-    if (items['movies-home'] && items['shows-home'] && items['anime-home']) {
-      return;
-    }
+    // Kick off each category in parallel and commit state as each resolves —
+    // don't block fast TMDB banners (movies/shows ~300ms) on the slower
+    // anime proxy (often 3s+). Per-key in-flight guard prevents duplicate
+    // fetches when multiple Banner instances mount on the same render.
+    const categories = [
+      { key: 'movies-home', call: () => fetchCarouselItems('movies', 'trending', 1, { timeWindow: 'week' }) },
+      { key: 'shows-home', call: () => fetchCarouselItems('shows', 'trending', 1, { timeWindow: 'week' }) },
+      { key: 'anime-home', call: () => fetchCarouselItems('anime', 'trending', 1) },
+    ];
+    const pending = categories.filter(({ key }) => !items[key] && !hasFetched.current[key]);
+    if (pending.length === 0) return;
+    pending.forEach(({ key }) => { hasFetched.current[key] = true; });
 
-    setIsLoading(true);
-    try {
-      // Fetch trending items for banners (more visually appealing and current)
-      const [movies, shows, anime] = await Promise.all([
-        fetchCarouselItems('movies', 'trending', 1, { timeWindow: 'week' }),
-        fetchCarouselItems('shows', 'trending', 1, { timeWindow: 'week' }),
-        fetchCarouselItems('anime', 'trending', 1),
-      ]);
-
-      const fetchedItems = {
-        'movies-home': movies,
-        'shows-home': shows,
-        'anime-home': anime,
-      };
-
-      setItems((prevItems) => ({ ...prevItems, ...fetchedItems }));
-      setCacheTime(Date.now());
-    } catch (error) {
-      console.error('Error fetching items:', error);
-    } finally {
-      setIsLoading(false);
-    }
+    await Promise.all(
+      pending.map(async ({ key, call }) => {
+        try {
+          const data = await call();
+          setItems((prev) => ({ ...prev, [key]: data }));
+          setCacheTime(Date.now());
+        } catch (error) {
+          console.error(`Error fetching ${key}:`, error);
+          // Reset the in-flight flag so a retry can happen later.
+          hasFetched.current[key] = false;
+        }
+      })
+    );
   }, [items]);
 
   const fetchGenreItems = useCallback(

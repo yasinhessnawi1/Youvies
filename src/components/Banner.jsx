@@ -7,7 +7,7 @@ import rightArrow from '../utils/right-arrow.png';
 import {getTitle, cleanHtmlTags} from "../utils/helper"; // For navigation icons
 
 const Banner = ({ contentType }) => {
-  const { items, isLoading, fetchAllItems } = useItemContext();
+  const { items, fetchAllItems } = useItemContext();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [prevIndex, setPrevIndex] = useState(null);
   const [showFullDescription, setShowFullDescription] = useState(false);
@@ -15,17 +15,16 @@ const Banner = ({ contentType }) => {
   const hasFetched = useRef(false);
   const intervalRef = useRef(null);
 
+  const itemKey = `${contentType}-home`;
+
   useEffect(() => {
-    if (!contentType || hasFetched.current || isLoading) return;
-    const itemKey = `home-${contentType}`;
-    if ((!items[itemKey] || items[itemKey].length === 0) && !hasFetched.current) {
+    if (!contentType || hasFetched.current) return;
+    if (!items[itemKey] || items[itemKey].length === 0) {
       fetchAllItems();
     }
     hasFetched.current = true;
-  }, [contentType, items, fetchAllItems, isLoading]);
+  }, [contentType, itemKey, items, fetchAllItems]);
 
-  // Memoize the goToNext function to prevent unnecessary re-renders
-  const itemKey = `${contentType}-home`;
   const totalItems = items[itemKey]?.length || 0;
 
   const goToNext = useCallback(() => {
@@ -34,16 +33,16 @@ const Banner = ({ contentType }) => {
   }, [currentIndex, totalItems]);
 
   useEffect(() => {
-    if (isPaused || isLoading || totalItems === 0) return;
+    if (isPaused || totalItems === 0) return;
 
     intervalRef.current = setInterval(() => {
       goToNext();
     }, 10000);
 
     return () => clearInterval(intervalRef.current);
-  }, [isPaused, isLoading, totalItems, goToNext]);
+  }, [isPaused, totalItems, goToNext]);
 
-  if (isLoading || !items[itemKey] || items[itemKey].length === 0) return null;
+  if (!items[itemKey] || items[itemKey].length === 0) return null;
 
   const currentItem = items[itemKey][currentIndex] || {};
 
