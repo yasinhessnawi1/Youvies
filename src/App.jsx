@@ -3,7 +3,8 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
 import HomePage from './pages/HomePage';
 import RandomPage from './pages/RandomPage';
-import IptvPage from './pages/IptvPage';
+// CHANGED: IptvPage import disabled while IPTV is hidden. To restore: uncomment the import below and the <Route path='/TV' .../> below.
+// import IptvPage from './pages/IptvPage';
 import { AuthProvider } from './contexts/AuthContext';
 import { UserProvider } from './contexts/UserContext';
 import { TorrentProvider } from './contexts/TorrentContext';
@@ -35,7 +36,8 @@ function App() {
                           <Route path='/movies' element={<HomePage />} />
                           <Route path='/shows' element={<HomePage />} />
                           <Route path='/anime' element={<HomePage />} />
-                          <Route path='/TV' element={<IptvPage />} />
+                          {/* CHANGED: /TV (IPTV) route disabled to avoid wasting bandwidth/backend calls. To restore: re-enable the IptvPage import above and uncomment the line below. */}
+                          {/* <Route path='/TV' element={<IptvPage />} /> */}
                           <Route path='/random' element={<RandomPage />} />
                           <Route path='/' element={<LoginPage />} />
                           <Route path='*' element={<LoginPage />} />

@@ -1145,6 +1145,30 @@
   margin-top: 20px;
   transition: opacity 0.3s ease, transform 0.4s ease;
   width: 100%;
+  /* Scroll the provider list when it overflows the wrapper's max-height. */
+  max-height: calc(95vh - 120px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.35) transparent;
+}
+
+.player-buttons::-webkit-scrollbar {
+  width: 6px;
+}
+
+.player-buttons::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.player-buttons::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.35);
+  border-radius: 3px;
+}
+
+.player-buttons::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.55);
 }
 
 .collapsed .player-buttons {

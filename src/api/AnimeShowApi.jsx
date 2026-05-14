@@ -41,6 +41,110 @@ export const fetchAnimeByGenre = async (genre, page = 1, perPage = 20) => {
   }
 };
 
+// Direct AniList GraphQL fallback used when the proxy returns 5xx.
+// Mirrors the field shape the rest of the app expects from the proxy's /info/{id}.
+const fetchAnimeFromAniListDirect = async (id) => {
+  const query = `
+    query ($id: Int) {
+      Media(id: $id, type: ANIME) {
+        id
+        idMal
+        title { romaji english native userPreferred }
+        coverImage { extraLarge large medium color }
+        bannerImage
+        description(asHtml: false)
+        season
+        seasonYear
+        format
+        status
+        episodes
+        duration
+        averageScore
+        popularity
+        isAdult
+        countryOfOrigin
+        genres
+        synonyms
+        startDate { year month day }
+        endDate { year month day }
+        nextAiringEpisode { airingAt timeUntilAiring episode }
+        trailer { id site thumbnail }
+        studios(isMain: true) { nodes { name } }
+        recommendations(perPage: 20, sort: RATING_DESC) {
+          nodes {
+            mediaRecommendation {
+              id
+              idMal
+              title { romaji english userPreferred }
+              coverImage { large }
+              averageScore
+              format
+              episodes
+              season
+              seasonYear
+            }
+          }
+        }
+      }
+    }
+  `;
+  const res = await axios.post(
+    'https://graphql.anilist.co',
+    { query, variables: { id: parseInt(id, 10) } },
+    { headers: { 'Content-Type': 'application/json' } }
+  );
+  const media = res.data?.data?.Media;
+  if (!media) return null;
+
+  const recommendations = (media.recommendations?.nodes || [])
+    .map((n) => n.mediaRecommendation)
+    .filter(Boolean)
+    .map((r) => ({
+      id: r.id,
+      malId: r.idMal,
+      title: r.title,
+      image: r.coverImage?.large,
+      cover: r.coverImage?.large,
+      rating: r.averageScore,
+      totalEpisodes: r.episodes,
+      season: r.season,
+      releaseDate: r.seasonYear,
+      format: r.format,
+    }));
+
+  // Shape the response so it matches what InfoPage / VidLink etc. already read.
+  return {
+    id: media.id,
+    malId: media.idMal,
+    title: media.title,
+    image: media.coverImage?.extraLarge || media.coverImage?.large,
+    cover: media.bannerImage || media.coverImage?.large,
+    color: media.coverImage?.color,
+    description: media.description,
+    season: media.season,
+    releaseDate: media.seasonYear,
+    status: media.status,
+    totalEpisodes: media.episodes,
+    currentEpisode: media.nextAiringEpisode
+      ? Math.max((media.nextAiringEpisode.episode || 1) - 1, 0)
+      : media.episodes,
+    duration: media.duration,
+    rating: media.averageScore,
+    popularity: media.popularity,
+    isAdult: media.isAdult,
+    countryOfOrigin: media.countryOfOrigin,
+    genres: media.genres,
+    synonyms: media.synonyms,
+    startDate: media.startDate,
+    endDate: media.endDate,
+    nextAiringEpisode: media.nextAiringEpisode,
+    trailer: media.trailer,
+    studios: (media.studios?.nodes || []).map((s) => s.name),
+    recommendations,
+    subOrDub: 'sub',
+  };
+};
+
 // Fetch detailed information about one anime
 export const fetchOneAnime = async (id) => {
   try {
@@ -48,6 +152,15 @@ export const fetchOneAnime = async (id) => {
     return handleAnimeApiErrors(response.data); // Return the processed response
   } catch (error) {
     console.error("Error fetching anime details:", error.message);
+    // Fallback: the proxy (api.anime.youvies.online) returns 5xx for /info/{id}.
+    // Hit AniList GraphQL directly so anime detail pages still load.
+    try {
+      console.warn(`[AnimeShowApi] /info/${id} failed, falling back to AniList GraphQL`);
+      const direct = await fetchAnimeFromAniListDirect(id);
+      if (direct) return direct;
+    } catch (fallbackErr) {
+      console.error('[AnimeShowApi] AniList direct fallback failed:', fallbackErr.message);
+    }
     throw new Error(error.message);
   }
 };
@@ -167,8 +280,66 @@ export const fetchAnimeAdvanced = async (params = {}) => {
   }
 };
 
+// Direct Jikan (MyAnimeList) fallback for episode lists when the proxy is broken.
+// Paginates through Jikan, capping at maxPages to avoid hammering on long-running anime.
+// Honors 429 Retry-After to recover from rate limits instead of giving up mid-list.
+const fetchEpisodesFromJikan = async (malId, maxPages = 20) => {
+  if (!malId) return null;
+  const episodes = [];
+  let page = 1;
+  let hasNext = true;
+  let lastVisiblePage = null;
+  while (hasNext && page <= maxPages) {
+    let attempt = 0;
+    let success = false;
+    while (attempt < 3 && !success) {
+      try {
+        const res = await axios.get(`https://api.jikan.moe/v4/anime/${malId}/episodes`, {
+          params: { page },
+          timeout: 15000,
+        });
+        const data = res.data?.data || [];
+        episodes.push(...data);
+        const pagination = res.data?.pagination;
+        hasNext = !!pagination?.has_next_page;
+        lastVisiblePage = pagination?.last_visible_page ?? lastVisiblePage;
+        success = true;
+      } catch (err) {
+        const status = err.response?.status;
+        if (status === 429) {
+          const retryAfter = parseInt(err.response.headers?.['retry-after'] || '2', 10);
+          console.warn(`[AnimeShowApi] Jikan 429 on page ${page}, retry in ${retryAfter}s`);
+          await new Promise((r) => setTimeout(r, retryAfter * 1000));
+          attempt += 1;
+        } else {
+          console.warn(`[AnimeShowApi] Jikan page ${page} failed:`, err.message);
+          attempt = 3;
+        }
+      }
+    }
+    if (!success) break;
+    page += 1;
+    // Jikan rate limit is 3 req/s and 60/min — keep ~500ms gap between pages.
+    if (hasNext) await new Promise((r) => setTimeout(r, 500));
+  }
+  if (episodes.length === 0) return null;
+  if (lastVisiblePage && episodes.length < lastVisiblePage * 50) {
+    console.warn(`[AnimeShowApi] Jikan returned ${episodes.length} eps but last_visible_page=${lastVisiblePage} — list may be truncated.`);
+  }
+  return episodes.map((ep) => ({
+    number: ep.mal_id,
+    title: ep.title,
+    // Jikan doesn't expose episode thumbnails — leave null so the UI shows cover fallback.
+    image: null,
+    duration: null,
+    aired: ep.aired,
+    filler: ep.filler,
+    recap: ep.recap,
+  }));
+};
+
 // Fetch episodes for an anime
-export const fetchAnimeEpisodes = async (id) => {
+export const fetchAnimeEpisodes = async (id, malId = null) => {
   try {
     // Try the episodes endpoint with provider parameter (required for episodes with images)
     console.log(`[AnimeShowApi] Fetching episodes from: ${BASE_URL}/episodes/${id}?provider=zoro`);
@@ -230,12 +401,26 @@ export const fetchAnimeEpisodes = async (id) => {
       }
     }
     
-    console.log('[AnimeShowApi] No episodes found in API responses, will generate from totalEpisodes');
+    console.log('[AnimeShowApi] No episodes found in API responses, trying Jikan fallback...');
+    const jikanEps = await fetchEpisodesFromJikan(malId);
+    if (jikanEps && jikanEps.length > 0) {
+      console.log('[AnimeShowApi] Returning Jikan episodes, length:', jikanEps.length);
+      return jikanEps;
+    }
     // Return null to indicate we need to generate episodes
     return null;
   } catch (error) {
     console.error("[AnimeShowApi] Error fetching anime episodes:", error.message);
-    // Return null to indicate we need to generate episodes
+    // Proxy is down — try Jikan with MAL id before giving up.
+    try {
+      const jikanEps = await fetchEpisodesFromJikan(malId);
+      if (jikanEps && jikanEps.length > 0) {
+        console.log('[AnimeShowApi] Returning Jikan episodes after proxy error, length:', jikanEps.length);
+        return jikanEps;
+      }
+    } catch (jikanErr) {
+      console.error('[AnimeShowApi] Jikan fallback failed:', jikanErr.message);
+    }
     return null;
   }
 };

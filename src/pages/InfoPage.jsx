@@ -58,7 +58,9 @@ const InfoPage = () => {
   const sideContentRef = useRef(null);
   const [infoPageTab, setInfoPageTab] = useState('details');
   const [episodesWithThumbnails, setEpisodesWithThumbnails] = useState([]);
-  const [useAdFreePlayer, setUseAdFreePlayer] = useState(true);
+  // CHANGED: Ad-Free (torrent) player disabled — default forced to false and toggle UI hidden in VideoModal.
+  // To restore the Ad-Free player: change the default below back to `true` and re-enable the toggle in VideoModal.jsx.
+  const [useAdFreePlayer, setUseAdFreePlayer] = useState(false);
   const heroEpisodePanelRef = useRef(null);
   const initializedFromWatchedRef = useRef(false);
   const lastWatchedItemRef = useRef(null);
@@ -148,16 +150,18 @@ const InfoPage = () => {
     setSelectedSeason(initialSeason);
     setSelectedEpisode(initialEpisode);
 
-    // 🚀 PROACTIVE OPTIMIZATION: Start preparing torrent in background immediately
-    if (item) {
-      if (item.type === 'movies') {
-        console.log('🔮 Proactively preparing movie torrent...');
-        prepTorrent(item);
-      } else if (item.type === 'shows' || item.type === 'anime') {
-        console.log('🔮 Proactively preparing episode torrent...');
-        prepTorrent(item, initialSeason.season_number, initialEpisode.episode_number);
-      }
-    }
+    // CHANGED: Proactive torrent preparation disabled because the Ad-Free (torrent) player is hidden.
+    // Keeping these calls would waste bandwidth / backend resources prepping a stream the user can't pick.
+    // To restore: remove this comment block and uncomment the original block below.
+    // if (item) {
+    //   if (item.type === 'movies') {
+    //     console.log('🔮 Proactively preparing movie torrent...');
+    //     prepTorrent(item);
+    //   } else if (item.type === 'shows' || item.type === 'anime') {
+    //     console.log('🔮 Proactively preparing episode torrent...');
+    //     prepTorrent(item, initialSeason.season_number, initialEpisode.episode_number);
+    //   }
+    // }
   }, []);
 
   useEffect(() => {
@@ -244,6 +248,63 @@ const InfoPage = () => {
         setItemInfo(fetchedItem);
         // Wait for watchedItems to load before initializing season/episode
         await initializeSelectedSeasonAndEpisode(fetchedItem, watchedItems, loading, user, addWatchedItem, prepareTorrent);
+
+        // ENRICHMENT: When a TMDB show is genre Animation (16), try to resolve
+        // MAL + AniList IDs so MegaPlay / VidLink anime endpoints become usable.
+        // Shows only — animation movies (Disney/Pixar/etc.) rarely have MAL entries.
+        // Runs async after initial render so we don't block paint.
+        if (category === 'shows' && !fetchedItem.malId) {
+          const isAnimation = Array.isArray(fetchedItem.genres) &&
+            fetchedItem.genres.some((g) => g.id === 16 || g.name === 'Animation');
+          if (isAnimation) {
+            (async () => {
+              try {
+                const title = getTitle(fetchedItem);
+                const year = (fetchedItem.first_air_date || '').slice(0, 4);
+                const jikanUrl = `https://api.jikan.moe/v4/anime?q=${encodeURIComponent(title)}&type=tv&limit=5${year ? `&start_date=${year}-01-01` : ''}`;
+                console.log(`🎬 Animation genre detected, resolving MAL/AniList for "${title}" (${year})`);
+                const jikanRes = await fetch(jikanUrl);
+                const jikanData = await jikanRes.json();
+                const malMatch = (jikanData.data || []).find((a) => {
+                  const aiYear = (a.aired?.from || '').slice(0, 4);
+                  return !year || !aiYear || aiYear === year;
+                }) || (jikanData.data || [])[0];
+                if (!malMatch) {
+                  console.log('ℹ️ No Jikan match for Animation item — skipping.');
+                  return;
+                }
+                const malId = malMatch.mal_id;
+                console.log('✅ MAL ID resolved:', malId, '-', malMatch.title);
+
+                // Resolve AniList ID from MAL ID via AniList GraphQL
+                let anilistId = null;
+                try {
+                  const aniRes = await fetch('https://graphql.anilist.co', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      query: 'query ($idMal: Int) { Media(idMal: $idMal, type: ANIME) { id } }',
+                      variables: { idMal: malId },
+                    }),
+                  });
+                  const aniData = await aniRes.json();
+                  anilistId = aniData?.data?.Media?.id || null;
+                  if (anilistId) console.log('✅ AniList ID resolved:', anilistId);
+                } catch (aniErr) {
+                  console.warn('AniList lookup failed:', aniErr.message);
+                }
+
+                // Patch state + cache so the iframe rebuilds with the new IDs.
+                const patched = { ...fetchedItem, malId, anilistId };
+                setItemInfo((prev) => (prev && prev.id === fetchedItem.id ? { ...prev, malId, anilistId } : prev));
+                const ck = `${category}-${mediaId}`;
+                setItemsCache((prev) => ({ ...prev, [ck]: patched }));
+              } catch (enrichErr) {
+                console.warn('Animation enrichment failed:', enrichErr.message);
+              }
+            })();
+          }
+        }
       } catch (err) {
         console.error('Error loading media info:', err);
         setError('Failed to load media information. Please try again later.');
@@ -349,6 +410,17 @@ const InfoPage = () => {
     });
   }, [watchedItems, loading, itemInfoId, itemInfoType, itemInfoTotalEpisodes, itemInfoSeasons, itemInfoSeason, itemInfo]);
 
+  // Auto-switch the active provider when landing on an anime page if the saved
+  // favorite is one of the Rive providers we hide for anime — otherwise the
+  // iframe stays on a provider the user can't see or change from the UI.
+  useEffect(() => {
+    if (itemInfoType !== 'anime') return;
+    const hiddenForAnime = ['RiveStream', 'RiveTorrent', 'RiveAggregator'];
+    if (hiddenForAnime.includes(videoPlayerState.provider)) {
+      switchProvider('VidLink');
+    }
+  }, [itemInfoType, videoPlayerState.provider, switchProvider]);
+
   useEffect(() => {
     if (selectedEpisode && sideContentRef.current) {
       const episodeIndex = selectedEpisode.episode_number - 1;
@@ -400,8 +472,9 @@ const InfoPage = () => {
           console.log('itemInfo.episodes:', itemInfo.episodes);
           console.log('itemInfo sample:', JSON.stringify(itemInfo, null, 2).substring(0, 1000));
           
-          // Try to fetch episodes from the API
-          const episodesData = await fetchAnimeEpisodes(itemInfo.id);
+          // Try to fetch episodes from the API (passes malId so the Jikan
+          // fallback can fire when the proxy /episodes endpoint is broken).
+          const episodesData = await fetchAnimeEpisodes(itemInfo.id, itemInfo.malId);
           console.log('Episodes API response:', episodesData);
           
           // If API returned null or empty, we'll generate episodes from totalEpisodes
@@ -517,53 +590,60 @@ const InfoPage = () => {
   const selectedSeasonNumber = selectedSeason?.season_number;
   const selectedEpisodeNumber = selectedEpisode?.episode_number;
 
+  // CHANGED: Torrent-preview effect disabled because the Ad-Free (torrent) player is hidden.
+  // This prevents calls to prepareTorrent() while the feature is off, avoiding wasted bandwidth/backend work.
+  // To restore: delete this short stub effect and uncomment the original implementation below.
   useEffect(() => {
-    const handlePreparedTorrent = async () => {
-      // Early return if essential data is missing
-      if (!itemInfoId) {
-        return;
-      }
+    setTorrentStreamUrl(null);
+    setUsingTorrent(false);
+  }, [itemInfoId, itemInfoType, selectedSeasonNumber, selectedEpisodeNumber]);
 
-      // For shows/anime, wait for season/episode to be selected
-      if ((itemInfoType === 'shows' || itemInfoType === 'anime') && (!selectedSeasonNumber || !selectedEpisodeNumber)) {
-        return;
-      }
-
-      // Reset torrent state
-      setTorrentStreamUrl(null);
-      setUsingTorrent(false);
-
-      console.log('🎬 Getting prepared torrent for preview...');
-
-      // Get or wait for the prepared torrent (reuses in-progress preparation)
-      // For movies, don't pass season/episode to match the cache key from proactive prep
-      const streamUrl = itemInfoType === 'movies'
-        ? await prepareTorrent(itemInfo)
-        : await prepareTorrent(itemInfo, selectedSeasonNumber, selectedEpisodeNumber);
-
-      if (streamUrl) {
-        console.log('✅ Torrent stream ready, using torrent player');
-        console.log('📍 Stream URL:', streamUrl);
-        setTorrentStreamUrl(streamUrl);
-        setUsingTorrent(true);
-
-        // Debug: Log state after setting
-        setTimeout(() => {
-          console.log('🔍 State after torrent ready:');
-          console.log('   - torrentStreamUrl is set:', !!streamUrl);
-          console.log('   - usingTorrent:', true);
-          console.log('   - showVideoModal:', false);
-          console.log('💡 Preview video should now be visible. Click it to open full player.');
-        }, 100);
-      } else {
-        console.log('ℹ️ Torrent preparation failed, using default iframe player');
-        setUsingTorrent(false);
-      }
-    };
-
-    handlePreparedTorrent();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [itemInfoId, itemInfoType, selectedSeasonNumber, selectedEpisodeNumber, prepareTorrent]);
+  // useEffect(() => {
+  //   const handlePreparedTorrent = async () => {
+  //     // Early return if essential data is missing
+  //     if (!itemInfoId) {
+  //       return;
+  //     }
+  //
+  //     // For shows/anime, wait for season/episode to be selected
+  //     if ((itemInfoType === 'shows' || itemInfoType === 'anime') && (!selectedSeasonNumber || !selectedEpisodeNumber)) {
+  //       return;
+  //     }
+  //
+  //     // Reset torrent state
+  //     setTorrentStreamUrl(null);
+  //     setUsingTorrent(false);
+  //
+  //     console.log('🎬 Getting prepared torrent for preview...');
+  //
+  //     // Get or wait for the prepared torrent (reuses in-progress preparation)
+  //     // For movies, don't pass season/episode to match the cache key from proactive prep
+  //     const streamUrl = itemInfoType === 'movies'
+  //       ? await prepareTorrent(itemInfo)
+  //       : await prepareTorrent(itemInfo, selectedSeasonNumber, selectedEpisodeNumber);
+  //
+  //     if (streamUrl) {
+  //       console.log('✅ Torrent stream ready, using torrent player');
+  //       console.log('📍 Stream URL:', streamUrl);
+  //       setTorrentStreamUrl(streamUrl);
+  //       setUsingTorrent(true);
+  //
+  //       setTimeout(() => {
+  //         console.log('🔍 State after torrent ready:');
+  //         console.log('   - torrentStreamUrl is set:', !!streamUrl);
+  //         console.log('   - usingTorrent:', true);
+  //         console.log('   - showVideoModal:', false);
+  //         console.log('💡 Preview video should now be visible. Click it to open full player.');
+  //       }, 100);
+  //     } else {
+  //       console.log('ℹ️ Torrent preparation failed, using default iframe player');
+  //       setUsingTorrent(false);
+  //     }
+  //   };
+  //
+  //   handlePreparedTorrent();
+  //   // eslint-disable-next-line react-hooks/exhaustive-deps
+  // }, [itemInfoId, itemInfoType, selectedSeasonNumber, selectedEpisodeNumber, prepareTorrent]);
 
   // Autoplay support - triggered when navigating from Random page with ?autoplay=true
   useEffect(() => {
@@ -588,7 +668,8 @@ const InfoPage = () => {
           }
           
           // Open the video player
-          setUseAdFreePlayer(true);
+          // CHANGED: Force Ad-Free (torrent) player off — was `setUseAdFreePlayer(true)`. To restore, change `false` back to `true`.
+          setUseAdFreePlayer(false);
           setShowVideoModal(true);
         }
       }, usingTorrent && torrentStreamUrl ? 0 : 3000); // Immediate if torrent ready, else wait a bit
@@ -640,7 +721,8 @@ const InfoPage = () => {
         setVideoPlayerProgress(progress?.currentTime || 0);
       }
       
-      setUseAdFreePlayer(true);
+      // CHANGED: Force Ad-Free (torrent) player off — was `setUseAdFreePlayer(true)`. To restore, change `false` back to `true`.
+      setUseAdFreePlayer(false);
       setShowVideoModal(true);
     }
   };
@@ -691,7 +773,8 @@ const InfoPage = () => {
       setVideoPlayerProgress(progress?.currentTime || 0);
     }
     
-    setUseAdFreePlayer(true);
+    // CHANGED: Force Ad-Free (torrent) player off — was `setUseAdFreePlayer(true)`. To restore, change `false` back to `true`.
+    setUseAdFreePlayer(false);
     setShowVideoModal(true);
   };
 
@@ -720,7 +803,8 @@ const InfoPage = () => {
         setVideoPlayerProgress(progress?.currentTime || 0);
       }
       
-      setUseAdFreePlayer(true);
+      // CHANGED: Force Ad-Free (torrent) player off — was `setUseAdFreePlayer(true)`. To restore, change `false` back to `true`.
+      setUseAdFreePlayer(false);
       setShowVideoModal(true);
     }
   };
@@ -765,15 +849,37 @@ const InfoPage = () => {
           return `https://vidrock.net/movie/${imdbId || id}?autoplay=true&autonext=true&theme=00ff00`;
         }
       case 'VidLink':
-        if (itemInfo.type === 'anime') {
-          const malId = itemInfo.malId || itemInfo.id; // Support both, prefer malId
+        if (itemInfo.type === 'anime' || itemInfo.malId) {
+          // VidLink requires a real MyAnimeList ID — falling back to the AniList id
+          // makes vidlink.pro serve its docs/error page instead of the player.
+          // If MAL id isn't resolved yet, fall through to a working anime provider.
           const subOrDub = itemInfo.subOrDub || 'sub';
-          return `https://vidlink.pro/anime/${malId}/${episode}/${subOrDub}?fallback=true&autoplay=true&nextbutton=true`;
+          if (!itemInfo.malId) {
+            const anilistId = itemInfo.type === 'anime' ? itemInfo.id : itemInfo.anilistId;
+            return anilistId
+              ? `https://megaplay.buzz/stream/ani/${anilistId}/${episode}/${subOrDub}`
+              : '';
+          }
+          return `https://vidlink.pro/anime/${itemInfo.malId}/${episode}/${subOrDub}?fallback=true&autoplay=true&nextbutton=true`;
         } else if (itemInfo.type === 'shows') {
           return `https://vidlink.pro/tv/${id}/${season}/${episode}?autoplay=true&nextbutton=true`;
         } else {
           return `https://vidlink.pro/movie/${id}?autoplay=true&nextbutton=true`;
         }
+      case 'MegaPlay': {
+        // Works for anime items OR animation-enriched shows that resolved a MAL ID.
+        const malId = itemInfo.malId;
+        const subOrDub = itemInfo.subOrDub || 'sub';
+        if (!malId) return '';
+        return `https://megaplay.buzz/stream/mal/${malId}/${episode}/${subOrDub}`;
+      }
+      case 'MegaPlayAL': {
+        // For anime, item.id IS the AniList id. For enriched shows it's stored as anilistId.
+        const anilistId = itemInfo.type === 'anime' ? itemInfo.id : itemInfo.anilistId;
+        const subOrDub = itemInfo.subOrDub || 'sub';
+        if (!anilistId) return '';
+        return `https://megaplay.buzz/stream/ani/${anilistId}/${episode}/${subOrDub}`;
+      }
       case 'NontonGo':
         return (itemInfo.type === 'shows' || itemInfo.type === 'anime')
           ? `https://NontonGo.win/embed/tv/${tmdbId}/${season}/${episode}?autoplay=true&autonext=true&nextbutton=true`
@@ -1729,24 +1835,28 @@ const InfoPage = () => {
                         <div className="dot"></div>
                       </button>
                       <div className='player-buttons'>
-                        <button
-                          className={`player-button ${videoPlayerState.provider === 'RiveStream' ? 'active' : ''}`}
-                          onClick={() => switchProvider('RiveStream')}
-                        >
-                          Low + Auto Next
-                        </button>
-                        <button
-                          className={`player-button ${videoPlayerState.provider === 'RiveTorrent' ? 'active' : ''}`}
-                          onClick={() => switchProvider('RiveTorrent')}
-                        >
-                          Low + Low Ads
-                        </button>
-                        <button
-                          className={`player-button ${videoPlayerState.provider === 'RiveAggregator' ? 'active' : ''}`}
-                          onClick={() => switchProvider('RiveAggregator')}
-                        >
-                          Low + Many Ads
-                        </button>
+                        {itemInfo.type !== 'anime' && (
+                          <>
+                            <button
+                              className={`player-button ${videoPlayerState.provider === 'RiveStream' ? 'active' : ''}`}
+                              onClick={() => switchProvider('RiveStream')}
+                            >
+                              Low + Auto Next
+                            </button>
+                            <button
+                              className={`player-button ${videoPlayerState.provider === 'RiveTorrent' ? 'active' : ''}`}
+                              onClick={() => switchProvider('RiveTorrent')}
+                            >
+                              Low + Low Ads
+                            </button>
+                            <button
+                              className={`player-button ${videoPlayerState.provider === 'RiveAggregator' ? 'active' : ''}`}
+                              onClick={() => switchProvider('RiveAggregator')}
+                            >
+                              Low + Many Ads
+                            </button>
+                          </>
+                        )}
                         <button
                           className={`player-button ${videoPlayerState.provider === 'SuperEmbed' ? 'active' : ''}`}
                           onClick={() => switchProvider('SuperEmbed')}
@@ -1783,6 +1893,26 @@ const InfoPage = () => {
                         >
                           Best + Auto Next
                         </button>
+                        {(itemInfo.type === 'anime' || itemInfo.malId || itemInfo.anilistId) && (
+                          <>
+                            <button
+                              className={`player-button ${videoPlayerState.provider === 'MegaPlay' ? 'active' : ''}`}
+                              onClick={() => switchProvider('MegaPlay')}
+                              disabled={!itemInfo.malId}
+                              title={!itemInfo.malId ? 'MAL ID not available' : 'MegaPlay (MAL)'}
+                            >
+                              Anime MegaPlay (MAL)
+                            </button>
+                            <button
+                              className={`player-button ${videoPlayerState.provider === 'MegaPlayAL' ? 'active' : ''}`}
+                              onClick={() => switchProvider('MegaPlayAL')}
+                              disabled={itemInfo.type !== 'anime' && !itemInfo.anilistId}
+                              title={(itemInfo.type !== 'anime' && !itemInfo.anilistId) ? 'AniList ID not available' : 'MegaPlay (AniList)'}
+                            >
+                              Anime MegaPlay (AniList)
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>

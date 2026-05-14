@@ -42,8 +42,9 @@ const VideoModal = ({
             <h3>{title}</h3>
           </div>
           <div className="modal-header-middle">
-            {/* Player Type Toggle Buttons */}
-            {onPlayerTypeChange && (
+            {/* CHANGED: Ad-Free / With Ads player type toggle hidden. The Ad-Free (torrent) player is disabled to avoid wasted bandwidth.
+                To restore: remove the `false &&` guard below so the original conditional `onPlayerTypeChange && (...)` is active again. */}
+            {false && onPlayerTypeChange && (
               <div className="modal-player-type-toggle">
                 <button
                   className={`modal-toggle-btn ${useAdFreePlayer ? 'active' : ''}`}

@@ -48,73 +48,55 @@ export const AuthProvider = ({ children }) => {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Helper to reshape a watched/liked row from the Supabase table into the
+  // format ItemCard expects (id/type/vote_average/poster_path or image).
+  // Extracted from the old fetch() responses so the rest of the app keeps working unchanged.
+  const transformItem = (item) => {
+    const baseItem = {
+      ...item,
+      id: item.tmdb_id,           // ItemCard expects 'id'
+      type: item.content_type,     // ItemCard expects 'type'
+      title: item.title,
+      vote_average: item.rating,   // ItemCard expects 'vote_average'
+    };
+    if (item.content_type === 'anime') {
+      baseItem.image = item.poster_url || null;
+    } else {
+      baseItem.poster_path = item.poster_url?.replace('https://image.tmdb.org/t/p/original', '') || item.poster_url;
+    }
+    return baseItem;
+  };
+
   // Load user data (watched & liked items)
+  // CHANGED: Reads now go straight to Supabase via the JS client instead of the Fly backend.
+  //   - Old: GET ${baseUrl}/auth/user/watched and /auth/user/liked
+  //   - New: supabase.from('watched_items'|'liked_items').select(...)
+  // RLS in supabase-migration.sql restricts rows to auth.uid() = user_id, so passing the userId
+  // here is for clarity/ordering — the policy enforces ownership. To restore the backend version,
+  // revert this function to the previous fetch() calls (the token param is still passed in).
+  // eslint-disable-next-line no-unused-vars
   const loadUserData = async (userId, token) => {
     try {
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
-
-      // Fetch watched items
-      const watchedRes = await fetch(`${baseUrl}/auth/user/watched`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      if (watchedRes.ok) {
-        const watchedData = await watchedRes.json();
-        // Transform Supabase format to match ItemCard expectations
-        const transformedWatchedItems = (watchedData.watchedItems || []).map(item => {
-          const baseItem = {
-            ...item,
-            id: item.tmdb_id,           // ItemCard expects 'id'
-            type: item.content_type,     // ItemCard expects 'type'
-            title: item.title,
-            vote_average: item.rating,   // ItemCard expects 'vote_average'
-          };
-
-          // Handle image/poster based on content type
-          if (item.content_type === 'anime') {
-            // Anime items need 'image' field (AniList format)
-            baseItem.image = item.poster_url || null;
-          } else {
-            // Movies/shows need 'poster_path' field (TMDB format)
-            baseItem.poster_path = item.poster_url?.replace('https://image.tmdb.org/t/p/original', '') || item.poster_url;
-          }
-
-          return baseItem;
-        });
-        setWatchedItems(transformedWatchedItems);
+      const { data: watchedData, error: watchedErr } = await supabase
+        .from('watched_items')
+        .select('*')
+        .eq('user_id', userId)
+        .order('last_watched', { ascending: false });
+      if (watchedErr) {
+        console.error('Error loading watched items:', watchedErr);
+      } else {
+        setWatchedItems((watchedData || []).map(transformItem));
       }
 
-      // Fetch liked items
-      const likedRes = await fetch(`${baseUrl}/auth/user/liked`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      if (likedRes.ok) {
-        const likedData = await likedRes.json();
-        // Transform Supabase format to match ItemCard expectations
-        const transformedLikedItems = (likedData.likedItems || []).map(item => {
-          const baseItem = {
-            ...item,
-            id: item.tmdb_id,           // ItemCard expects 'id'
-            type: item.content_type,     // ItemCard expects 'type'
-            title: item.title,
-            vote_average: item.rating,   // ItemCard expects 'vote_average'
-          };
-
-          // Handle image/poster based on content type
-          if (item.content_type === 'anime') {
-            // Anime items need 'image' field (AniList format)
-            baseItem.image = item.poster_url || null;
-          } else {
-            // Movies/shows need 'poster_path' field (TMDB format)
-            baseItem.poster_path = item.poster_url?.replace('https://image.tmdb.org/t/p/original', '') || item.poster_url;
-          }
-
-          return baseItem;
-        });
-        setLikedItems(transformedLikedItems);
+      const { data: likedData, error: likedErr } = await supabase
+        .from('liked_items')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+      if (likedErr) {
+        console.error('Error loading liked items:', likedErr);
+      } else {
+        setLikedItems((likedData || []).map(transformItem));
       }
     } catch (error) {
       console.error('Error loading user data:', error);
@@ -185,28 +167,29 @@ export const AuthProvider = ({ children }) => {
       return;
     }
 
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+    // CHANGED: Was PUT ${baseUrl}/auth/user/watched on the Fly backend.
+    // Now upserts directly into Supabase's `watched_items` table. UNIQUE(user_id, tmdb_id, content_type)
+    // means re-watching the same show just updates season/episode/last_watched in place.
+    // The Fly route used the same Supabase table under the hood, so behavior is unchanged.
+    const { error } = await supabase
+      .from('watched_items')
+      .upsert(
+        {
+          user_id: user.id,
+          tmdb_id: item.tmdbId,
+          content_type: item.mediaType,
+          title: item.title,
+          season: item.season || 1,
+          episode: item.episode || 1,
+          poster_url: item.posterPath || null,
+          rating: item.rating || null,
+          last_watched: new Date().toISOString(),
+        },
+        { onConflict: 'user_id,tmdb_id,content_type' }
+      );
 
-    const response = await fetch(`${baseUrl}/auth/user/watched`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`
-      },
-      body: JSON.stringify({
-        tmdbId: item.tmdbId,
-        mediaType: item.mediaType,
-        title: item.title,
-        season: item.season || null,
-        episode: item.episode || null,
-        posterPath: item.posterPath || null,
-        rating: item.rating || null
-      })
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to add watched item');
+    if (error) {
+      throw new Error(error.message || 'Failed to add watched item');
     }
 
     // Refresh watched items
@@ -245,25 +228,24 @@ export const AuthProvider = ({ children }) => {
       return;
     }
 
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+    // CHANGED: Was POST ${baseUrl}/auth/user/liked on the Fly backend.
+    // Now upserts into Supabase's `liked_items` directly. Upsert (not insert) means tapping the
+    // like button on the same item twice no longer errors on the UNIQUE constraint.
+    const { error } = await supabase
+      .from('liked_items')
+      .upsert(
+        {
+          user_id: user.id,
+          tmdb_id: item.tmdbId,
+          content_type: item.mediaType,
+          title: item.title,
+          poster_url: item.posterPath || null,
+        },
+        { onConflict: 'user_id,tmdb_id,content_type' }
+      );
 
-    const response = await fetch(`${baseUrl}/auth/user/liked`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`
-      },
-      body: JSON.stringify({
-        tmdbId: item.tmdbId,
-        mediaType: item.mediaType,
-        title: item.title,
-        posterPath: item.posterPath || null
-      })
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to add liked item');
+    if (error) {
+      throw new Error(error.message || 'Failed to add liked item');
     }
 
     // Refresh liked items
@@ -293,18 +275,18 @@ export const AuthProvider = ({ children }) => {
       return;
     }
 
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+    // CHANGED: Was DELETE ${baseUrl}/auth/user/liked/{mediaType}/{tmdbId} on the Fly backend.
+    // Now deletes from Supabase directly. RLS ensures only the owner's row can be deleted, but
+    // we still scope the query by user_id for clarity.
+    const { error } = await supabase
+      .from('liked_items')
+      .delete()
+      .eq('user_id', user.id)
+      .eq('content_type', mediaType)
+      .eq('tmdb_id', tmdbId);
 
-    const response = await fetch(`${baseUrl}/auth/user/liked/${mediaType}/${tmdbId}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`
-      }
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to remove liked item');
+    if (error) {
+      throw new Error(error.message || 'Failed to remove liked item');
     }
 
     // Refresh liked items

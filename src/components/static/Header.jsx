@@ -79,7 +79,8 @@ const Header = ({ onSearchClick }) => {
             onClick={() => document.scrollingElement.scrollTop}
           />
           <nav  className='nav-links'>
-            {['home', 'movies', 'shows', 'anime', 'TV', 'random'].map((tab) =>
+            {/* CHANGED: 'TV' (IPTV) tab temporarily hidden. To restore, add 'TV' back into this array (between 'anime' and 'random'). */}
+            {['home', 'movies', 'shows', 'anime', 'random'].map((tab) =>
               renderNavLink(
                 tab,
                 tab === 'random' ? 'Random background picker' :
@@ -92,7 +93,8 @@ const Header = ({ onSearchClick }) => {
             <FaChevronDown size={24} onClick={toggleMobileNav} />
             {mobileNavOpen && (
               <div className='mobile-nav-menu' ref={dropdownRef}>
-                {['home', 'movies', 'shows', 'anime', 'TV', 'random'].map(renderMobileNavItem)}
+                {/* CHANGED: 'TV' (IPTV) tab temporarily hidden from mobile nav. To restore, add 'TV' back into this array. */}
+                {['home', 'movies', 'shows', 'anime', 'random'].map(renderMobileNavItem)}
               </div>
             )}
           </div>

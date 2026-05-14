@@ -1,24 +1,22 @@
 // UserContext.jsx
 
 import React, { createContext, useState, useEffect, useCallback } from 'react';
-import { loginUser, logoutUser, editUser } from '../api/UserApi';
-import { useNavigate } from 'react-router-dom';
-import { config } from '../config/environment';
+import { supabase } from '../services/supabase';
+
+// CHANGED: This file used to import `loginUser/logoutUser/editUser` from `../api/UserApi`
+// and persist user data via the Fly backend (`/api/login`, `/api/user`, etc.).
+// Those imports + the `login` / `logout` / `addToWatchedList` / `getWatchedItem` / `updateUser`
+// methods are now dead code in this app — auth is handled by AuthContext (Supabase) and
+// watched/liked lists live in AuthContext too. They've been removed here to drop the Fly dependency.
+// To restore: pull back the original imports and method bodies from git history of this file.
 
 export const UserContext = createContext();
 
 export const UserProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
   const [preferredSubtitleLanguage, setPreferredSubtitleLanguage] = useState(null);
-  const navigate = useNavigate();
 
-
+  // Load saved subtitle preference from localStorage as fallback (works even when logged out)
   useEffect(() => {
-    const loggedUser = localStorage.getItem('user');
-    if (loggedUser) {
-      setUser(JSON.parse(loggedUser));
-    }
-    // Also load saved subtitle preference from localStorage as fallback
     const savedSubtitlePref = localStorage.getItem('preferredSubtitleLanguage');
     if (savedSubtitlePref) {
       setPreferredSubtitleLanguage(savedSubtitlePref);
@@ -26,169 +24,88 @@ export const UserProvider = ({ children }) => {
   }, []);
 
   // ============================================================================
-  // USER PREFERENCES (Subtitle Language)
+  // USER PREFERENCES (Subtitle Language) — now via Supabase, not Fly backend
   // ============================================================================
-  
-  /**
-   * Fetch user preferences from server
-   */
-  const fetchUserPreferences = useCallback(async (currentUser) => {
-    // Get the token - check both possible locations (new Supabase format vs legacy)
-    const token = currentUser?.session?.access_token || currentUser?.token;
-    if (!token) return;
-    
+
+  // CHANGED: Was GET ${apiBaseUrl}/api/auth/user/preferences/subtitle-language on Fly.
+  // Now reads directly from Supabase's `user_preferences` table (schema in
+  // server/supabase-migration.sql). RLS scopes it to auth.uid() = user_id.
+  // To restore: revert this function and the save function below to the original fetch() calls.
+  const fetchUserPreferences = useCallback(async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) return;
+
     try {
-      const apiBaseUrl = config.apiBaseUrl.replace('/api', '');
-      const response = await fetch(`${apiBaseUrl}/api/auth/user/preferences/subtitle-language`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data.preferredLanguage) {
-          setPreferredSubtitleLanguage(data.preferredLanguage);
-          localStorage.setItem('preferredSubtitleLanguage', data.preferredLanguage);
-          console.log('📝 Loaded preferred subtitle language from server:', data.preferredLanguage);
-        }
-      } else {
-        console.warn('Failed to fetch subtitle preference from server:', response.status);
+      const { data, error } = await supabase
+        .from('user_preferences')
+        .select('preferred_subtitle_language')
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+
+      if (error) {
+        console.warn('Failed to fetch subtitle preference from Supabase:', error.message);
+        return;
+      }
+      if (data?.preferred_subtitle_language) {
+        setPreferredSubtitleLanguage(data.preferred_subtitle_language);
+        localStorage.setItem('preferredSubtitleLanguage', data.preferred_subtitle_language);
+        console.log('📝 Loaded preferred subtitle language from Supabase:', data.preferred_subtitle_language);
       }
     } catch (error) {
       console.error('Failed to fetch user preferences:', error);
     }
   }, []);
-  
-  // Fetch user preferences from server when user logs in
+
+  // Fetch the preference when the session is ready and re-fetch on sign-in/sign-out events.
   useEffect(() => {
-    const token = user?.session?.access_token || user?.token;
-    if (token) {
-      fetchUserPreferences(user);
-    }
-  }, [user, fetchUserPreferences]);
-
-  const login = async (username, password) => {
-    try {
-      const userData = await loginUser(username, password);
-      setUser(userData);
-      localStorage.setItem('user', JSON.stringify(userData));
-    } catch (error) {
-      throw new Error('Invalid username or password');
-    }
-  };
-
-  const logout = async () => {
-    try {
-      if (user && user.token) {
-       let watched = user.user.watched;
-        if(watched.length > 30){
-            watched = watched.slice(watched.length - 30, watched.length);
-            user.user.watched = watched
-        }
-        await editUser(user.user, user.token);
-        await logoutUser(user.token);
+    fetchUserPreferences();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        fetchUserPreferences();
       }
-      setUser(null);
-      localStorage.removeItem('user');
-      navigate('/login');
-    } catch (error) {
-      alert('An error occurred while logging out. Please try again.'); // Display a user-friendly alert
-      console.error('Logout error:', error); // Log the error for debugging
-    }
-  };
-
-  const updateUser = async (watchedList) => {
-    if(watchedList){
-        user.user.watched = watchedList;
-    }
-    try {
-      localStorage.setItem('user', JSON.stringify(user));
-        await editUser(user.user, user.token);
-    } catch (error) {
-      console.error('Failed to update user:', error);
-    }
-  }
-
-  const addToWatchedList = async (watchedItem) => {
-    if (!user) return;
-  console.log(watchedItem);
-    // Initialize watched list if it doesn't exist
-    if (!user.user.watched) user.user.watched = [];
-
-    // Parse the watched item details
-    const [type, id, title] = watchedItem.split(':');
-
-    // Find the existing watched item
-    const existingItemIndex = user.user.watched.findIndex((item) =>
-      item.startsWith(`${type}:${id}:${title}`),
-    );
-    if (existingItemIndex !== -1) {
-        // Update the existing item
-        user.user.watched.splice(existingItemIndex, 1);
-    }
-     // New item, add it to the watched list
-     user.user.watched.push(watchedItem);
-
-    localStorage.setItem('user', JSON.stringify(user));
-    try {
-      await editUser(user.user, user.token);
-    } catch (error) {
-      console.error('Failed to update user watched list:', error);
-    }
-  };
-
-  const getWatchedItem = (type, id, title) => {
-    if (!user || !user.user.watched) return null;
-    return (
-      user.user.watched.find((item) =>
-        item.startsWith(`${type}:${id}:${title}`),
-      ) || null
-    );
-  };
+    });
+    return () => subscription.unsubscribe();
+  }, [fetchUserPreferences]);
 
   /**
    * Set user's preferred subtitle language
    * @param {string} language - Language name (e.g., 'english', 'arabic')
    */
+  // CHANGED: Was PUT ${apiBaseUrl}/api/auth/user/preferences/subtitle-language on Fly.
+  // Now upserts into Supabase's `user_preferences` table (UNIQUE user_id makes upsert safe).
   const setSubtitleLanguagePreference = useCallback(async (language) => {
     const normalizedLanguage = language?.toLowerCase();
-    
-    // Update local state immediately
+
     setPreferredSubtitleLanguage(normalizedLanguage);
     localStorage.setItem('preferredSubtitleLanguage', normalizedLanguage);
-    
-    // Get the token - check both possible locations (new Supabase format vs legacy)
-    const token = user?.session?.access_token || user?.token;
-    
-    // If user is logged in, save to server
-    if (token) {
-      try {
-        const apiBaseUrl = config.apiBaseUrl.replace('/api', '');
-        const response = await fetch(`${apiBaseUrl}/api/auth/user/preferences/subtitle-language`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({ language: normalizedLanguage })
-        });
-        
-        if (response.ok) {
-          console.log('✅ Saved preferred subtitle language to server:', normalizedLanguage);
-        } else {
-          const errorText = await response.text();
-          console.warn('Failed to save subtitle preference to server:', response.status, errorText);
-        }
-      } catch (error) {
-        console.error('Error saving subtitle preference:', error);
-      }
-    } else {
-      console.log('No auth token available, saving to localStorage only');
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) {
+      console.log('No auth session, saving subtitle preference to localStorage only');
+      return normalizedLanguage;
     }
-    
+
+    try {
+      const { error } = await supabase
+        .from('user_preferences')
+        .upsert(
+          {
+            user_id: session.user.id,
+            preferred_subtitle_language: normalizedLanguage,
+          },
+          { onConflict: 'user_id' }
+        );
+      if (error) {
+        console.warn('Failed to save subtitle preference to Supabase:', error.message);
+      } else {
+        console.log('✅ Saved preferred subtitle language to Supabase:', normalizedLanguage);
+      }
+    } catch (error) {
+      console.error('Error saving subtitle preference:', error);
+    }
+
     return normalizedLanguage;
-  }, [user]);
+  }, []);
 
   /**
    * Get the user's preferred subtitle language
@@ -200,17 +117,11 @@ export const UserProvider = ({ children }) => {
 
   return (
     <UserContext.Provider
-      value={{ 
-        user, 
-        login, 
-        logout, 
-        addToWatchedList, 
-        getWatchedItem, 
-        updateUser,
-        // Subtitle preferences
+      value={{
+        // Subtitle preferences (only piece of UserContext that's actually consumed elsewhere)
         preferredSubtitleLanguage,
         setSubtitleLanguagePreference,
-        getSubtitleLanguagePreference
+        getSubtitleLanguagePreference,
       }}
     >
       {children}
